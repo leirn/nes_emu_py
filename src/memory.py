@@ -7,6 +7,7 @@ class memory:
 	ROM = bytearray(b'0' * 0x10000)
 	PRG = bytearray(b'0' * 0x10000)
 	VRAM = bytearray(b'0' * 0x2000)
+	palette_VRAM = bytearray(b'0' *  0x20)
 	OAM = bytearray(b'0' * 256)
 	PPUADDR = 0
 	OAMADDR = 0
@@ -38,7 +39,7 @@ class memory:
 		elif address < 0x2000: # RAM mirroring
 			return self.ROM[address % 0x800]
 		elif address == 0x2007:
-			return self.VRAM[self.PPUADDR]
+			return self.read_ppu_memory_at_ppuaddr()
 		elif address < 0x4000: # PPU mirroring
 			return self.ROM[0x2000 + (address % 0x8)]
 		else:
@@ -69,7 +70,7 @@ class memory:
 				self.PPUADDR = ((self.PPUADDR << 8 ) + value ) & 0xffff
 			elif address == 0x2007:
 				print(f"0x{self.PPUADDR:x}")
-				self.write_ppu_memory(value)
+				self.write_ppu_memory_at_ppuaddr(value)
 			else:
 				self.ROM[address] = value
 			return 0
@@ -84,17 +85,32 @@ class memory:
 		return 0 
 		
 		
-	def read_ppu_memory(self, address):
+	def read_ppu_memory_at_ppuaddr(self):
 			if self.PPUADDR < 0x2000:
-				return self.cartridge.prg_rom[address] # CHR_ROM ADDRESS
+				return self.cartridge.prg_rom[self.PPUADDR] # CHR_ROM ADDRESS
 			elif self.PPUADDR < 0x3000: # VRAM
-				return self.VRAM[address - 0x2000]
+				return self.VRAM[self.PPUADDR - 0x2000]
 			elif self.PPUADDR < 0x3F00: # VRAM mirror
-				self.VRAM[address - 0X1000]
-			else: # palette
-				self.VRAM[0x3F00 + (address % 0x20)]
+				return self.VRAM[self.PPUADDR - 0X3000]
+			elif address < 0x4000 : # palette
+				return self.palette_VRAM[self.PPUADDR % 0x20]
+			else:
+				raise Error("Out of PPU memory range")
+		
+		
+	def read_ppu_memory(self, address):
+			if address < 0x2000:
+				return self.cartridge.prg_rom[address] # CHR_ROM ADDRESS
+			elif address < 0x3000: # VRAM
+				return self.VRAM[address - 0x2000]
+			elif address < 0x3F00: # VRAM mirror
+				return self.VRAM[address - 0X3000]
+			elif address < 0x4000 : # palette
+				return self.palette_VRAM[self.PPUADDR % 0x20]
+			else:
+				raise Error("Out of PPU memory range")
 	
-	def write_ppu_memory(self, value):
+	def write_ppu_memory_at_ppuaddr(self, value):
 			print(f"{self.PPUADDR:x}")
 			if self.PPUADDR < 0x2000:
 				pass # CHR_ROM ADDRESS
@@ -103,6 +119,6 @@ class memory:
 				VRAM_increment = (self.read_rom(0x2000) >> 2) & 1
 				self.PPUADDR += 1 if VRAM_increment == 0 else 0x20
 			elif self.PPUADDR < 0x3F00: # VRAM mirror
-				self.VRAM[self.PPUADDR - 0X1000] = value
+				self.VRAM[self.PPUADDR - 0X3000] = value # - 0x1000 due to mirror + -0x2000 to reach start of VRAM
 			else: # palette
-				self.VRAM[0x3F00 + (self.PPUADDR % 0x20)] = value
+				self.palette_VRAM[self.PPUADDR % 0x20] = value

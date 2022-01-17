@@ -49,9 +49,27 @@ class cpu:
                 
                 return 1
         
+        def nmi(self):
+                # Execute an NMI
+                print("NMI interruption detected")
+                
+                self.flagI = 0
+                
+                self.push(self.PC >> 8)
+                self.push(self.PC & 255)
+                self.push(self.getP())
+                
+                self.PC = self.memory.read_rom_16(0xFFFA)
+                self.remaining_cycles = 7
+        
         # next : execute the next opcode.
         # return the number of cycles used to execute
         def next(self):
+                
+                if self.PC < 0x8000:
+                        print(f"PC out of PRG ROM : {self.PC:x}")
+                        exit()
+                
                 if self.remaining_cycles > 0:
                         self.remaining_cycles -= 1
                         return
@@ -68,7 +86,7 @@ class cpu:
                                         else:
                                                 val = self.getAbsoluteAddress()
                                                 label = label.replace(l.group(0), f"{' '.join(a+b for a,b in zip(f'{val:x}'[::2], f'{val:x}'[1::2]))}")
-                                print(f"Counter : {self.compteur:8}, PC : {' '.join(a+b for a,b in zip(f'{self.PC:x}'[::2], f'{self.PC:x}'[1::2]))} - fn_0x{opcode:02x} - {label:14}, A = {self.A:2x}, X = {self.X:2x}, Y = {self.Y:2x}")
+                                print(f"Counter : {self.compteur:8}, SP : 0x{self.SP:02x}, PC : {' '.join(a+b for a,b in zip(f'{self.PC:x}'[::2], f'{self.PC:x}'[1::2]))} - fn_0x{opcode:02x} - {label:14}, A = {self.A:2x}, X = {self.X:2x}, Y = {self.Y:2x}")
                         
                         fn = getattr(self, f"fn_0x{opcode:02x}")
                         step, self.remaining_cycles = fn()
@@ -96,12 +114,12 @@ class cpu:
                 self.flagN = (p >> 7) & 1
 
         def push(self, val):
-                self.memory.write_rom(self.SP, val)
+                self.memory.write_rom(0x0100 | self.SP, val)
                 self.SP = 255 if self.SP == 0 else self.SP - 1
                 
         def pop(self):
                 self.SP = 0 if self.SP == 255 else self.SP + 1
-                return self.memory.read_rom(self.SP)
+                return self.memory.read_rom(0x0100 | self.SP)
 
         # Get 8 bit immediate value on PC + 1
         def getImmediate(self):
@@ -1180,7 +1198,7 @@ class cpu:
                 self.setP(self.pop())
                 low = self.pop()
                 high = self.pop()
-                self.PC = (high << 8) & low
+                self.PC = (high << 8) + low
                 #TO BE IMPLEMENTED
                 print("RTI")
                 return (1, 6)
@@ -1259,49 +1277,49 @@ class cpu:
         def fn_0x85(self) :
                 address = self.getZeroPageAddress()
                 extra_cycles = self.memory.write_rom(address, self.A)
-                return (2 + extra_cycles, 3)
+                return (2, 3 + extra_cycles)
 
         # STA $44, X
         # Zero Page, X
         def fn_0x95(self) :
                 address = self.getZeroPageXAddress()
                 extra_cycles = self.memory.write_rom(address, self.A)
-                return (2 + extra_cycles, 4)
+                return (2, 4 + extra_cycles)
 
         # STA $4400
         # Absolute
         def fn_0x8d(self) :
                 address = self.getAbsoluteAddress()
                 extra_cycles = self.memory.write_rom(address, self.A)
-                return (3 + extra_cycles, 4)
+                return (3, 4 + extra_cycles)
 
         # STA $4400, X
         # Absolute, X
         def fn_0x9d(self) :
                 address = self.getAbsoluteXAddress()
                 extra_cycles = self.memory.write_rom(address, self.A)
-                return (3 + extra_cycles, 5)
+                return (3, 5 + extra_cycles)
 
         # STA $4400, Y
         # Absolute, Y
         def fn_0x99(self) :
                 address = self.getAbsoluteYAddress()
                 extra_cycles = self.memory.write_rom(address, self.A)
-                return (3 + extra_cycles, 5)
+                return (3, 5 + extra_cycles)
 
         # STA ($44, X)
         # Indirect, X
         def fn_0x81(self) :
                 address = self.getIndirectXAddress()
                 extra_cycles = self.memory.write_rom(address, self.A)
-                return (2 + extra_cycles, 6)
+                return (2, 6 + extra_cycles)
 
         # STA ($44), Y
         # Indirect, Y
         def fn_0x91(self) :
                 address = self.getIndirectYAddress()
                 extra_cycles = self.memory.write_rom(address, self.A)
-                return (2 + extra_cycles, 6)
+                return (2, 6 + extra_cycles)
 
         # TXS
         # Implied

@@ -4,7 +4,7 @@ from inputs import NESController1, NESController2
 
 import argparse
 from cpu import cpu 
-from ppu import ppu 
+import ppu 
 from memory import memory 
 from cartridge import cartridge
 import time
@@ -28,7 +28,7 @@ the_cartridge.print()
 
 MEM = memory(the_cartridge)
 CPU = cpu(MEM)
-PPU = ppu(MEM, display)
+PPU = ppu.ppu(MEM, display)
 CTRL1 = NESController1(MEM)
 
 CPU.start()
@@ -47,6 +47,10 @@ start_frame_time = time.time_ns()
 
 FRAME_LENGHT_NS = 1/60 * 1000000000
 frame_count = 0
+
+# Useful to handle NMI interruption
+is_nmi = False
+
 while continuer:
 	# Handle FRAME_SIZE cycles frames
 	# 29780.5 CPU cycles per frame
@@ -55,13 +59,20 @@ while continuer:
 	if cycles_left < 0:
 		cycles_left = FRAME_SIZE
 	if not pause:
+		#Check for NMI
+		if is_nmi:
+			is_nmi = False
+			CPU.nmi()
+		#Check for IRQ
+		
+		#Execute next CPU instruction
 		CPU.next()
 		# 3 PPU dots per CPU cycles
-		isFrame = False
-		isFrame |= PPU.next()
-		isFrame |= PPU.next()
-		isFrame |= PPU.next()
-		if isFrame:
+		is_frame = 0
+		is_frame |= PPU.next()
+		is_frame |= PPU.next()
+		is_frame |= PPU.next()
+		if is_frame & ppu.FRAME_COMPLETED > 0:
 			current_time =  time.time_ns()
 			time_left = FRAME_LENGHT_NS - (current_time - start_frame_time)
 			if time_left > 0:
@@ -69,9 +80,10 @@ while continuer:
 				frame_count += 1
 				time.sleep(time_left/1000000000)
 				start_frame_time = time.time_ns()
-			
+		elif is_frame & ppu.NMI > 0:
+			is_nmi = True
 		
-		time.sleep(0.0001)
+		#time.sleep(0.0001)
 	
 	# http://www.pygame.org/docs/ref/key.html
 	for event in pygame.event.get():

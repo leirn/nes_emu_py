@@ -1,6 +1,9 @@
 import pygame
 import numpy as np
 
+NMI = 0b10
+FRAME_COMPLETED = 0b1
+
 class ppu:
 	memory = ""
 	display = ""
@@ -49,25 +52,23 @@ class ppu:
 			nametable = PPUCTRL & 0b11
 			nametableAddress = {0 : 0x2000, 1 : 0x2400, 2 : 0x2800, 3 : 0x2C00}[nametable]
 			backgroundPatternTableAddress = ((PPUCTRL >> 4) & 1) * 0x1000
-			backgroundPatternTableAddress = 0x0
 			
 			
 			tileIndex = self.col // 8 + (32 * self.line // 8)
 				
 			#read background info in VRAM
-			bgTileIndex = self.memory.read_ppu_memory(backgroundPatternTableAddress + tileIndex)
-			
+			bgTileIndex = self.memory.read_ppu_memory(0x2000 + backgroundPatternTableAddress + tileIndex) # 0x2000 to aligne with VRAM start
 			print (f"Tile ID : {tileIndex} - Tile content : {bgTileIndex:x}")
-			tileData = self.memory.getTile(backgroundPatternTableAddress, bgTileIndex)
 			
+			tileData = self.memory.getTile(backgroundPatternTableAddress, bgTileIndex)
 			tile = self.createTile(tileData)
 			tile = pygame.surfarray.make_surface(tile)
 			tile = pygame.transform.scale(tile, (int(8 * self.scale), int(8 * self.scale)))
 			self.display.blit(tile, (self.col * self.scale, self.line * self.scale))
-				
-			#self.cachedFrame[self.line][self.col] = self.palette[(self.line + self.col)%len(self.palette)]
-				
-		if (self.line, self.col) == (241, 2): 
+		
+		self.col  = (self.col + 1) % 340
+						
+		if (self.line, self.col) == (241, 3): 
 			self.setVBlank()
 			'''
 			tile = pygame.surfarray.make_surface(self.cachedFrame)
@@ -76,11 +77,11 @@ class ppu:
 			'''
 			pygame.display.update()
 			pygame.display.flip()
-		if (self.line, self.col) == (261, 2): 
-			self.setVBlank()
+			return NMI
+		elif (self.line, self.col) == (261, 3): 
+			self.clearVBlank()
 		
 		
-		self.col  = (self.col + 1) % 340
 		if self.col == 0:
 			# End of scan line --> Sprite evaluation
 			self.line = (self.line + 1) 
@@ -90,17 +91,15 @@ class ppu:
 		if self.line == 262:
 			self.line = 0
 			self.frameParity = 1 - self.frameParity
-			return True
-		return False
-			
-	
-	def refreshScreen(self):
-		pass
+			return FRAME_COMPLETED
+		return 0
 
 	def setVBlank(self):
+		# TODO : To be implemented to update PPUCTRL
 		pass
 		
 	def clearVBlank(self):
+		# TODO : To be implemented to update PPUCTRL
 		pass
 	
 	def setPPUCTRL(self, val):
