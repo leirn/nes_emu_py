@@ -53,11 +53,11 @@ class cpu:
                 # Execute an NMI
                 print("NMI interruption detected")
                 
-                self.flagI = 0
-                
                 self.push(self.PC >> 8)
                 self.push(self.PC & 255)
                 self.push(self.getP())
+                
+                self.flagI = 0
                 
                 self.PC = self.memory.read_rom_16(0xFFFA)
                 self.remaining_cycles = 7
