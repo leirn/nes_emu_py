@@ -12,7 +12,7 @@ import re
 from utils import format_hex_data
 
 class cpu:
-        debug = 0
+        debug = 1
         compteur = 0
         remaining_cycles = 0
         

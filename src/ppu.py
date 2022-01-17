@@ -1,5 +1,6 @@
 import pygame
 import numpy as np
+import time
 
 NMI = 0b10
 FRAME_COMPLETED = 0b1
@@ -105,6 +106,9 @@ class ppu:
                         self.display.blit(self.cached_frame, (0, 0))
                         pygame.display.update()
                         pygame.display.flip()
+                        
+                        time.sleep(2)
+                        
                         if (PPUCTRL >> 7) & 1:
                             return NMI
                         else:
@@ -226,6 +230,6 @@ class ppu:
         def print_status(self):
                 print("PPU")
                 print("PPUCTRL  | PPUMASK  | PPUSTAT")
-                print(f"{self.getPPUCTRL():b} | {self.getPPUMASK():b} | {self.getPPUSTAT():b}")
+                print(f"{self.getPPUCTRL():b} | {self.getPPUMASK():b} | {self.getPPUSTATUS():b}")
                 print("")
                 pass
