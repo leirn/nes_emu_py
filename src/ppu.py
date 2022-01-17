@@ -45,13 +45,14 @@ class ppu:
                         self.cached_frame = pygame.Surface((int(self.scale * 256), int(self.scale * 240))) # il faudrait recréer une nouvelle frame en cache
                         # Parcourir les 
                 
-                # Current nametable
                 PPUCTRL = self.getPPUCTRL()
+                PPUMASK = self.getPPUMASK()
+                # Current nametable
                 nametable = PPUCTRL & 0b11
                 nametableAddress = {0 : 0x2000, 1 : 0x2400, 2 : 0x2800, 3 : 0x2C00}[nametable]
                 backgroundPatternTableAddress = ((PPUCTRL >> 4) & 1) * 0x1000
-                # update dot
-                if self.line < 240 and self.col < 256 and self.col % 8 == 0 and self.line % 8 == 0 :	# Update pixel
+                # update background
+                if (PPUMASK >>3) & 1 and self.line < 240 and self.col < 256 and self.col % 8 == 0 and self.line % 8 == 0 :	# Update pixel
                         
                         
                         tileIndex = self.col // 8 + (32 * self.line // 8)
@@ -70,23 +71,27 @@ class ppu:
                                                 
                 if (self.line, self.col) == (241, 3):
 
-                        # Display sprites
-                        for i in range(64):
-                                sprite = self.memory.OAM[i * 4:i * 4 + 4]
-                                s_y = sprite[0]
-                                s_x = sprite[3]
-                                s_tileId = sprite[1]
-                                s_param = sprite[2]
-                                
-                                sprite_tile = self.memory.getTile(backgroundPatternTableAddress, s_tileId)
-                                tile = self.createTile(sprite_tile)
-                                tile = pygame.surfarray.make_surface(tile)
-                                tile = pygame.transform.scale(tile, (int(8 * self.scale), int(8 * self.scale)))
-                                
-                                tile = pygame.transform.flip(tile, (s_param >> 7) & 1, (s_param >> 6) & 1)
-                                
-                                print(f"Tile {i} : {s_tileId} - {s_x} - {s_y}")
-                                self.cached_frame.blit(tile, (s_x * self.scale, (s_y - 1) * self.scale))
+                        if (PPUCTRL >> 5) & 1:
+                            raise Exception("8x16 tiles are not supported yet")
+                            
+                        if (PPUMASK >>4) & 1  :  # Doit on afficher les sprites
+                            # Display sprites
+                            for i in range(64):
+                                    sprite = self.memory.OAM[self.memory.OAMADDR + i * 4:self.memory.OAMADDR + i * 4 + 4]
+                                    s_y = sprite[0]
+                                    s_x = sprite[3]
+                                    s_tileId = sprite[1]
+                                    s_param = sprite[2]
+                                    
+                                    sprite_tile = self.memory.getTile(backgroundPatternTableAddress, s_tileId)
+                                    tile = self.createTile(sprite_tile)
+                                    tile = pygame.surfarray.make_surface(tile)
+                                    tile = pygame.transform.scale(tile, (int(8 * self.scale), int(8 * self.scale)))
+                                    
+                                    tile = pygame.transform.flip(tile, (s_param >> 7) & 1, (s_param >> 6) & 1)
+                                    
+                                    print(f"Tile {i} : {s_tileId} - {s_x} - {s_y}")
+                                    self.cached_frame.blit(tile, (s_x * self.scale, (s_y - 1) * self.scale))
                         
                         # Update screen
                         self.setVBlank()
@@ -98,7 +103,10 @@ class ppu:
                         self.display.blit(self.cached_frame, (0, 0))
                         pygame.display.update()
                         pygame.display.flip()
-                        return NMI
+                        if (PPUCTRL >> 7) & 1:
+                            return NMI
+                        else:
+                            return 0
                 elif (self.line, self.col) == (261, 3): 
                         self.clearVBlank()
                 

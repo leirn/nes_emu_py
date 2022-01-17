@@ -90,8 +90,10 @@ class memory:
                                 self.ROM[address] = value
                         return 0
                 elif address == 0x4014 : # OAMDMA
-                        address = address << 8
-                        self.OAM = bytearray(self.ROM[value << 8 :(value << 8) + 0x100])
+                        value = value << 8
+                        self.OAM[self.OAMADDR:] = bytearray(self.ROM[value:value + 0x100])
+                        if len(self.OAM) < 256:
+                                raise Exception("OAM trop court")
                         return 514
                 elif address == 0x4016: # Handling joystick
                         if value & 1 == 0:
@@ -109,9 +111,13 @@ class memory:
                         if self.PPUADDR < 0x2000:
                                 return self.cartridge.prg_rom[self.PPUADDR] # CHR_ROM ADDRESS
                         elif self.PPUADDR < 0x3000: # VRAM
-                                return self.VRAM[self.PPUADDR - 0x2000]
+                                val =  self.VRAM[self.PPUADDR - 0x2000]
+                                self.PPUADDR += 1 if VRAM_increment == 0 else 0x20
+                                return val
                         elif self.PPUADDR < 0x3F00: # VRAM mirror
-                                return self.VRAM[self.PPUADDR - 0X3000]
+                                val =  self.VRAM[self.PPUADDR - 0X3000]
+                                self.PPUADDR += 1 if VRAM_increment == 0 else 0x20
+                                return val
                         elif address < 0x4000 : # palette
                                 return self.palette_VRAM[self.PPUADDR % 0x20]
                         else:
@@ -138,7 +144,9 @@ class memory:
                                 VRAM_increment = (self.read_rom(0x2000) >> 2) & 1
                                 self.PPUADDR += 1 if VRAM_increment == 0 else 0x20
                         elif self.PPUADDR < 0x3F00: # VRAM mirror
-                                self.VRAM[self.PPUADDR - 0X3000] = value # - 0x1000 due to mirror + -0x2000 to reach start of VRAM
+                                self.VRAM[self.PPUADDR - 0x3000] = value
+                                VRAM_increment = (self.read_rom(0x2000) >> 2) & 1
+                                self.PPUADDR += 1 if VRAM_increment == 0 else 0x20
                         else: # palette
                                 self.palette_VRAM[self.PPUADDR % 0x20] = value
                 
