@@ -1,6 +1,3 @@
-import memory
-
-
 class NESController:
 	status = 0
 	

@@ -5,6 +5,8 @@ NMI = 0b10
 FRAME_COMPLETED = 0b1
 
 class ppu:
+        debug = 0
+    
         memory = ""
         display = ""
         scale = 2
@@ -59,7 +61,7 @@ class ppu:
                                 
                         #read background info in VRAM
                         bgTileIndex = self.memory.read_ppu_memory(0x2000 + backgroundPatternTableAddress + tileIndex) # 0x2000 to aligne with VRAM start
-                        print (f"Tile ID : {tileIndex} - Tile content : {bgTileIndex:x}")
+                        if self.debug : print (f"Tile ID : {tileIndex} - Tile content : {bgTileIndex:x}")
                         
                         tileData = self.memory.getTile(backgroundPatternTableAddress, bgTileIndex)
                         tile = self.createTile(tileData)
@@ -90,7 +92,7 @@ class ppu:
                                     
                                     tile = pygame.transform.flip(tile, (s_param >> 7) & 1, (s_param >> 6) & 1)
                                     
-                                    print(f"Tile {i} : {s_tileId} - {s_x} - {s_y}")
+                                    if self.debug : print(f"Tile {i} : {s_tileId} - {s_x} - {s_y}")
                                     self.cached_frame.blit(tile, (s_x * self.scale, (s_y - 1) * self.scale))
                         
                         # Update screen
@@ -222,4 +224,8 @@ class ppu:
                 return a
         
         def print_status(self):
+                print("PPU")
+                print("PPUCTRL  | PPUMASK  | PPUSTAT")
+                print(f"{self.getPPUCTRL():b} | {self.getPPUMASK():b} | {self.getPPUSTAT():b}")
+                print("")
                 pass

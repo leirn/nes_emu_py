@@ -12,7 +12,7 @@ import re
 from utils import format_hex_data
 
 class cpu:
-        debug = 1
+        debug = 0
         compteur = 0
         remaining_cycles = 0
         
@@ -45,17 +45,17 @@ class cpu:
         def start(self):
                 # Equivalent to JMP ($FFFC)
                 self.PC = self.memory.read_rom_16(0xfffc)
-                print(f"Entry point : 0x{format_hex_data(self.PC)}")
+                if self.debug : print(f"Entry point : 0x{format_hex_data(self.PC)}")
                 
                 return 1
         
         def nmi(self):
                 # Execute an NMI
-                print("NMI interruption detected")
+                if self.debug : print("NMI interruption detected")
                 self.general_interrupt(0xFFFA)
                 
         def irq(self):
-                print("IRQ interruption detected")
+                if self.debug : print("IRQ interruption detected")
                 self.general_interrupt(0xFFFE)
                 
         def general_interrupt(self, address):
@@ -74,7 +74,7 @@ class cpu:
         def next(self):
                 
                 if self.PC < 0x8000:
-                        print(f"PC out of PRG ROM : {self.PC:x}")
+                        if self.debug : print(f"PC out of PRG ROM : {self.PC:x}")
                         exit()
                 
                 if self.remaining_cycles > 0:
@@ -93,7 +93,7 @@ class cpu:
                                         else:
                                                 val = self.getAbsoluteAddress()
                                                 label = label.replace(l.group(0), f"{format_hex_data(val)}")
-                                print(f"Counter : {self.compteur:8}, SP : 0x{self.SP:02x}, PC : {format_hex_data(self.PC)} - fn_0x{opcode:02x} - {label:14}, A = {self.A:2x}, X = {self.X:2x}, Y = {self.Y:2x}")
+                                if self.debug : print(f"Counter : {self.compteur:8}, SP : 0x{self.SP:02x}, PC : {format_hex_data(self.PC)} - fn_0x{opcode:02x} - {label:14}, A = {self.A:2x}, X = {self.X:2x}, Y = {self.Y:2x}")
                         
                         fn = getattr(self, f"fn_0x{opcode:02x}")
                         step, self.remaining_cycles = fn()

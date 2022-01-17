@@ -2,6 +2,8 @@ import mappers
 from utils import format_hex_data
 
 class memory:
+        debug = 0
+        
         mapper = ""
         mapper_name = 0
         ROM =           bytearray(b'\0' * 0x10000)
@@ -36,7 +38,7 @@ class memory:
                         exit()
                 
         def getTile(self, bank, tile):
-                print(f"{len(self.cartridge.chr_rom):x} - {tile} - {bank + 16 * tile:x}:{bank + 16 * tile + 16:x}")
+                if self.debug : print(f"{len(self.cartridge.chr_rom):x} - {tile} - {bank + 16 * tile:x}:{bank + 16 * tile + 16:x}")
                 tile =  self.cartridge.chr_rom[bank + 16 * tile:bank + 16 * tile + 16]
                 return tile
                         
@@ -50,10 +52,12 @@ class memory:
                 elif address < 0x4000: # PPU mirroring
                         return self.ROM[0x2000 + (address % 0x8)]
                 elif address == 0x4016: # Handling joystick
+                        if self.debug : print(f"Joystick 1 read {self.ctrl1_status:b}")
                         value = self.ctrl1_status & 1
                         self.ctrl1_status = self.ctrl1_status >> 1
                         return value
                 elif address == 0x4017: # Handling joystick
+                        if self.debug : print(f"Joystick 1 read {self.ctrl1_status:b}")
                         value = self.ctrl2_status & 1
                         self.ctrl2_status = self.ctrl2_status >> 1
                         return value
@@ -74,7 +78,7 @@ class memory:
         
         def write_rom(self, address, value):
                 if address > 0x7FFF:
-                        print(f"Illegal write to address 0x{format_hex_data(address)}")
+                        if self.debug : print(f"Illegal write to address 0x{format_hex_data(address)}")
                 elif address >= 0x2000 and address < 0x4000:
                         address = 0x2000 + (address % 8)
                         if address == 0x2003:
@@ -84,7 +88,6 @@ class memory:
                         elif address == 0x2006:
                                 self.PPUADDR = ((self.PPUADDR << 8 ) + value ) & 0xffff
                         elif address == 0x2007:
-                                print(f"0x{self.PPUADDR:x}")
                                 self.write_ppu_memory_at_ppuaddr(value)
                         else:
                                 self.ROM[address] = value
@@ -96,10 +99,12 @@ class memory:
                                 raise Exception("OAM trop court")
                         return 514
                 elif address == 0x4016: # Handling joystick
+                        if self.debug : print(f"Joystick write {value:b}")
                         if value & 1 == 0:
                                 # store joypad value
                                 self.ctrl1_status = self.ctrl1.status
-                                self.ctrl1_status = self.ctrl2.status
+                                self.ctrl2_status = self.ctrl2.status
+                                
                 elif address < 0x2000:
                         self.ROM[address % 0x800] = value
                 else:
