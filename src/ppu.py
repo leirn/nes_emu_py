@@ -157,13 +157,12 @@ class ppu:
                 c = 0
                 x = 2
                 y = 2
-                while c < len(self.memory.cartridge.chr_rom):
+                for c in range(len(self.memory.cartridge.chr_rom)//16):
                 
-                        ar = self.createTile(self.memory.cartridge.chr_rom[c:c+16])
+                        ar = self.createTile(self.memory.getTile(0, c))
                         tile = pygame.surfarray.make_surface(ar)
                         tile = pygame.transform.scale(tile, (int(8 * self.scale), int(8 * self.scale)))
                         self.display.blit(tile, (x, y))
-                        c += 16
                         x += 10 * self.scale
                         if x > 256 * self.scale:
                                 x = 1

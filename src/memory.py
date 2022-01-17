@@ -8,7 +8,7 @@ class memory:
         PRG =           bytearray(b'\0' * 0x10000)
         VRAM =          bytearray(b'\0' * 0x2000)
         palette_VRAM = bytearray(b'\0' *  0x20)
-        OAM =           bytearray(b'\0' * 0xFF)
+        OAM =           bytearray(b'\0' * 0x100)
         PPUADDR = 0
         OAMADDR = 0
         
