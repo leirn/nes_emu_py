@@ -39,7 +39,6 @@ class memory:
 			return self.ROM[address % 0x800]
 		elif address == 0x2007:
 			return self.VRAM[self.PPUADDR]
-			self.VRAM[self.PPUADDR] = value
 		elif address < 0x4000: # PPU mirroring
 			return self.ROM[0x2000 + (address % 0x8)]
 		else:

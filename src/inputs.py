@@ -4,14 +4,14 @@ import memory
 class NESController:
 	
 	status = 0
-	memoryAddress = 0x4016
+	memory_address = 0x4016
 	
-	def __init__(self, memory, memoryAddress):
-		self.memoryAddress = memoryAddress
+	def __init__(self, memory, memory_address):
+		self.memory_address = memory_address
 		self.memory = memory
 		
 	def updateMemory(self):
-		self.memory.write_rom(self.memoryAddress, self.status)
+		self.memory.write_rom(self.memory_address, self.status)
 		
 	def setA(self):
 		self.status |= 1
@@ -46,14 +46,14 @@ class NESController:
 		self.updateMemory()
 		
 	def setUp(self):
-		self.status |= 0b1000
+		self.status |= 0b10000
 		self.updateMemory()
 		
 	def clearUp(self):
 		self.status &= 0b11101111
 		
 	def setDown(self):
-		self.status |= 0b10000
+		self.status |= 0b100000
 		self.updateMemory()
 		
 	def clearDown(self):
@@ -61,7 +61,7 @@ class NESController:
 		self.updateMemory()
 		
 	def setLeft(self):
-		self.status |= 0b100000
+		self.status |= 0b1000000
 		self.updateMemory()
 		
 	def clearLeft(self):
@@ -69,7 +69,7 @@ class NESController:
 		self.updateMemory()
 		
 	def setRight(self):
-		self.status |= 0b1000000
+		self.status |= 0b10000000
 		self.updateMemory()
 		
 	def clearRight(self):

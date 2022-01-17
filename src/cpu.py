@@ -60,7 +60,6 @@ class cpu:
                 try:
                         if self.debug:
                                 label = cpu_opcodes.opcodes[opcode][1]
-                                reg = r'[0-9]+'
                                 l = re.search(r'[0-9]+', label)
                                 if l:
                                         if len(l.group(0)) == 2:
@@ -164,9 +163,6 @@ class cpu:
                 address = self.getAbsoluteYAddress()
                 return self.memory.read_rom(address)
 
-        def getIndirect(self):
-                pass
-
         def getIndirectXAddress(self):
                 address = (self.memory.read_rom(self.PC+1) + self.X) & 255
                 return self.memory.read_rom_16(address)
@@ -182,26 +178,27 @@ class cpu:
         def getIndirectYValue(self):
                 address = self.getIndirectYAddress()
                 return self.memory.read_rom(address)
-                
+        
+        def setFlagNZ(self, val):
+                self.setFlagN(val)
+                self.setFlagZ(val)
+        
         def setFlagN(self, val):
                 self.flagN = val >> 7
-                return
 
         def setFlagZ(self, val):
                 self.flagZ = 1 if val == 0 else 0
-                return
 
         def ADC(self, input):
-                sum = input + self.A + self.flagC
-                self.flagC = sum >> 8
-                result = 255 & sum
+                adc = input + self.A + self.flagC
+                self.flagC = adc >> 8
+                result = 255 & adc
                 
                 self.flagV = not not ((self.A ^ result) & (input ^ result) & 0x80)
                 
                 self.A = result
                 
-                self.setFlagN(self.A)
-                self.setFlagZ(self.A)
+                self.setFlagNZ(self.A)
 
         # ADC #$44
         # Immediate
@@ -255,64 +252,56 @@ class cpu:
         # Immediate
         def fn_0x29(self) :
                 self.A &= self.getImmediate()
-                self.setFlagN(self.A)
-                self.setFlagZ(self.A)
+                self.setFlagNZ(self.A)
                 return (2, 2)
 
         # AND $44
         # Zero Page
         def fn_0x25(self) :
                 self.A &= self.getZeroPageValue()
-                self.setFlagN(self.A)
-                self.setFlagZ(self.A)
+                self.setFlagNZ(self.A)
                 return (2, 3)
 
         # AND $44, X
         # Zero Page, X
         def fn_0x35(self) :
                 self.A &= self.getZeroPageXValue()
-                self.setFlagN(self.A)
-                self.setFlagZ(self.A)
+                self.setFlagNZ(self.A)
                 return (2, 4)
 
         # AND $4400
         # Absolute
         def fn_0x2d(self) :
                 self.A &= self.getAbsoluteValue()
-                self.setFlagN(self.A)
-                self.setFlagZ(self.A)
+                self.setFlagNZ(self.A)
                 return (3, 4)
 
         # AND $4400, X
         # Absolute, X
         def fn_0x3d(self) :
                 self.A &= self.getAbsoluteXValue()
-                self.setFlagN(self.A)
-                self.setFlagZ(self.A)
+                self.setFlagNZ(self.A)
                 return (3, 4)
 
         # AND $4400, Y
         # Absolute, Y
         def fn_0x39(self) :
                 self.A &= self.getAbsoluteYValue()
-                self.setFlagN(self.A)
-                self.setFlagZ(self.A)
+                self.setFlagNZ(self.A)
                 return (3, 4)
 
         # AND ($44, X)
         # Indirect, X
         def fn_0x21(self) :
                 self.A &= self.getIndirectXValue()
-                self.setFlagN(self.A)
-                self.setFlagZ(self.A)
+                self.setFlagNZ(self.A)
                 return (2, 6)
 
         # AND ($44), Y
         # Indirect, Y
         def fn_0x31(self) :
                 self.A &= self.getIndirectYValue()
-                self.setFlagN(self.A)
-                self.setFlagZ(self.A)
+                self.setFlagNZ(self.A)
                 return (2, 5)
 
         # ASL A
@@ -320,8 +309,7 @@ class cpu:
         def fn_0x0a(self) :
                 self.flagC = self.A >> 7
                 self.A = (self.A < 1) & 0b11111111
-                self.setFlagN(self.A)
-                self.setFlagZ(self.A)
+                self.setFlagNZ(self.A)
                 return (1, 2)
 
         # ASL $44
@@ -330,8 +318,7 @@ class cpu:
                 value = self.getZeroPageValue()
                 self.flagC = value >> 7
                 self.A = (self.A < 1) & 0b11111111
-                self.setFlagN(self.A)
-                self.setFlagZ(self.A)
+                self.setFlagNZ(self.A)
                 return (2, 5)
 
         # ASL $44, X
@@ -340,8 +327,7 @@ class cpu:
                 value = self.getZeroPageXValue()
                 self.flagC = value >> 7
                 self.A = (self.A < 1) & 0b11111111
-                self.setFlagN(self.A)
-                self.setFlagZ(self.A)
+                self.setFlagNZ(self.A)
                 return (2, 6)
 
         # ASL $4400
@@ -350,8 +336,7 @@ class cpu:
                 value = self.getAbsoluteValue()
                 self.flagC = value >> 7
                 self.A = (self.A < 1) & 0b11111111
-                self.setFlagN(self.A)
-                self.setFlagZ(self.A)
+                self.setFlagNZ(self.A)
                 return (3, 6)
 
         # ASL $4400, X
@@ -360,8 +345,7 @@ class cpu:
                 value = self.getAbsoluteXValue()
                 self.flagC = value >> 7
                 self.A = (self.A << 1) & 0b11111111
-                self.setFlagN(self.A)
-                self.setFlagZ(self.A)
+                self.setFlagNZ(self.A)
                 return (3, 7)
 
         # BIT $44
@@ -474,8 +458,7 @@ class cpu:
                         self.flagC = 1
                 else:  
                         self.flagC = 0
-                self.setFlagN(val)
-                self.setFlagZ(val)
+                self.setFlagNZ(val)
                 return (2, 2)
 
         # CMP $44
@@ -486,8 +469,7 @@ class cpu:
                         self.flagC = 1
                 else:  
                         self.flagC = 0
-                self.setFlagN(val)
-                self.setFlagZ(val)
+                self.setFlagNZ(val)
                 return (2, 3)
 
         # CMP $44, X
@@ -498,8 +480,7 @@ class cpu:
                         self.flagC = 1
                 else:  
                         self.flagC = 0
-                self.setFlagN(val)
-                self.setFlagZ(val)
+                self.setFlagNZ(val)
                 return (2, 4)
 
         # CMP $4400
@@ -510,8 +491,7 @@ class cpu:
                         self.flagC = 1
                 else:  
                         self.flagC = 0
-                self.setFlagN(val)
-                self.setFlagZ(val)
+                self.setFlagNZ(val)
                 return (3, 4)
 
         # CMP $4400, X
@@ -522,8 +502,7 @@ class cpu:
                         self.flagC = 1
                 else:  
                         self.flagC = 0
-                self.setFlagN(val)
-                self.setFlagZ(val)
+                self.setFlagNZ(val)
                 return (3, 4)
 
         # CMP $4400, Y
@@ -534,8 +513,7 @@ class cpu:
                         self.flagC = 1
                 else:  
                         self.flagC = 0
-                self.setFlagN(val)
-                self.setFlagZ(val)
+                self.setFlagNZ(val)
                 return (3, 4)
 
         # CMP ($44), Y
@@ -546,8 +524,7 @@ class cpu:
                         self.flagC = 1
                 else:  
                         self.flagC = 0
-                self.setFlagN(val)
-                self.setFlagZ(val)
+                self.setFlagNZ(val)
                 return (2, 5)
 
         # CPX #$44
@@ -558,8 +535,7 @@ class cpu:
                         self.flagC = 1
                 else:  
                         self.flagC = 0
-                self.setFlagN(val)
-                self.setFlagZ(val)
+                self.setFlagNZ(val)
                 return (2, 2)
 
         # CPX $44
@@ -570,8 +546,7 @@ class cpu:
                         self.flagC = 1
                 else:  
                         self.flagC = 0
-                self.setFlagN(val)
-                self.setFlagZ(val)
+                self.setFlagNZ(val)
                 return (2, 3)
 
         # CPX $4400
@@ -582,8 +557,7 @@ class cpu:
                         self.flagC = 1
                 else:  
                         self.flagC = 0
-                self.setFlagN(val)
-                self.setFlagZ(val)
+                self.setFlagNZ(val)
                 return (3, 4)
 
         # CPY #$44
@@ -594,8 +568,7 @@ class cpu:
                         self.flagC = 1
                 else:  
                         self.flagC = 0
-                self.setFlagN(val)
-                self.setFlagZ(val)
+                self.setFlagNZ(val)
                 return (2, 2)
 
         # CPY $44
@@ -606,8 +579,7 @@ class cpu:
                         self.flagC = 1
                 else:  
                         self.flagC = 0
-                self.setFlagN(val)
-                self.setFlagZ(val)
+                self.setFlagNZ(val)
                 return (2, 3)
 
         # CPY $4400
@@ -618,8 +590,7 @@ class cpu:
                         self.flagC = 1
                 else:  
                         self.flagC = 0
-                self.setFlagN(val)
-                self.setFlagZ(val)
+                self.setFlagNZ(val)
                 return (3, 4)
 
         # DEC $44
@@ -628,8 +599,7 @@ class cpu:
                 value = self.getZeroPageValue()
                 value = 255 if value == 0 else value - 1
                 self.setZeroPage(value)
-                self.setFlagN(value)
-                self.setFlagZ(value)
+                self.setFlagNZ(value)
                 return (2, 5)
 
         # DEC $44, X
@@ -638,8 +608,7 @@ class cpu:
                 value = self.getZeroPageXValue()
                 value = 255 if value == 0 else value - 1
                 self.setZeroPageX(value)
-                self.setFlagN(value)
-                self.setFlagZ(value)
+                self.setFlagNZ(value)
                 return (2, 6)
 
         # DEC $4400
@@ -648,8 +617,7 @@ class cpu:
                 value = self.getAbsoluteValue()
                 value = 255 if value == 0 else value - 1
                 self.setAbsolute(value)
-                self.setFlagN(value)
-                self.setFlagZ(value)
+                self.setFlagNZ(value)
                 return (3, 6)
 
         # DEC $4400, X
@@ -658,72 +626,63 @@ class cpu:
                 value = self.getAbsoluteXValue()
                 value = 255 if value == 0 else value - 1
                 self.setAbsoluteX(value)
-                self.setFlagN(value)
-                self.setFlagZ(value)
+                self.setFlagNZ(value)
                 return (3, 7)
 
         # EOR #$44
         # Immediate
         def fn_0x49(self) :
                 self.A ^= self.getImmediate()
-                self.setFlagN(self.A)
-                self.setFlagZ(self.A)
+                self.setFlagNZ(self.A)
                 return (2, 2)
 
         # EOR $44
         # Zero Page
         def fn_0x45(self) :
                 self.A ^= self.getZeroPageValue()
-                self.setFlagN(self.A)
-                self.setFlagZ(self.A)
+                self.setFlagNZ(self.A)
                 return (2, 3)
 
         # EOR $44, X
         # Zero Page, X
         def fn_0x55(self) :
                 self.A ^= self.getZeroPageXValue()
-                self.setFlagN(self.A)
-                self.setFlagZ(self.A)
+                self.setFlagNZ(self.A)
                 return (2, 4)
 
         # EOR $4400
         # Absolute
         def fn_0x4d(self) :
                 self.A ^= self.getAbsoluteValue()
-                self.setFlagN(self.A)
-                self.setFlagZ(self.A)
+                self.setFlagNZ(self.A)
                 return (3, 4)
 
         # EOR $4400, X
         # Absolute, X
         def fn_0x5d(self) :
                 self.A ^= self.getAbsoluteXValue()
-                self.setFlagN(self.A)
-                self.setFlagZ(self.A)
+                self.setFlagNZ(self.A)
                 return (3, 4)
 
         # EOR $4400, Y
         # Absolute, Y
         def fn_0x59(self) :
                 self.A ^= self.getAbsoluteYValue()
-                self.setFlagN(self.A)
-                self.setFlagZ(self.A)
+                self.setFlagNZ(self.A)
                 return (3, 4)
 
         # EOR ($44, X)
         # Indirect, X
         def fn_0x41(self) :
                 self.A ^= self.getIndirectXValue()
-                self.setFlagN(self.A)
-                self.setFlagZ(self.A)
+                self.setFlagNZ(self.A)
                 return (2, 6)
 
         # EOR ($44), Y
         # Indirect, Y
         def fn_0x51(self) :
                 self.A ^= self.getIndirectYValue()
-                self.setFlagN(self.A)
-                self.setFlagZ(self.A)
+                self.setFlagNZ(self.A)
                 return (2, 5)
 
         # CLC
@@ -774,8 +733,7 @@ class cpu:
                 value = self.getZeroPageValue()
                 value = 0 if value == 255 else value + 1
                 self.setZeroPage(value)
-                self.setFlagN(value)
-                self.setFlagZ(value)
+                self.setFlagNZ(value)
                 return (2, 5)
 
         # INC $44, X
@@ -784,8 +742,7 @@ class cpu:
                 value = self.getZeroPageXValue()
                 value = 0 if value == 255 else value + 1
                 self.setZeroPageX(value)
-                self.setFlagN(value)
-                self.setFlagZ(value)
+                self.setFlagNZ(value)
                 return (2, 6)
 
         # INC $4400
@@ -794,8 +751,7 @@ class cpu:
                 value = self.getAbsoluteValue()
                 value = 0 if value == 255 else value + 1
                 self.setAbsolute(value)
-                self.setFlagN(value)
-                self.setFlagZ(value)
+                self.setFlagNZ(value)
                 return (3, 6)
 
         # INC $4400, X
@@ -804,8 +760,7 @@ class cpu:
                 value = self.getAbsoluteXValue()
                 value = 0 if value == 255 else value + 1
                 self.setAbsoluteX(value)
-                self.setFlagN(value)
-                self.setFlagZ(value)
+                self.setFlagNZ(value)
                 return (3, 7)
 
         # JMP $5597
@@ -836,144 +791,126 @@ class cpu:
         # Immediate
         def fn_0xa9(self) :
                 self.A = self.getImmediate()
-                self.setFlagN(self.A)
-                self.setFlagZ(self.A)
+                self.setFlagNZ(self.A)
                 return (2, 2)
 
         # LDA $44
         # Zero Page
         def fn_0xa5(self) :
                 self.A =self.getZeroPageValue()
-                self.setFlagN(self.A)
-                self.setFlagZ(self.A)
+                self.setFlagNZ(self.A)
                 return (2, 3)
 
         # LDA $44, X
         # Zero Page, X
         def fn_0xb5(self) :
                 self.A = self.getZeroPageXValue()
-                self.setFlagN(self.A)
-                self.setFlagZ(self.A)
+                self.setFlagNZ(self.A)
                 return (2, 4)
 
         # LDA $4400
         # Absolute
         def fn_0xad(self) :
                 self.A = self.getAbsoluteValue()
-                self.setFlagN(self.A)
-                self.setFlagZ(self.A)
+                self.setFlagNZ(self.A)
                 return (3, 4)
 
         # LDA $4400, X
         # Absolute, X
         def fn_0xbd(self) :
                 self.A = self.getAbsoluteXValue()
-                self.setFlagN(self.A)
-                self.setFlagZ(self.A)
+                self.setFlagNZ(self.A)
                 return (3, 4)
 
         # LDA $4400, Y
         # Absolute, Y
         def fn_0xb9(self) :
                 self.A = self.getAbsoluteYValue()
-                self.setFlagN(self.A)
-                self.setFlagZ(self.A)
+                self.setFlagNZ(self.A)
                 return (3, 4)
 
         # LDA ($44, X)
         # Indirect, X
         def fn_0xa1(self) :
                 self.A = self.getIndirectXValue()
-                self.setFlagN(self.A)
-                self.setFlagZ(self.A)
+                self.setFlagNZ(self.A)
                 return (2, 6)
 
         # LDA ($44), Y
         # Indirect, Y
         def fn_0xb1(self) :
                 self.A = self.getIndirectYValue()
-                self.setFlagN(self.A)
-                self.setFlagZ(self.A)
+                self.setFlagNZ(self.A)
                 return (2, 5)
 
         # LDX #$44
         # Immediate
         def fn_0xa2(self) :
                 self.X = self.getImmediate()
-                self.setFlagN(self.X)
-                self.setFlagZ(self.X)
+                self.setFlagNZ(self.X)
                 return (2, 2)
 
         # LDX $44
         # Zero Page
         def fn_0xa6(self) :
                 self.X = self.getZeroPageValue()
-                self.setFlagN(self.X)
-                self.setFlagZ(self.X)
+                self.setFlagNZ(self.X)
                 return (2, 3)
 
         # LDX $44, Y
         # Zero Page, Y
         def fn_0xb6(self) :
                 self.X = self.getZeroPageYValue()
-                self.setFlagN(self.X)
-                self.setFlagZ(self.X)
+                self.setFlagNZ(self.X)
                 return (2, 4)
 
         # LDX $4400
         # Absolute
         def fn_0xae(self) :
                 self.X = self.getAbsoluteValue()
-                self.setFlagN(self.X)
-                self.setFlagZ(self.X)
+                self.setFlagNZ(self.X)
                 return (3, 4)
 
         # LDX $4400, Y
         # Absolute, Y
         def fn_0xbe(self) :
                 self.X = self.self.getAbsoluteYValue()
-                self.setFlagN(self.X)
-                self.setFlagZ(self.X)
+                self.setFlagNZ(self.X)
                 return (3, 4)
 
         # LDY #$44
         # Immediate
         def fn_0xa0(self) :
                 self.Y = self.getImmediate()
-                self.setFlagN(self.Y)
-                self.setFlagZ(self.Y)
+                self.setFlagNZ(self.Y)
                 return (2, 2)
 
         # LDY $44
         # Zero Page
         def fn_0xa4(self) :
                 self.Y = self.getZeroPageValue()
-                self.setFlagN(self.X)
-                self.setFlagZ(self.X)
+                self.setFlagNZ(self.X)
                 return (2, 3)
 
         # LDY $44, X
         # Zero Page, X
         def fn_0xb4(self) :
                 self.Y = self.getZeroPageXValue()
-                self.setFlagN(self.Y)
-                self.setFlagZ(self.Y)
+                self.setFlagNZ(self.Y)
                 return (2, 4)
 
         # LDY $4400
         # Absolute
         def fn_0xac(self) :
                 self.Y =self.getAbsoluteValue()
-                self.setFlagN(self.Y)
-                self.setFlagZ(self.Y)
+                self.setFlagNZ(self.Y)
                 return (3, 4)
 
         # LDY $4400, X
         # Absolute, X
         def fn_0xbc(self) :
                 self.Y = self.getAbsoluteXValue()
-                self.setFlagN(self.Y)
-                self.setFlagZ(self.Y)
+                self.setFlagNZ(self.Y)
                 return (3, 4)
 
         # LSR A
@@ -981,8 +918,7 @@ class cpu:
         def fn_0x4a(self) :
                 self.flagC = self.A & 1
                 self.A = self.A > 1
-                self.setFlagN(self.A)
-                self.setFlagZ(self.A)
+                self.setFlagNZ(self.A)
                 return (1, 2)
 
         # LSR $44
@@ -991,8 +927,7 @@ class cpu:
                 value = self.getZeroPageValue()
                 self.flagC = value & 1
                 self.A = value > 1
-                self.setFlagN(self.A)
-                self.setFlagZ(self.A)
+                self.setFlagNZ(self.A)
                 return (2, 5)
 
         # LSR $44, X
@@ -1001,8 +936,7 @@ class cpu:
                 value = self.getZeroPageXValue()
                 self.flagC = value & 1
                 self.A = value > 1
-                self.setFlagN(self.A)
-                self.setFlagZ(self.A)
+                self.setFlagNZ(self.A)
                 return (2, 6)
 
         # LSR $4400
@@ -1011,8 +945,7 @@ class cpu:
                 value = self.getAbsoluteValue()
                 self.flagC = value & 1
                 self.A = value > 1
-                self.setFlagN(self.A)
-                self.setFlagZ(self.A)
+                self.setFlagNZ(self.A)
                 return (3, 6)
 
         # LSR $4400, X
@@ -1021,8 +954,7 @@ class cpu:
                 value = self.getAbsoluteXValue()
                 self.flagC = value & 1
                 self.A = value > 1
-                self.setFlagN(self.A)
-                self.setFlagZ(self.A)
+                self.setFlagNZ(self.A)
                 return (3, 7)
 
         # NOP
@@ -1035,128 +967,112 @@ class cpu:
         # Immediate
         def fn_0x09(self) :
                 self.A |= self.getImmediate()
-                self.setFlagN(self.A)
-                self.setFlagZ(self.A)
+                self.setFlagNZ(self.A)
                 return (2, 2)
 
         # ORA $44
         # Zero Page
         def fn_0x05(self) :
                 self.A |= self.getZeroPageValue()
-                self.setFlagN(self.A)
-                self.setFlagZ(self.A)
+                self.setFlagNZ(self.A)
                 return (2, 3)
 
         # ORA $44, X
         # Zero Page, X
         def fn_0x15(self) :
                 self.A |= self.getZeroPageXValue()
-                self.setFlagN(self.A)
-                self.setFlagZ(self.A)
+                self.setFlagNZ(self.A)
                 return (2, 4)
 
         # ORA $4400
         # Absolute
         def fn_0xd(self) :
                 self.A |= self.getAbsoluteValue()
-                self.setFlagN(self.A)
-                self.setFlagZ(self.A)
+                self.setFlagNZ(self.A)
                 return (3, 4)
 
         # ORA $4400, X
         # Absolute, X
         def fn_0x1d(self) :
                 self.A |= self.getAbsoluteXValue()
-                self.setFlagN(self.A)
-                self.setFlagZ(self.A)
+                self.setFlagNZ(self.A)
                 return (3, 4)
 
         # ORA $4400, Y
         # Absolute, Y
         def fn_0x19(self) :
                 self.A |= self.getAbsoluteYValue()
-                self.setFlagN(self.A)
-                self.setFlagZ(self.A)
+                self.setFlagNZ(self.A)
                 return (3, 4)
 
         # ORA ($44, X)
         # Indirect, X
         def fn_0x01(self) :
                 self.A |= self.getIndirectXValue()
-                self.setFlagN(self.A)
-                self.setFlagZ(self.A)
+                self.setFlagNZ(self.A)
                 return (2, 6)
 
         # ORA ($44), Y
         # Indirect, Y
         def fn_0x11(self) :
                 self.A |= self.getIndirectYValue()
-                self.setFlagN(self.A)
-                self.setFlagZ(self.A)
+                self.setFlagNZ(self.A)
                 return (2, 5)
 
         # TAX
         # Implied
         def fn_0xaa(self) :
                 self.X = self.A
-                self.setFlagN(self.X)
-                self.setFlagZ(self.X)
+                self.setFlagNZ(self.X)
                 return (1, 2)
 
         # TXA
         # Implied
         def fn_0x8a(self) :
                 self.A = self.X
-                self.setFlagN(self.A)
-                self.setFlagZ(self.A)
+                self.setFlagNZ(self.A)
                 return (1, 2)
 
         # DEX
         # Implied
         def fn_0xca(self) :
                 self.X = self.X - 1 if self.X > 0 else 255
-                self.setFlagN(self.X)
-                self.setFlagZ(self.X)
+                self.setFlagNZ(self.X)
                 return (1, 2)
 
         # INX
         # Implied
         def fn_0xe8(self) :
                 self.X = self.X + 1 if self.X < 255 else 0
-                self.setFlagN(self.X)
-                self.setFlagZ(self.X)
+                self.setFlagNZ(self.X)
                 return (1, 2)
 
         # TAY
         # Implied
         def fn_0xa8(self) :
                 self.Y = self.A
-                self.setFlagN(self.Y)
-                self.setFlagZ(self.Y)
+                self.setFlagNZ(self.Y)
                 return (1, 2)
 
         # TYA
         # Implied
         def fn_0x98(self) :
                 self.A = self.Y
-                self.setFlagN(self.A)
-                self.setFlagZ(self.A)
+                self.setFlagNZ(self.A)
                 return (1, 2)
 
         # DEY
         # Implied
         def fn_0x88(self) :
                 self.Y = self.Y - 1 if self.Y > 0 else 255
-                self.setFlagN(self.Y)
-                self.setFlagZ(self.Y)
+                self.setFlagNZ(self.Y)
                 return (1, 2)
 
         # INY
         # Implied
         def fn_0xc8(self) :
                 self.Y = self.Y + 1 if self.Y < 255 else 0
-                self.setFlagN(self.Y)
-                self.setFlagZ(self.Y)
+                self.setFlagNZ(self.Y)
                 return (1, 2)
 
         # ROL A
@@ -1165,8 +1081,7 @@ class cpu:
                 self.A = (self.A << 1) & (self.flagC)
                 self.flagC = self.A >> 8
                 self.A &= 255
-                self.setFlagN(self.A)
-                self.setFlagZ(self.A)
+                self.setFlagNZ(self.A)
                 return (1, 2)
 
         # ROL $44
@@ -1176,8 +1091,7 @@ class cpu:
                 self.A = (val << 1) & (self.flagC)
                 self.flagC = self.A >> 8
                 self.A &= 255
-                self.setFlagN(self.A)
-                self.setFlagZ(self.A)
+                self.setFlagNZ(self.A)
                 return (2, 5)
 
         # ROL $44, X
@@ -1187,8 +1101,7 @@ class cpu:
                 self.A = (val << 1) & (self.flagC)
                 self.flagC = self.A >> 8
                 self.A &= 255
-                self.setFlagN(self.A)
-                self.setFlagZ(self.A)
+                self.setFlagNZ(self.A)
                 return (2, 6)
 
         # ROL $4400
@@ -1198,8 +1111,7 @@ class cpu:
                 self.A = (val << 1) & (self.flagC)
                 self.flagC = self.A >> 8
                 self.A &= 255
-                self.setFlagN(self.A)
-                self.setFlagZ(self.A)
+                self.setFlagNZ(self.A)
                 return (3, 6)
 
         # ROL $4400, X
@@ -1209,8 +1121,7 @@ class cpu:
                 self.A = (val << 1) & (self.flagC)
                 self.flagC = self.A >> 8
                 self.A &= 255
-                self.setFlagN(self.A)
-                self.setFlagZ(self.A)
+                self.setFlagNZ(self.A)
                 print("ROL $4400, X")
                 return (3, 7)
 
@@ -1220,8 +1131,7 @@ class cpu:
                 carry = self.A & 1
                 self.A = (self.A >> 1) & (self.flagC << 7)
                 self.flagC = carry
-                self.setFlagN(self.A)
-                self.setFlagZ(self.A)
+                self.setFlagNZ(self.A)
                 return (1, 2)
 
         # ROR $44
@@ -1231,8 +1141,7 @@ class cpu:
                 carry = val & 1
                 self.A = (val >> 1) & (self.flagC << 7)
                 self.flagC = carry
-                self.setFlagN(self.A)
-                self.setFlagZ(self.A)
+                self.setFlagNZ(self.A)
                 return (2, 5)
 
         # ROR $44, X
@@ -1242,8 +1151,7 @@ class cpu:
                 carry = val & 1
                 self.A = (val >> 1) & (self.flagC << 7)
                 self.flagC = carry
-                self.setFlagN(self.A)
-                self.setFlagZ(self.A)
+                self.setFlagNZ(self.A)
                 return (2, 6)
 
         # ROR $4400
@@ -1253,8 +1161,7 @@ class cpu:
                 carry = val & 1
                 self.A = (val >> 1) & (self.flagC << 7)
                 self.flagC = carry
-                self.setFlagN(self.A)
-                self.setFlagZ(self.A)
+                self.setFlagNZ(self.A)
                 return (3, 6)
 
         # ROR $4400, X
@@ -1264,8 +1171,7 @@ class cpu:
                 carry = val & 1
                 self.A = (val >> 1) & (self.flagC << 7)
                 self.flagC = carry
-                self.setFlagN(self.A)
-                self.setFlagZ(self.A)
+                self.setFlagNZ(self.A)
                 return (3, 7)
 
         # RTI
@@ -1298,8 +1204,7 @@ class cpu:
                 
                 self.A = result
                 
-                self.setFlagN(self.A)
-                self.setFlagZ(self.A)
+                self.setFlagNZ(self.A)
 
         # SBC #$44
         # Immediate
@@ -1409,8 +1314,7 @@ class cpu:
         # Implied
         def fn_0xba(self) :
                 self.X = self.SP
-                self.setFlagN(self.X)
-                self.setFlagZ(self.X)
+                self.setFlagNZ(self.X)
                 return (1, 2)
 
         # PHA
