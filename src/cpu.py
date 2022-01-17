@@ -382,7 +382,7 @@ class cpu:
 
         # BIT $4400
         # Absolute
-        def fn_0x2C(self) :
+        def fn_0x2c(self) :
                 tocomp = self.getAbsoluteValue()
                 value = tocomp | self.A
                 self.setFlagZ(value)

@@ -12,7 +12,7 @@ class ppu:
         col = 0
         cycle = 0
         
-        cachedFrame = ''
+        cached_frame = ''
         frameParity = 0
         
         palette = [
@@ -35,21 +35,23 @@ class ppu:
                 self.setPPUADDR(0)
                 self.setPPUDATA(0)
                 
-                self.cachedFrame = np.array([[(0, 0, 0) for x in range(256)] for y in range(240)])
-                
                 self.col = 0
                 self.line = 0
         
         # https://wiki.nesdev.org/w/index.php?title=PPU_registers
         # https://bugzmanov.github.io/nes_ebook/chapter_6_4.html
         def next(self):
+                if self.line == 0 and self.col == 0:
+                        self.cached_frame = pygame.Surface((int(self.scale * 256), int(self.scale * 240))) # il faudrait recréer une nouvelle frame en cache
+                        # Parcourir les 
+                
+                # Current nametable
+                PPUCTRL = self.getPPUCTRL()
+                nametable = PPUCTRL & 0b11
+                nametableAddress = {0 : 0x2000, 1 : 0x2400, 2 : 0x2800, 3 : 0x2C00}[nametable]
+                backgroundPatternTableAddress = ((PPUCTRL >> 4) & 1) * 0x1000
                 # update dot
                 if self.line < 240 and self.col < 256 and self.col % 8 == 0 and self.line % 8 == 0 :	# Update pixel
-                        # Current nametable
-                        PPUCTRL = self.getPPUCTRL()
-                        nametable = PPUCTRL & 0b11
-                        nametableAddress = {0 : 0x2000, 1 : 0x2400, 2 : 0x2800, 3 : 0x2C00}[nametable]
-                        backgroundPatternTableAddress = ((PPUCTRL >> 4) & 1) * 0x1000
                         
                         
                         tileIndex = self.col // 8 + (32 * self.line // 8)
@@ -62,17 +64,38 @@ class ppu:
                         tile = self.createTile(tileData)
                         tile = pygame.surfarray.make_surface(tile)
                         tile = pygame.transform.scale(tile, (int(8 * self.scale), int(8 * self.scale)))
-                        self.display.blit(tile, (self.col * self.scale, self.line * self.scale))
+                        self.cached_frame.blit(tile, (self.col * self.scale, self.line * self.scale))
                 
                 self.col  = (self.col + 1) % 340
                                                 
-                if (self.line, self.col) == (241, 3): 
+                if (self.line, self.col) == (241, 3):
+
+                        # Display sprites
+                        for i in range(64):
+                                sprite = self.memory.OAM[i * 4:i * 4 + 4]
+                                s_y = sprite[0]
+                                s_x = sprite[3]
+                                s_tileId = sprite[1]
+                                s_param = sprite[2]
+                                
+                                sprite_tile = self.memory.getTile(backgroundPatternTableAddress, s_tileId)
+                                tile = self.createTile(sprite_tile)
+                                tile = pygame.surfarray.make_surface(tile)
+                                tile = pygame.transform.scale(tile, (int(8 * self.scale), int(8 * self.scale)))
+                                
+                                tile = pygame.transform.flip(tile, (s_param >> 7) & 1, (s_param >> 6) & 1)
+                                
+                                print(f"Tile {i} : {s_tileId} - {s_x} - {s_y}")
+                                self.cached_frame.blit(tile, (s_x * self.scale, (s_y - 1) * self.scale))
+                        
+                        # Update screen
                         self.setVBlank()
                         '''
                         tile = pygame.surfarray.make_surface(self.cachedFrame)
                         tile = pygame.transform.scale(tile, (int(256 * self.scale), int(240 * self.scale)))
                         self.display.blit(tile, (0, 0))
                         '''
+                        self.display.blit(self.cached_frame, (0, 0))
                         pygame.display.update()
                         pygame.display.flip()
                         return NMI
@@ -173,7 +196,6 @@ class ppu:
                 a = [[0,   0,   0]] * 8
                 a = [a] * 8
                 a = np.array([[(0, 0, 0) for x in range(8)] for y in range(8)])
-                print(len(array_of_byte))
                 for i in range(8):
                         for j in range(8):
                                 bit1 = (array_of_byte[i] >> (7-j)) & 1
