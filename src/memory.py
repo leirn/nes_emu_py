@@ -14,9 +14,16 @@ class memory:
         
         cartridge = b''
         
+        ctrl1 = 0
+        ctrl1_status = 0
+        ctrl2 = 0
+        ctrl2_status = 0
         
-        def __init__(self, cartridge):
+        
+        def __init__(self, cartridge, ctrl1, ctrl2):
                 self.cartridge = cartridge
+                self.ctrl1 = ctrl1
+                self.ctrl2 = ctrl2
                 
                 try:
                         module = __import__("mappers")
@@ -42,6 +49,14 @@ class memory:
                         return self.read_ppu_memory_at_ppuaddr()
                 elif address < 0x4000: # PPU mirroring
                         return self.ROM[0x2000 + (address % 0x8)]
+                elif address == 0x4016: # Handling joystick
+                        value = self.ctrl1_status & 1
+                        self.ctrl1_status = self.ctrl1_status >> 1
+                        return value
+                elif address == 0x4017: # Handling joystick
+                        value = self.ctrl2_status & 1
+                        self.ctrl2_status = self.ctrl2_status >> 1
+                        return value
                 else:
                         return self.ROM[address]
         
@@ -78,6 +93,11 @@ class memory:
                         address = address << 8
                         self.OAM = bytearray(self.ROM[value << 8 :(value << 8) + 0x100])
                         return 514
+                elif address == 0x4016: # Handling joystick
+                        if value & 1 == 0:
+                                # store joypad value
+                                self.ctrl1_status = self.ctrl1.status
+                                self.ctrl1_status = self.ctrl2.status
                 elif address < 0x2000:
                         self.ROM[address % 0x800] = value
                 else:

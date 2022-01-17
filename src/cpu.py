@@ -52,6 +52,13 @@ class cpu:
         def nmi(self):
                 # Execute an NMI
                 print("NMI interruption detected")
+                self.general_interrupt(0xFFFA)
+                
+        def irq(self):
+                print("IRQ interruption detected")
+                self.general_interrupt(0xFFFE)
+                
+        def general_interrupt(self, address):
                 
                 self.push(self.PC >> 8)
                 self.push(self.PC & 255)
@@ -59,7 +66,7 @@ class cpu:
                 
                 self.flagI = 0
                 
-                self.PC = self.memory.read_rom_16(0xFFFA)
+                self.PC = self.memory.read_rom_16(address)
                 self.remaining_cycles = 7
         
         # next : execute the next opcode.
@@ -458,12 +465,12 @@ class cpu:
         # BRK
         # Implied
         def fn_0x00(self) :
-                self.PC += 2
+                self.PC += 1
                 self.push(self.PC >> 8)
                 self.push(self.PC & 255)
                 self.push(self.getP())
                 self.PC = self.memory.read_rom_16(0xFFFE)
-                return (1, 7)
+                return (0, 7)
 
         # CMP #$44
         # Immediate

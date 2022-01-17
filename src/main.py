@@ -1,6 +1,6 @@
 import pygame
 from pygame.locals import *
-from inputs import NESController1, NESController2
+from inputs import NESController
 import traceback
 
 import argparse
@@ -32,10 +32,11 @@ the_cartridge.parse_rom(args.infile)
 the_cartridge.print()
 
 
-MEM = memory(the_cartridge)
+CTRL1 = NESController()
+CTRL2 = NESController()
+MEM = memory(the_cartridge, CTRL1, CTRL2)
 CPU = cpu(MEM)
 PPU = ppu.ppu(MEM, display)
-CTRL1 = NESController1(MEM)
 
 CPU.start()
 FRAME_SIZE = 20 #cycles
@@ -56,6 +57,7 @@ frame_count = 0
 
 # Useful to handle NMI interruption
 is_nmi = False
+is_irq = False
 
 while continuer:
         # Handle FRAME_SIZE cycles frames
@@ -69,6 +71,8 @@ while continuer:
                 if is_nmi:
                         is_nmi = False
                         CPU.nmi()
+                if not CPU.flagI and is_irq: # Interrupt flag is ON
+                        CPU.irq()
                 #Check for IRQ
                 try:
                         #Execute next CPU instruction
@@ -103,7 +107,7 @@ while continuer:
                 if event.type == QUIT:
                         continuer = 0
                 elif event.type == KEYDOWN:
-                        if event.key == K_UP: 			CTRL1.setUp()
+                        if event.key == K_UP: 		CTRL1.setUp()
                         elif event.key == K_DOWN: 	CTRL1.setDown()
                         elif event.key == K_LEFT: 	CTRL1.setLeft()
                         elif event.key == K_RIGHT: 	CTRL1.setRight()
@@ -119,12 +123,12 @@ while continuer:
                                 MEM.print_status()
                         
                 elif event.type == KEYUP:
-                        if event.key == K_UP: 			CTRL1.clearUp()
+                        if event.key == K_UP: 		CTRL1.clearUp()
                         elif event.key == K_DOWN: 	CTRL1.clearDown()
-                        elif event.key == K_LEFT:		CTRL1.clearLeft()
+                        elif event.key == K_LEFT:	CTRL1.clearLeft()
                         elif event.key == K_RIGHT: 	CTRL1.clearRight()
-                        elif event.key == K_RETURN: CTRL1.clearStart()
-                        elif event.key == K_ESCAPE: CTRL1.clearSelect()
+                        elif event.key == K_RETURN:     CTRL1.clearStart()
+                        elif event.key == K_ESCAPE:     CTRL1.clearSelect()
                         elif event.key == K_LCTRL: 	CTRL1.clearA()
                         elif event.key == K_LALT: 	CTRL1.clearB()
                         
