@@ -6,10 +6,10 @@
 # https://www.masswerk.at/6502/6502_instruction_set.html
 
 # https://www.gladir.com/CODER/ASM6502/referenceopcode.htm
-import traceback
 import sys
 import cpu_opcodes
 import re
+from utils import format_hex_data
 
 class cpu:
         debug = 1
@@ -45,7 +45,7 @@ class cpu:
         def start(self):
                 # Equivalent to JMP ($FFFC)
                 self.PC = self.memory.read_rom_16(0xfffc)
-                print(f"Entry point : 0x{self.PC:x}")
+                print(f"Entry point : 0x{format_hex_data(self.PC)}")
                 
                 return 1
         
@@ -85,8 +85,8 @@ class cpu:
                                                 label = label.replace(l.group(0), f"{val:x}") 
                                         else:
                                                 val = self.getAbsoluteAddress()
-                                                label = label.replace(l.group(0), f"{' '.join(a+b for a,b in zip(f'{val:x}'[::2], f'{val:x}'[1::2]))}")
-                                print(f"Counter : {self.compteur:8}, SP : 0x{self.SP:02x}, PC : {' '.join(a+b for a,b in zip(f'{self.PC:x}'[::2], f'{self.PC:x}'[1::2]))} - fn_0x{opcode:02x} - {label:14}, A = {self.A:2x}, X = {self.X:2x}, Y = {self.Y:2x}")
+                                                label = label.replace(l.group(0), f"{format_hex_data(val)}")
+                                print(f"Counter : {self.compteur:8}, SP : 0x{self.SP:02x}, PC : {format_hex_data(self.PC)} - fn_0x{opcode:02x} - {label:14}, A = {self.A:2x}, X = {self.X:2x}, Y = {self.Y:2x}")
                         
                         fn = getattr(self, f"fn_0x{opcode:02x}")
                         step, self.remaining_cycles = fn()
@@ -95,14 +95,11 @@ class cpu:
                         return
                 except KeyError as e:
                         print(f"Unknow opcode 0x{opcode:02x} at {' '.join(a+b for a,b in zip(f'{self.PC:x}'[::2], f'{self.PC:x}'[1::2]))}")
-                        exit()
-                except Exception as e:
-                        print(Exception, e)
-                        print(traceback.format_exc())
-                        exit()
+                        raise e
+                
 
         def getP(self):
-                return (self.flagN << 7) & (self.flagV << 6) & (self.flagB << 4) & (self.flagD << 3) & (self.flagI << 2) & (self.flagZ << 1) & self.flagC
+                return (self.flagN << 7) | (self.flagV << 6) | (self.flagB << 4) | (self.flagD << 3) | (self.flagI << 2) | (self.flagZ << 1) | self.flagC
 
         def setP(self, p):
                 self.flagC = p & 1
@@ -350,7 +347,7 @@ class cpu:
 
         # ASL $4400
         # Absolute
-        def fn_0xe(self) :
+        def fn_0x0e(self) :
                 value = self.getAbsoluteValue()
                 self.flagC = value >> 7
                 self.A = (self.A < 1) & 0b11111111
@@ -504,7 +501,7 @@ class cpu:
         # CMP $4400
         # Absolute
         def fn_0xcd(self) :
-                val = self.geAbsoluteValue() - self.A
+                val = self.getAbsoluteValue() - self.A
                 if val > 0:
                         self.flagC = 1
                 else:  
@@ -515,7 +512,7 @@ class cpu:
         # CMP $4400, X
         # Absolute, X
         def fn_0xdd(self) :
-                val = self.geAbsoluteXValue() - self.A
+                val = self.getAbsoluteXValue() - self.A
                 if val > 0:
                         self.flagC = 1
                 else:  
@@ -526,7 +523,7 @@ class cpu:
         # CMP $4400, Y
         # Absolute, Y
         def fn_0xd9(self) :
-                val = self.geAbsoluteYValue() - self.A
+                val = self.getAbsoluteYValue() - self.A
                 if val > 0:
                         self.flagC = 1
                 else:  
@@ -537,7 +534,7 @@ class cpu:
         # CMP ($44), Y
         # Indirect, Y
         def fn_0xc1(self) :
-                val = self.geIndirectYValue() - self.A
+                val = self.getIndirectYValue() - self.A
                 if val > 0:
                         self.flagC = 1
                 else:  
@@ -570,7 +567,7 @@ class cpu:
         # CPX $4400
         # Absolute
         def fn_0xec(self) :
-                val = self.geAbsoluteValue() - self.X
+                val = self.getAbsoluteValue() - self.X
                 if val > 0:
                         self.flagC = 1
                 else:  
@@ -603,7 +600,7 @@ class cpu:
         # CPY $4400
         # Absolute
         def fn_0xcc(self) :
-                val = self.geAbsoluteValue() - self.Y
+                val = self.getAbsoluteValue() - self.Y
                 if val > 0:
                         self.flagC = 1
                 else:  
@@ -797,7 +794,7 @@ class cpu:
         # JSR $5597
         # Absolute
         def fn_0x20(self) :
-                pc = self.PC + 2
+                pc = self.PC + 3
                 high = pc >> 8
                 low =  pc & 255
                 self.push(high)
@@ -892,7 +889,7 @@ class cpu:
         # LDX $4400, Y
         # Absolute, Y
         def fn_0xbe(self) :
-                self.X = self.self.getAbsoluteYValue()
+                self.X = self.getAbsoluteYValue()
                 self.setFlagNZ(self.X)
                 return (3, 4)
 
@@ -1004,7 +1001,7 @@ class cpu:
 
         # ORA $4400
         # Absolute
-        def fn_0xd(self) :
+        def fn_0x0d(self) :
                 self.A |= self.getAbsoluteValue()
                 self.setFlagNZ(self.A)
                 return (3, 4)
@@ -1201,7 +1198,7 @@ class cpu:
                 self.PC = (high << 8) + low
                 #TO BE IMPLEMENTED
                 print("RTI")
-                return (1, 6)
+                return (0, 6)
 
         # RTS
         # Implied
@@ -1209,7 +1206,7 @@ class cpu:
                 low = self.pop()
                 high = self.pop()
                 self.PC = (high << 8) + low
-                return (1, 6)
+                return (0, 6)
 
         def SBC(self, input):
                 input ^= 255
@@ -1349,7 +1346,7 @@ class cpu:
 
         # PHP
         # Implied
-        def fn_0x8(self) :
+        def fn_0x08(self) :
                 # create status byte
                 self.push(self.getP())
                 return (1, 3)
@@ -1402,3 +1399,17 @@ class cpu:
                 address = self.getAbsoluteAddress()
                 self.memory.write_rom(address, self.Y)
                 return (3, 4)
+                
+        def print_status(self) :
+                print("CPU")
+                print("Registers:")
+                print("A\t| X\t| Y\t| SP\t| PC")
+                print(f"0x{self.A:x}\t| 0x{self.X:x}\t| 0x{self.Y:x}\t| 0x{self.SP:x}\t| 0x{format_hex_data(self.PC)}")
+                print("")
+                print("Flags")
+                print("NVxBDIZC")
+                print(f"{self.getP():08b}")
+                print("")
+                
+                
+ 
