@@ -12,7 +12,7 @@ import re
 from utils import format_hex_data
 
 class cpu:
-        debug = 0
+        debug = 1
         compteur = 0
         remaining_cycles = 0
         
@@ -93,7 +93,7 @@ class cpu:
                                         else:
                                                 val = self.getAbsoluteAddress()
                                                 label = label.replace(l.group(0), f"{format_hex_data(val)}")
-                                #print(f"Counter : {self.compteur:8}, SP : 0x{self.SP:02x}, PC : {format_hex_data(self.PC)} - fn_0x{opcode:02x} - {label:14}, A = {self.A:2x}, X = {self.X:2x}, Y = {self.Y:2x}")
+                                if opcode != 0x4c:print(f"Counter : {self.compteur:8}, SP : 0x{self.SP:02x}, PC : {format_hex_data(self.PC)} - fn_0x{opcode:02x} - {label:14}, A = {self.A:2x}, X = {self.X:2x}, Y = {self.Y:2x}")
                         
                         fn = getattr(self, f"fn_0x{opcode:02x}")
                         step, self.remaining_cycles = fn()
@@ -472,147 +472,90 @@ class cpu:
                 self.PC = self.emulator.memory.read_rom_16(0xFFFE)
                 return (0, 7)
 
+        def cmp(self, val):
+                if val > 0:
+                        self.flagC = 0
+                else:  
+                        self.flagC = 1
+                self.setFlagNZ(val)
+                
+
         # CMP #$44
         # Immediate
         def fn_0xc9(self) :
-                val = self.getImmediate() - self.A
-                if val > 0:
-                        self.flagC = 1
-                else:  
-                        self.flagC = 0
-                self.setFlagNZ(val)
+                self.cmp(self.getImmediate() - self.A)
                 return (2, 2)
 
         # CMP $44
         # Zero Page
         def fn_0xc5(self) :
-                val = self.getZeroPageValue() - self.A
-                if val > 0:
-                        self.flagC = 1
-                else:  
-                        self.flagC = 0
-                self.setFlagNZ(val)
+                self.cmp(self.getZeroPageValue() - self.A)
                 return (2, 3)
 
         # CMP $44, X
         # Zero Page, X
         def fn_0xd5(self) :
-                val = self.getZeroPageXValue() - self.A
-                if val > 0:
-                        self.flagC = 1
-                else:  
-                        self.flagC = 0
-                self.setFlagNZ(val)
+                self.cmp(self.getZeroPageXValue() - self.A)
                 return (2, 4)
 
         # CMP $4400
         # Absolute
         def fn_0xcd(self) :
-                val = self.getAbsoluteValue() - self.A
-                if val > 0:
-                        self.flagC = 1
-                else:  
-                        self.flagC = 0
-                self.setFlagNZ(val)
+                self.cmp(self.getAbsoluteValue() - self.A)
                 return (3, 4)
 
         # CMP $4400, X
         # Absolute, X
         def fn_0xdd(self) :
-                val = self.getAbsoluteXValue() - self.A
-                if val > 0:
-                        self.flagC = 1
-                else:  
-                        self.flagC = 0
-                self.setFlagNZ(val)
+                self.cmp(self.getAbsoluteXValue() - self.A)
                 return (3, 4)
 
         # CMP $4400, Y
         # Absolute, Y
         def fn_0xd9(self) :
-                val = self.getAbsoluteYValue() - self.A
-                if val > 0:
-                        self.flagC = 1
-                else:  
-                        self.flagC = 0
-                self.setFlagNZ(val)
+                self.cmp(self.getAbsoluteYValue() - self.A)
                 return (3, 4)
 
         # CMP ($44), Y
         # Indirect, Y
         def fn_0xc1(self) :
-                val = self.getIndirectYValue() - self.A
-                if val > 0:
-                        self.flagC = 1
-                else:  
-                        self.flagC = 0
-                self.setFlagNZ(val)
+                self.cmp(self.getIndirectYValue() - self.A)
                 return (2, 5)
 
         # CPX #$44
         # Immediate
         def fn_0xe0(self) :
-                val = self.getImmediate() - self.X
-                if val > 0:
-                        self.flagC = 1
-                else:  
-                        self.flagC = 0
-                self.setFlagNZ(val)
+                self.cmp(self.getImmediate() - self.X)
                 return (2, 2)
 
         # CPX $44
         # Zero Page
         def fn_0xe4(self) :
-                val = self.getZeroPageValue() - self.X
-                if val > 0:
-                        self.flagC = 1
-                else:  
-                        self.flagC = 0
-                self.setFlagNZ(val)
+                self.cmp(self.getZeroPageValue() - self.X)
                 return (2, 3)
 
         # CPX $4400
         # Absolute
         def fn_0xec(self) :
-                val = self.getAbsoluteValue() - self.X
-                if val > 0:
-                        self.flagC = 1
-                else:  
-                        self.flagC = 0
-                self.setFlagNZ(val)
+                self.cmp(self.getAbsoluteValue() - self.X)
                 return (3, 4)
 
         # CPY #$44
         # Immediate
         def fn_0xc0(self) :
-                val = self.getImmediate() - self.Y
-                if val > 0:
-                        self.flagC = 1
-                else:  
-                        self.flagC = 0
-                self.setFlagNZ(val)
+                self.cmp(self.getImmediate() - self.Y)
                 return (2, 2)
 
         # CPY $44
         # Zero Page
         def fn_0xc4(self) :
-                val = self.getZeroPageValue() - self.Y
-                if val > 0:
-                        self.flagC = 1
-                else:  
-                        self.flagC = 0
-                self.setFlagNZ(val)
+                self.cmp(self.getZeroPageValue() - self.Y)
                 return (2, 3)
 
         # CPY $4400
         # Absolute
         def fn_0xcc(self) :
-                val = self.getAbsoluteValue() - self.Y
-                if val > 0:
-                        self.flagC = 1
-                else:  
-                        self.flagC = 0
-                self.setFlagNZ(val)
+                self.cmp(self.getAbsoluteValue() - self.Y)
                 return (3, 4)
 
         # DEC $44

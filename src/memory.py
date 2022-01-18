@@ -47,7 +47,8 @@ class memory:
                 elif address < 0x4000: # PPU mirroring
                         return self.ROM[0x2000 + (address % 0x8)]
                 elif address == 0x4016: # Handling joystick
-                        if self.debug : print(f"Joystick 1 read {self.ctrl1_status:b}")
+                        #if self.debug : 
+                        print(f"Joystick 1 read {self.ctrl1_status:b}")
                         value = self.ctrl1_status & 1
                         self.ctrl1_status = self.ctrl1_status >> 1
                         return value
@@ -94,8 +95,10 @@ class memory:
                                 raise Exception("OAM trop court")
                         return 514
                 elif address == 0x4016: # Handling joystick
-                        if self.debug : print(f"Joystick write {value:b}")
+                        #if self.debug : 
+                        print(f"Joystick write {value:b}")
                         if value & 1 == 0:
+                                print(f"Saved {self.emulator.ctrl1.status:b}")
                                 # store joypad value
                                 self.ctrl1_status = self.emulator.ctrl1.status
                                 self.ctrl2_status = self.emulator.ctrl2.status
@@ -159,3 +162,5 @@ class memory:
                 print(f"{' '.join([f'{i:02x}' for i in self.OAM])}")
                 print("Zero Page")
                 print(f"{' '.join([f'{i:02x}' for i in self.ROM[:0x100]])}")
+                print("Stack")
+                print(f"{' '.join([f'{i:02x}' for i in self.ROM[0x0100:0x0200]])}")

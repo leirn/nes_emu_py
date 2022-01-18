@@ -84,30 +84,28 @@ class nes_emulator:
                         if event.type == QUIT:
                                 continuer = 0
                         elif event.type == KEYDOWN:
-                                if event.key == K_UP: 		CTRL1.setUp()
-                                elif event.key == K_DOWN: 	CTRL1.setDown()
-                                elif event.key == K_LEFT: 	CTRL1.setLeft()
-                                elif event.key == K_RIGHT: 	CTRL1.setRight()
-                                elif event.key == K_RETURN: 	CTRL1.setStart()
-                                elif event.key == K_ESCAPE: 	CTRL1.setSelect()
-                                elif event.key == K_LCTRL: 	CTRL1.setA()
-                                elif event.key == K_LALT: 	CTRL1.setB()
+                                if event.key == K_UP: 		self.ctrl1.setUp()
+                                elif event.key == K_DOWN: 	self.ctrl1.setDown()
+                                elif event.key == K_LEFT: 	self.ctrl1.setLeft()
+                                elif event.key == K_RIGHT: 	self.ctrl1.setRight()
+                                elif event.key == K_RETURN: 	self.ctrl1.setStart()
+                                elif event.key == K_ESCAPE: 	self.ctrl1.setSelect()
+                                elif event.key == K_LCTRL: 	self.ctrl1.setA()
+                                elif event.key == K_LALT: 	self.ctrl1.setB()
                                 elif event.key == K_q: 		continuer = 0
-                                elif event.key == K_p: 		pause = 1 - pause
+                                elif event.key == K_p: 		self.togglePause()
                                 elif event.key == K_s: 		
-                                        CPU.print_status()
-                                        PPU.print_status()
-                                        MEM.print_status()
+                                        self.print_status()
                                 
                         elif event.type == KEYUP:
-                                if event.key == K_UP: 		CTRL1.clearUp()
-                                elif event.key == K_DOWN: 	CTRL1.clearDown()
-                                elif event.key == K_LEFT:	CTRL1.clearLeft()
-                                elif event.key == K_RIGHT: 	CTRL1.clearRight()
-                                elif event.key == K_RETURN:     CTRL1.clearStart()
-                                elif event.key == K_ESCAPE:     CTRL1.clearSelect()
-                                elif event.key == K_LCTRL: 	CTRL1.clearA()
-                                elif event.key == K_LALT: 	CTRL1.clearB()
+                                if event.key == K_UP: 		self.ctrl1.clearUp()
+                                elif event.key == K_DOWN: 	self.ctrl1.clearDown()
+                                elif event.key == K_LEFT:	self.ctrl1.clearLeft()
+                                elif event.key == K_RIGHT: 	self.ctrl1.clearRight()
+                                elif event.key == K_RETURN:     self.ctrl1.clearStart()
+                                elif event.key == K_ESCAPE:     self.ctrl1.clearSelect()
+                                elif event.key == K_LCTRL: 	self.ctrl1.clearA()
+                                elif event.key == K_LALT: 	self.ctrl1.clearB()
                                 
         
     def reset(self):

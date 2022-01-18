@@ -95,11 +95,7 @@ class ppu:
                         
                         # Update screen
                         self.setVBlank()
-                        '''
-                        tile = pygame.surfarray.make_surface(self.cachedFrame)
-                        tile = pygame.transform.scale(tile, (int(256 * self.scale), int(240 * self.scale)))
-                        self.display.blit(tile, (0, 0))
-                        '''
+
                         self.emulator.display.blit(self.cached_frame, (0, 0))
                         #pygame.display.update()
                         pygame.display.flip()
