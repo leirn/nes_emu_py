@@ -34,7 +34,7 @@ class cpu:
         flagV = 0
         flagB = 0
         flagD = 0
-        flagI = 0
+        flagI = 1
         flagZ = 0
         flagC = 0
         
@@ -93,7 +93,8 @@ class cpu:
                                         else:
                                                 val = self.getAbsoluteAddress()
                                                 label = label.replace(l.group(0), f"{format_hex_data(val)}")
-                                if opcode != 0x4c:print(f"Counter : {self.compteur:8}, SP : 0x{self.SP:02x}, PC : {format_hex_data(self.PC)} - fn_0x{opcode:02x} - {label:14}, A = {self.A:2x}, X = {self.X:2x}, Y = {self.Y:2x}")
+                                if opcode != 0x4c:print(f"Counter : {self.compteur:8}, SP : 0x{self.SP:02x}, PC : {format_hex_data(self.PC)} - fn_0x{opcode:02x} - {label:14}, A = {self.A:2x}, X = {self.X:2x}, Y = {self.Y:2x}, Flags NVxBDIZC : {self.getP():08b}")
+                                #print(f"{self.PC:x}  {opcode:02x} F5 C5  {label:30}  A:{self.A:02x} X:{self.X:02x} Y:{self.Y:02x} P:{self.getP():02x} SP:{self.SP:02x} PPU:  0, 21 CYC:{self.compteur}")
                         
                         fn = getattr(self, f"fn_0x{opcode:02x}")
                         step, self.remaining_cycles = fn()
@@ -106,14 +107,14 @@ class cpu:
                 
 
         def getP(self):
-                return (self.flagN << 7) | (self.flagV << 6) | (self.flagB << 4) | (self.flagD << 3) | (self.flagI << 2) | (self.flagZ << 1) | self.flagC
+                return (self.flagN << 7) | (self.flagV << 6) | (1 << 5) | (self.flagB << 4) | (self.flagD << 3) | (self.flagI << 2) | (self.flagZ << 1) | self.flagC
 
         def setP(self, p):
                 self.flagC = p & 1
                 self.flagZ = (p >> 1) & 1
                 self.flagI = (p >> 2) & 1
                 self.flagD = (p >> 3) & 1
-                self.flagB = (p >> 4) & 1
+                #self.flagB = (p >> 4) & 1
                 self.flagV = (p >> 6) & 1
                 self.flagN = (p >> 7) & 1
 
@@ -206,7 +207,10 @@ class cpu:
                 self.setFlagZ(val)
         
         def setFlagN(self, val):
-                self.flagN = val >> 7
+                if val < 0:
+                        self.flagN = 1
+                else:
+                        self.flagN = val >> 7
 
         def setFlagZ(self, val):
                 self.flagZ = 1 if val == 0 else 0
@@ -472,7 +476,7 @@ class cpu:
                 self.PC = self.emulator.memory.read_rom_16(0xFFFE)
                 return (0, 7)
 
-        def cmp(self, val):
+        def cmp(self, val) :
                 if val > 0:
                         self.flagC = 0
                 else:  
@@ -1040,103 +1044,77 @@ class cpu:
                 self.setFlagNZ(self.Y)
                 return (1, 2)
 
-        # ROL A
-        # Accumulator
-        def fn_0x2a(self) :
-                self.A = (self.A << 1) & (self.flagC)
+        def rol(self, val):
+                self.A = (val << 1) | (self.flagC)
                 self.flagC = self.A >> 8
                 self.A &= 255
                 self.setFlagNZ(self.A)
+
+        # ROL A
+        # Accumulator
+        def fn_0x2a(self) :
+                self.rol(self.A)
                 return (1, 2)
+                
 
         # ROL $44
         # Zero Page
         def fn_0x26(self) :
-                val = self.getZeroPageValue()
-                self.A = (val << 1) & (self.flagC)
-                self.flagC = self.A >> 8
-                self.A &= 255
-                self.setFlagNZ(self.A)
+                self.rol(self.getZeroPageValue())
                 return (2, 5)
 
         # ROL $44, X
         # Zero Page, X
         def fn_0x36(self) :
-                val = self.getZeroPageXValue()
-                self.A = (val << 1) & (self.flagC)
-                self.flagC = self.A >> 8
-                self.A &= 255
-                self.setFlagNZ(self.A)
+                self.rol(self.getZeroPageXValue())
                 return (2, 6)
 
         # ROL $4400
         # Absolute
         def fn_0x2e(self) :
-                val = self.getAbsoluteValue()
-                self.A = (val << 1) & (self.flagC)
-                self.flagC = self.A >> 8
-                self.A &= 255
-                self.setFlagNZ(self.A)
+                self.rol(self.getAbsoluteValue())
                 return (3, 6)
 
         # ROL $4400, X
         # Absolute, X
         def fn_0x3e(self) :
-                val = self.getAbsoluteXValue()
-                self.A = (val << 1) & (self.flagC)
-                self.flagC = self.A >> 8
-                self.A &= 255
-                self.setFlagNZ(self.A)
-                print("ROL $4400, X")
+                self.rol(self.getAbsoluteXValue())
                 return (3, 7)
+
+        def ror(self, val):
+                carry = val & 1
+                self.A = (val >> 1) | (self.flagC << 7)
+                self.flagC = carry
+                self.setFlagNZ(self.A)
 
         # ROR A
         # Accumulator
         def fn_0x6a(self) :
-                carry = self.A & 1
-                self.A = (self.A >> 1) & (self.flagC << 7)
-                self.flagC = carry
-                self.setFlagNZ(self.A)
+                self.ror(self.A)
                 return (1, 2)
 
         # ROR $44
         # Zero Page
         def fn_0x66(self) :
-                val = self.getZeroPageValue()
-                carry = val & 1
-                self.A = (val >> 1) & (self.flagC << 7)
-                self.flagC = carry
-                self.setFlagNZ(self.A)
+                self.ror(self.getZeroPageValue())
                 return (2, 5)
 
         # ROR $44, X
         # Zero Page, X
         def fn_0x76(self) :
-                val = self.getZeroPageXValue()
-                carry = val & 1
-                self.A = (val >> 1) & (self.flagC << 7)
-                self.flagC = carry
-                self.setFlagNZ(self.A)
+                self.ror(self.getZeroPageXValue())
                 return (2, 6)
 
         # ROR $4400
         # Absolute
         def fn_0x6e(self) :
-                val = self.getAbsoluteValue()
-                carry = val & 1
-                self.A = (val >> 1) & (self.flagC << 7)
-                self.flagC = carry
-                self.setFlagNZ(self.A)
+                self.ror(self.getAbsoluteValue())
                 return (3, 6)
 
         # ROR $4400, X
         # Absolute, X
         def fn_0x7e(self) :
-                val = self.getAbsoluteXValue()
-                carry = val & 1
-                self.A = (val >> 1) & (self.flagC << 7)
-                self.flagC = carry
-                self.setFlagNZ(self.A)
+                self.ror(self.getAbsoluteXValue())
                 return (3, 7)
 
         # RTI
@@ -1292,6 +1270,7 @@ class cpu:
         # Implied
         def fn_0x68(self) :
                 self.A = self.pop()
+                self.setFlagNZ(self.A)
                 return (1, 4)
 
         # PHP

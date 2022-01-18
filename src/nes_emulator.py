@@ -7,6 +7,7 @@ import cartridge
 import pygame
 import traceback
 from pygame.locals import *
+import time
 
 class nes_emulator:
     apu = 0
