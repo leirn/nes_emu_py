@@ -46,7 +46,7 @@ class cpu:
                 # Equivalent to JMP ($FFFC)
                 self.PC = self.emulator.memory.read_rom_16(0xfffc)
                 if self.debug : print(f"Entry point : 0x{format_hex_data(self.PC)}")
-                
+                self.PC = 0xC000
                 return 1
         
         def nmi(self):
@@ -93,8 +93,8 @@ class cpu:
                                         else:
                                                 val = self.getAbsoluteAddress()
                                                 label = label.replace(l.group(0), f"{format_hex_data(val)}")
-                                if opcode != 0x4c:print(f"Counter : {self.compteur:8}, SP : 0x{self.SP:02x}, PC : {format_hex_data(self.PC)} - fn_0x{opcode:02x} - {label:14}, A = {self.A:2x}, X = {self.X:2x}, Y = {self.Y:2x}, Flags NVxBDIZC : {self.getP():08b}")
-                                #print(f"{self.PC:x}  {opcode:02x} F5 C5  {label:30}  A:{self.A:02x} X:{self.X:02x} Y:{self.Y:02x} P:{self.getP():02x} SP:{self.SP:02x} PPU:  0, 21 CYC:{self.compteur}")
+                                #if opcode != 0x4c:print(f"Counter : {self.compteur:8}, SP : 0x{self.SP:02x}, PC : {format_hex_data(self.PC)} - fn_0x{opcode:02x} - {label:14}, A = {self.A:2x}, X = {self.X:2x}, Y = {self.Y:2x}, Flags NVxBDIZC : {self.getP():08b}")
+                                print(f"{self.PC:x}  {opcode:02x} F5 C5  {label:30}  A:{self.A:02x} X:{self.X:02x} Y:{self.Y:02x} P:{self.getP():02x} SP:{self.SP:02x} PPU:  0, 21 CYC:{self.compteur}")
                         
                         fn = getattr(self, f"fn_0x{opcode:02x}")
                         step, self.remaining_cycles = fn()
@@ -477,89 +477,89 @@ class cpu:
                 return (0, 7)
 
         def cmp(self, val) :
-                if val > 0:
-                        self.flagC = 0
-                else:  
+                if val >= 0:
                         self.flagC = 1
+                else:  
+                        self.flagC = 0
                 self.setFlagNZ(val)
                 
 
         # CMP #$44
         # Immediate
         def fn_0xc9(self) :
-                self.cmp(self.getImmediate() - self.A)
+                self.cmp(self.A - self.getImmediate())
                 return (2, 2)
 
         # CMP $44
         # Zero Page
         def fn_0xc5(self) :
-                self.cmp(self.getZeroPageValue() - self.A)
+                self.cmp(self.A - self.getZeroPageValue())
                 return (2, 3)
 
         # CMP $44, X
         # Zero Page, X
         def fn_0xd5(self) :
-                self.cmp(self.getZeroPageXValue() - self.A)
+                self.cmp(self.A - self.getZeroPageXValue())
                 return (2, 4)
 
         # CMP $4400
         # Absolute
         def fn_0xcd(self) :
-                self.cmp(self.getAbsoluteValue() - self.A)
+                self.cmp(self.A - self.getAbsoluteValue())
                 return (3, 4)
 
         # CMP $4400, X
         # Absolute, X
         def fn_0xdd(self) :
-                self.cmp(self.getAbsoluteXValue() - self.A)
+                self.cmp(self.A - self.getAbsoluteXValue())
                 return (3, 4)
 
         # CMP $4400, Y
         # Absolute, Y
         def fn_0xd9(self) :
-                self.cmp(self.getAbsoluteYValue() - self.A)
+                self.cmp(self.A - self.getAbsoluteYValue())
                 return (3, 4)
 
         # CMP ($44), Y
         # Indirect, Y
         def fn_0xc1(self) :
-                self.cmp(self.getIndirectYValue() - self.A)
+                self.cmp(self.A - self.getIndirectYValue())
                 return (2, 5)
 
         # CPX #$44
         # Immediate
         def fn_0xe0(self) :
-                self.cmp(self.getImmediate() - self.X)
+                self.cmp(self.X - self.getImmediate())
                 return (2, 2)
 
         # CPX $44
         # Zero Page
         def fn_0xe4(self) :
-                self.cmp(self.getZeroPageValue() - self.X)
+                self.cmp(self.X - self.getZeroPageValue())
                 return (2, 3)
 
         # CPX $4400
         # Absolute
         def fn_0xec(self) :
-                self.cmp(self.getAbsoluteValue() - self.X)
+                self.cmp(self.X - self.getAbsoluteValue())
                 return (3, 4)
 
         # CPY #$44
         # Immediate
         def fn_0xc0(self) :
-                self.cmp(self.getImmediate() - self.Y)
+                self.cmp(self.Y - self.getImmediate())
                 return (2, 2)
 
         # CPY $44
         # Zero Page
         def fn_0xc4(self) :
-                self.cmp(self.getZeroPageValue() - self.Y)
+                self.cmp(self.Y - self.getZeroPageValue())
                 return (2, 3)
 
         # CPY $4400
         # Absolute
         def fn_0xcc(self) :
-                self.cmp(self.getAbsoluteValue() - self.Y)
+                self.cmp(self.Y - self.getAbsoluteValue())
                 return (3, 4)
 
         # DEC $44
@@ -1136,10 +1136,10 @@ class cpu:
                 self.PC = (high << 8) + low
                 return (0, 6)
 
-        def SBC(self, input):
+        def SBC(self, input): # issue here, CBB4 in nestest.nes
                 input ^= 255
                 c = 1 - self.flagC
-                sum = input + self.A + c
+                sum = self.A + input + c
                 self.flagC = sum >> 8
                 result = 255 & sum
                 
