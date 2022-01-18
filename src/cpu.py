@@ -16,7 +16,7 @@ class cpu:
         compteur = 0
         remaining_cycles = 0
         
-        memory = ""
+        emulator = ""
         A = 0
         X = 0
         Y = 0
@@ -38,13 +38,13 @@ class cpu:
         flagZ = 0
         flagC = 0
         
-        def __init__(self, memory):
-                self.memory = memory
+        def __init__(self, emulator):
+                self.emulator = emulator
         
         # initialise PC
         def start(self):
                 # Equivalent to JMP ($FFFC)
-                self.PC = self.memory.read_rom_16(0xfffc)
+                self.PC = self.emulator.memory.read_rom_16(0xfffc)
                 if self.debug : print(f"Entry point : 0x{format_hex_data(self.PC)}")
                 
                 return 1
@@ -66,7 +66,7 @@ class cpu:
                 
                 self.flagI = 0
                 
-                self.PC = self.memory.read_rom_16(address)
+                self.PC = self.emulator.memory.read_rom_16(address)
                 self.remaining_cycles = 7
         
         # next : execute the next opcode.
@@ -81,7 +81,7 @@ class cpu:
                         self.remaining_cycles -= 1
                         return
                 
-                opcode = self.memory.read_rom(self.PC)
+                opcode = self.emulator.memory.read_rom(self.PC)
                 try:
                         if self.debug:
                                 label = cpu_opcodes.opcodes[opcode][1]
@@ -118,19 +118,19 @@ class cpu:
                 self.flagN = (p >> 7) & 1
 
         def push(self, val):
-                self.memory.write_rom(0x0100 | self.SP, val)
+                self.emulator.memory.write_rom(0x0100 | self.SP, val)
                 self.SP = 255 if self.SP == 0 else self.SP - 1
                 
         def pop(self):
                 self.SP = 0 if self.SP == 255 else self.SP + 1
-                return self.memory.read_rom(0x0100 | self.SP)
+                return self.emulator.memory.read_rom(0x0100 | self.SP)
 
         # Get 8 bit immediate value on PC + 1
         def getImmediate(self):
-                return self.memory.read_rom(self.PC+1)
+                return self.emulator.memory.read_rom(self.PC+1)
 
         def setZeroPage(self, val):
-                self.memory.write_rom(self.getZeroPageAddress(), val)
+                self.emulator.memory.write_rom(self.getZeroPageAddress(), val)
 
         # Alias to getImmediate
         def getZeroPageAddress(self):
@@ -139,67 +139,67 @@ class cpu:
         # Get 8 bit zeropage value on 8 bit (PC + 1)
         def getZeroPageValue(self):
                 address= self.getImmediate()
-                return self.memory.read_rom(address)
+                return self.emulator.memory.read_rom(address)
         
         def setZeroPageX(self, val):
-                self.memory.write_rom(self.getZeroPageXAddress(), val)
+                self.emulator.memory.write_rom(self.getZeroPageXAddress(), val)
                 
         def getZeroPageXAddress(self):
-                return  (self.memory.read_rom(self.PC+1) + self.X) & 255
+                return  (self.emulator.memory.read_rom(self.PC+1) + self.X) & 255
                 
         def getZeroPageXValue(self):
                 address = self.getZeroPageXAddress()
-                return self.memory.read_rom(address)
+                return self.emulator.memory.read_rom(address)
                 
         def getZeroPageYAddress(self):
-                return  (self.memory.read_rom(self.PC+1) + self.Y) & 255
+                return  (self.emulator.memory.read_rom(self.PC+1) + self.Y) & 255
                 
         def getZeroPageYValue(self):
                 address = self.getZeroPageYAddress()
-                return self.memory.read_rom(address)
+                return self.emulator.memory.read_rom(address)
         
         def setAbsolute(self, val):
-                self.memory.write_rom(self.getAbsoluteAddress(), val)
+                self.emulator.memory.write_rom(self.getAbsoluteAddress(), val)
                 
         def getAbsoluteAddress(self):
-                return self.memory.read_rom_16(self.PC+1)
+                return self.emulator.memory.read_rom_16(self.PC+1)
                 
         def getAbsoluteValue(self):
                 address = self.getAbsoluteAddress()
-                return self.memory.read_rom(address)
+                return self.emulator.memory.read_rom(address)
         
         def setAbsoluteX(self, val):
-                self.memory.write_rom(self.getAbsoluteXAddress(), val)
+                self.emulator.memory.write_rom(self.getAbsoluteXAddress(), val)
                 
         def getAbsoluteXAddress(self):
-                return self.memory.read_rom_16(self.PC+1) + self.X
+                return self.emulator.memory.read_rom_16(self.PC+1) + self.X
                 
         def getAbsoluteXValue(self):
                 address = self.getAbsoluteXAddress()
-                return self.memory.read_rom(address)
+                return self.emulator.memory.read_rom(address)
                 
         def getAbsoluteYAddress(self):
-                return self.memory.read_rom_16(self.PC+1) + self.Y
+                return self.emulator.memory.read_rom_16(self.PC+1) + self.Y
                 
         def getAbsoluteYValue(self):
                 address = self.getAbsoluteYAddress()
-                return self.memory.read_rom(address)
+                return self.emulator.memory.read_rom(address)
 
         def getIndirectXAddress(self):
                 address = (self.memory.read_rom(self.PC+1) + self.X) & 255
-                return self.memory.read_rom_16(address)
+                return self.emulator.memory.read_rom_16(address)
 
         def getIndirectXValue(self):
                 address = self.getIndirectXAddress()
-                return self.memory.read_rom(address)
+                return self.emulator.memory.read_rom(address)
 
         def getIndirectYAddress(self):
                 address = self.memory.read_rom(self.PC+1)
-                return self.memory.read_rom_16(address + self.Y)
+                return self.emulator.memory.read_rom_16(address + self.Y)
 
         def getIndirectYValue(self):
                 address = self.getIndirectYAddress()
-                return self.memory.read_rom(address)
+                return self.emulator.memory.read_rom(address)
         
         def setFlagNZ(self, val):
                 self.setFlagN(val)

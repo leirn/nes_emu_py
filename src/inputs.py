@@ -1,4 +1,4 @@
-class NESController:
+class nes_controller:
 	status = 0
 	
 	def __init__(self):

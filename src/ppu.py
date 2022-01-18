@@ -8,8 +8,7 @@ FRAME_COMPLETED = 0b1
 class ppu:
         debug = 0
     
-        memory = ""
-        display = ""
+        emulator = ""
         scale = 2
         line = 0
         col = 0
@@ -25,10 +24,8 @@ class ppu:
                         [236, 238, 236],  	[168, 204, 236],  	[188, 188, 236],  	[212, 178, 236],  	[236, 174, 236],	[236, 174, 212],  	[236, 180, 176],  	[228, 196, 144],  	[204, 210, 120],  	[180, 222, 120],  	[168, 226, 144],  	[152, 226, 180],  	[160, 214, 228],  	[160, 162, 160],	[0,   0,   0],		[0,   0,   0],
                 ]
         
-        def __init__(self, memory, display):
-                self.memory = memory		
-                
-                self.display = display
+        def __init__(self, emulator):
+                self.emulator = emulator	
                 
                 self.setPPUCTRL(0)
                 self.setPPUMASK(0)
@@ -61,10 +58,10 @@ class ppu:
                         tileIndex = self.col // 8 + (32 * self.line // 8)
                                 
                         #read background info in VRAM
-                        bgTileIndex = self.memory.read_ppu_memory(0x2000 + backgroundPatternTableAddress + tileIndex) # 0x2000 to aligne with VRAM start
+                        bgTileIndex = self.emulator.memory.read_ppu_memory(0x2000 + backgroundPatternTableAddress + tileIndex) # 0x2000 to aligne with VRAM start
                         if self.debug : print (f"Tile ID : {tileIndex} - Tile content : {bgTileIndex:x}")
                         
-                        tileData = self.memory.getTile(backgroundPatternTableAddress, bgTileIndex)
+                        tileData = self.emulator.memory.getTile(backgroundPatternTableAddress, bgTileIndex)
                         tile = self.createTile(tileData)
                         tile = pygame.surfarray.make_surface(tile)
                         tile = pygame.transform.scale(tile, (int(8 * self.scale), int(8 * self.scale)))
@@ -80,13 +77,13 @@ class ppu:
                         if (PPUMASK >>4) & 1  :  # Doit on afficher les sprites
                             # Display sprites
                             for i in range(64):
-                                    sprite = self.memory.OAM[self.memory.OAMADDR + i * 4:self.memory.OAMADDR + i * 4 + 4]
+                                    sprite = self.emulator.memory.OAM[self.memory.OAMADDR + i * 4:self.memory.OAMADDR + i * 4 + 4]
                                     s_y = sprite[0]
                                     s_x = sprite[3]
                                     s_tileId = sprite[1]
                                     s_param = sprite[2]
                                     
-                                    sprite_tile = self.memory.getTile(backgroundPatternTableAddress, s_tileId)
+                                    sprite_tile = self.emulator.memory.getTile(backgroundPatternTableAddress, s_tileId)
                                     tile = self.createTile(sprite_tile)
                                     tile = pygame.surfarray.make_surface(tile)
                                     tile = pygame.transform.scale(tile, (int(8 * self.scale), int(8 * self.scale)))
@@ -110,9 +107,8 @@ class ppu:
                         time.sleep(2)
                         
                         if (PPUCTRL >> 7) & 1:
-                            return NMI
-                        else:
-                            return 0
+                                self.emulator.raise_nmi()
+                        return 0
                 elif (self.line, self.col) == (261, 3): 
                         self.clearVBlank()
                 
@@ -138,68 +134,68 @@ class ppu:
                 pass
         
         def setPPUCTRL(self, val):
-                self.memory.write_rom(0x2000, val)
+                self.emulator.memory.write_rom(0x2000, val)
 
         def getPPUCTRL(self):
-                return self.memory.read_rom(0x2000)
+                return self.emulator.memory.read_rom(0x2000)
         
         def setPPUMASK(self, val):
-                self.memory.write_rom(0x2001, val)
+                self.emulator.memory.write_rom(0x2001, val)
 
         def getPPUMASK(self):
-                return self.memory.read_rom(0x2001)
+                return self.emulator.memory.read_rom(0x2001)
         
         def setPPUSTATUS(self, val):
-                self.memory.write_rom(0x2002, val)
+                self.emulator.memory.write_rom(0x2002, val)
 
         def getPPUSTATUS(self):
-                return self.memory.read_rom(0x2002)
+                return self.emulator.memory.read_rom(0x2002)
         
         def setPPU_OAMADDR(self, val):
-                self.memory.write_rom(0x2003, val)
+                self.emulator.memory.write_rom(0x2003, val)
 
         def getPPU_OAMADDR(self):
-                return self.memory.read_rom(0x2003)
+                return self.emulator.memory.read_rom(0x2003)
         
         def setPPU_OAMDATA(self, val):
-                self.memory.write_rom(0x2004, val)
+                self.emulator.memory.write_rom(0x2004, val)
 
         def getPPU_OAMDATA(self):
-                return self.memory.read_rom(0x2004)
+                return self.emulator.memory.read_rom(0x2004)
         
         def setPPUSCROLL(self, val):
-                self.memory.write_rom(0x2005, val)
+                self.emulator.memory.write_rom(0x2005, val)
 
         def getPPUSCROLL(self):
-                return self.memory.read_rom(0x2005)
+                return self.emulator.memory.read_rom(0x2005)
         
         def setPPUADDR(self, val):
-                self.memory.write_rom(0x2006, val)
+                self.emulator.memory.write_rom(0x2006, val)
 
         def getPPUADDR(self):
-                return self.memory.read_rom(0x2006)
+                return self.emulator.memory.read_rom(0x2006)
         
         def setPPUDATA(self, val):
-                self.memory.write_rom(0x2007, val)
+                self.emulator.memory.write_rom(0x2007, val)
 
         def getPPUDATA(self):
-                return self.memory.read_rom(0x2007)
+                return self.emulator.memory.read_rom(0x2007)
                 
         def dump_chr(self):
-                print(len(self.memory.cartridge.chr_rom)/16)
+                print(len(self.emulator.memory.cartridge.chr_rom)/16)
                 
-                ar = self.createTile(self.memory.cartridge.chr_rom[:16])
+                ar = self.createTile(self.emulator.memory.cartridge.chr_rom[:16])
                 tile = pygame.surfarray.make_surface(ar)
                 
                 c = 0
                 x = 2
                 y = 2
-                for c in range(len(self.memory.cartridge.chr_rom)//16):
+                for c in range(len(self.emulator.memory.cartridge.chr_rom)//16):
                 
                         ar = self.createTile(self.memory.getTile(0, c))
                         tile = pygame.surfarray.make_surface(ar)
                         tile = pygame.transform.scale(tile, (int(8 * self.scale), int(8 * self.scale)))
-                        self.display.blit(tile, (x, y))
+                        self.emulator.display.blit(tile, (x, y))
                         x += 10 * self.scale
                         if x > 256 * self.scale:
                                 x = 1
