@@ -5,6 +5,7 @@ import ppu
 import inputs
 import cartridge
 import pygame
+import traceback
 from pygame.locals import *
 
 class nes_emulator:
@@ -19,34 +20,34 @@ class nes_emulator:
     cartridge  = 0
     scale = 0
     pause = 0
+    clock = 0
     
     def __init__(self, cartridge_stream):
         pygame.init()
         self.scale = 2
         
-        self.cartridge = cartridge()
+        self.cartridge = cartridge.cartridge()
         self.cartridge.parse_rom(cartridge_stream)
         
-        self.display = pygame.display.set_mode( (int(256 * scale), int(240 * scale)))
+        self.display = pygame.display.set_mode( (int(256 * self.scale), int(240 * self.scale)))
         
-        self.ctrl1 = inputs.nes_controller(self)
-        self.ctrl2 = inputs.nes_controller(self)
-        self.mem = memory.memory(self)
+        self.ctrl1 = inputs.nes_controller()
+        self.ctrl2 = inputs.nes_controller()
+        self.memory = memory.memory(self)
         self.cpu = cpu.cpu(self)
         self.ppu = ppu.ppu(self)
         self.apu = apu.apu(self)
         
+        self.clock = pygame.time.Clock()
         
         self.ppu.dump_chr()
         pygame.display.update()
         pygame.display.flip()
+        
 
     def start(self):
         self.cpu.start()
         continuer = 1
-        start_frame_time = time.time_ns()
-
-        FRAME_LENGHT_NS = 1/60 * 1000000000
         frame_count = 0
 
         while continuer:
@@ -72,13 +73,9 @@ class nes_emulator:
                                 print(traceback.format_exc())
                                 exit()
                         if is_frame & ppu.FRAME_COMPLETED > 0:
-                                current_time =  time.time_ns()
-                                time_left = FRAME_LENGHT_NS - (current_time - start_frame_time)
-                                if time_left > 0:
-                                        print(f"Frame {frame_count} finished, sleeep time : {time_left/1000000} ms")
-                                        frame_count += 1
-                                        time.sleep(time_left/1000000000)
-                                        start_frame_time = time.time_ns()
+                                frame_count += 1
+                                self.clock.tick(60)
+                                print(f"FPS = {self.clock.get_fps()}")
                         
                         #time.sleep(0.0001)
                 
@@ -119,7 +116,7 @@ class nes_emulator:
     def resize(self):
         pass
 
-    def print_status():
+    def print_status(self):
             self.cpu.print_status()
             self.ppu.print_status()
             self.memory.print_status()

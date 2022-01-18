@@ -12,7 +12,7 @@ import re
 from utils import format_hex_data
 
 class cpu:
-        debug = 1
+        debug = 0
         compteur = 0
         remaining_cycles = 0
         
@@ -83,7 +83,7 @@ class cpu:
                 
                 opcode = self.emulator.memory.read_rom(self.PC)
                 try:
-                        if self.debug:
+                        if self.debug > 0:
                                 label = cpu_opcodes.opcodes[opcode][1]
                                 l = re.search(r'[0-9]+', label)
                                 if l:
@@ -93,7 +93,7 @@ class cpu:
                                         else:
                                                 val = self.getAbsoluteAddress()
                                                 label = label.replace(l.group(0), f"{format_hex_data(val)}")
-                                if self.debug : print(f"Counter : {self.compteur:8}, SP : 0x{self.SP:02x}, PC : {format_hex_data(self.PC)} - fn_0x{opcode:02x} - {label:14}, A = {self.A:2x}, X = {self.X:2x}, Y = {self.Y:2x}")
+                                #print(f"Counter : {self.compteur:8}, SP : 0x{self.SP:02x}, PC : {format_hex_data(self.PC)} - fn_0x{opcode:02x} - {label:14}, A = {self.A:2x}, X = {self.X:2x}, Y = {self.Y:2x}")
                         
                         fn = getattr(self, f"fn_0x{opcode:02x}")
                         step, self.remaining_cycles = fn()
@@ -186,7 +186,7 @@ class cpu:
                 return self.emulator.memory.read_rom(address)
 
         def getIndirectXAddress(self):
-                address = (self.memory.read_rom(self.PC+1) + self.X) & 255
+                address = (self.emulator.memory.read_rom(self.PC+1) + self.X) & 255
                 return self.emulator.memory.read_rom_16(address)
 
         def getIndirectXValue(self):
@@ -194,7 +194,7 @@ class cpu:
                 return self.emulator.memory.read_rom(address)
 
         def getIndirectYAddress(self):
-                address = self.memory.read_rom(self.PC+1)
+                address = self.emulator.memory.read_rom(self.PC+1)
                 return self.emulator.memory.read_rom_16(address + self.Y)
 
         def getIndirectYValue(self):
@@ -469,7 +469,7 @@ class cpu:
                 self.push(self.PC >> 8)
                 self.push(self.PC & 255)
                 self.push(self.getP())
-                self.PC = self.memory.read_rom_16(0xFFFE)
+                self.PC = self.emulator.memory.read_rom_16(0xFFFE)
                 return (0, 7)
 
         # CMP #$44
@@ -795,7 +795,7 @@ class cpu:
         # Indirect
         def fn_0x6c(self) :
                 address = self.getAbsoluteAddress()
-                self.PC = self.memory.read_rom_16(address)
+                self.PC = self.emulator.memory.read_rom_16(address)
                 return (0, 5)
 
         # JSR $5597
@@ -1280,49 +1280,49 @@ class cpu:
         # Zero Page
         def fn_0x85(self) :
                 address = self.getZeroPageAddress()
-                extra_cycles = self.memory.write_rom(address, self.A)
+                extra_cycles = self.emulator.memory.write_rom(address, self.A)
                 return (2, 3 + extra_cycles)
 
         # STA $44, X
         # Zero Page, X
         def fn_0x95(self) :
                 address = self.getZeroPageXAddress()
-                extra_cycles = self.memory.write_rom(address, self.A)
+                extra_cycles = self.emulator.memory.write_rom(address, self.A)
                 return (2, 4 + extra_cycles)
 
         # STA $4400
         # Absolute
         def fn_0x8d(self) :
                 address = self.getAbsoluteAddress()
-                extra_cycles = self.memory.write_rom(address, self.A)
+                extra_cycles = self.emulator.memory.write_rom(address, self.A)
                 return (3, 4 + extra_cycles)
 
         # STA $4400, X
         # Absolute, X
         def fn_0x9d(self) :
                 address = self.getAbsoluteXAddress()
-                extra_cycles = self.memory.write_rom(address, self.A)
+                extra_cycles = self.emulator.memory.write_rom(address, self.A)
                 return (3, 5 + extra_cycles)
 
         # STA $4400, Y
         # Absolute, Y
         def fn_0x99(self) :
                 address = self.getAbsoluteYAddress()
-                extra_cycles = self.memory.write_rom(address, self.A)
+                extra_cycles = self.emulator.memory.write_rom(address, self.A)
                 return (3, 5 + extra_cycles)
 
         # STA ($44, X)
         # Indirect, X
         def fn_0x81(self) :
                 address = self.getIndirectXAddress()
-                extra_cycles = self.memory.write_rom(address, self.A)
+                extra_cycles = self.emulator.memory.write_rom(address, self.A)
                 return (2, 6 + extra_cycles)
 
         # STA ($44), Y
         # Indirect, Y
         def fn_0x91(self) :
                 address = self.getIndirectYAddress()
-                extra_cycles = self.memory.write_rom(address, self.A)
+                extra_cycles = self.emulator.memory.write_rom(address, self.A)
                 return (2, 6 + extra_cycles)
 
         # TXS
@@ -1369,42 +1369,42 @@ class cpu:
         # Zero Page
         def fn_0x86(self) :
                 address = self.getZeroPageAddress()
-                self.memory.write_rom(address, self.X)
+                self.emulator.memory.write_rom(address, self.X)
                 return (2, 3)
 
         # STX $44, Y
         # Zero Page, Y
         def fn_0x96(self) :
                 address = self.getZeroPageYAddress()
-                self.memory.write_rom(address, self.X)
+                self.emulator.memory.write_rom(address, self.X)
                 return (2, 4)
 
         # STX $4400
         # Absolute
         def fn_0x8e(self) :
                 address = self.getAbsoluteAddress()
-                self.memory.write_rom(address, self.X)
+                self.emulator.memory.write_rom(address, self.X)
                 return (3, 4)
 
         # STY $44
         # Zero Page
         def fn_0x84(self) :
                 address = self.getZeroPageAddress()
-                self.memory.write_rom(address, self.Y)
+                self.emulator.memory.write_rom(address, self.Y)
                 return (2, 3)
 
         # STY $44, X
         # Zero Page, X
         def fn_0x94(self) :
                 address = self.getZeroPageXAddress()
-                self.memory.write_rom(address, self.Y)
+                self.emulator.memory.write_rom(address, self.Y)
                 return (2, 4)
 
         # STY $4400
         # Absolute
         def fn_0x8c(self) :
                 address = self.getAbsoluteAddress()
-                self.memory.write_rom(address, self.Y)
+                self.emulator.memory.write_rom(address, self.Y)
                 return (3, 4)
                 
         def print_status(self) :

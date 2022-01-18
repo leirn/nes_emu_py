@@ -1,9 +1,5 @@
-
-import traceback
-
 import argparse
 import nes_emulator
-import time
 
 import cpu_opcodes
 

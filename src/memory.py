@@ -14,32 +14,27 @@ class memory:
         PPUADDR = 0
         OAMADDR = 0
         
-        cartridge = b''
-        
-        ctrl1 = 0
+        emulator = b''
         ctrl1_status = 0
-        ctrl2 = 0
         ctrl2_status = 0
         
         
-        def __init__(self, cartridge, ctrl1, ctrl2):
-                self.cartridge = cartridge
-                self.ctrl1 = ctrl1
-                self.ctrl2 = ctrl2
+        def __init__(self, emulator):
+                self.emulator = emulator
                 
                 try:
                         module = __import__("mappers")
-                        class_ = getattr(module, f"mapper{cartridge.mapper}")
-                        self.mapper = class_(cartridge)
-                        self.mapper_name = cartridge.mapper
+                        class_ = getattr(module, f"mapper{self.emulator.cartridge.mapper}")
+                        self.mapper = class_(self.emulator.cartridge)
+                        self.mapper_name = self.emulator.cartridge.mapper
                 except Exception as e:
-                        print(f"Unreconized mapper {cartridge.mapper}")
+                        print(f"Unreconized mapper {self.emulator.cartridge.mapper}")
                         print(e)
                         exit()
                 
         def getTile(self, bank, tile):
                 if self.debug : print(f"{len(self.cartridge.chr_rom):x} - {tile} - {bank + 16 * tile:x}:{bank + 16 * tile + 16:x}")
-                tile =  self.cartridge.chr_rom[bank + 16 * tile:bank + 16 * tile + 16]
+                tile =  self.emulator.cartridge.chr_rom[bank + 16 * tile:bank + 16 * tile + 16]
                 return tile
                         
         def read_rom(self, address):
@@ -102,8 +97,8 @@ class memory:
                         if self.debug : print(f"Joystick write {value:b}")
                         if value & 1 == 0:
                                 # store joypad value
-                                self.ctrl1_status = self.ctrl1.status
-                                self.ctrl2_status = self.ctrl2.status
+                                self.ctrl1_status = self.emulator.ctrl1.status
+                                self.ctrl2_status = self.emulator.ctrl2.status
                                 
                 elif address < 0x2000:
                         self.ROM[address % 0x800] = value
@@ -131,7 +126,7 @@ class memory:
                 
         def read_ppu_memory(self, address):
                         if address < 0x2000:
-                                return self.cartridge.prg_rom[address] # CHR_ROM ADDRESS
+                                return self.emulator.xcartridge.prg_rom[address] # CHR_ROM ADDRESS
                         elif address < 0x3000: # VRAM
                                 return self.VRAM[address - 0x2000]
                         elif address < 0x3F00: # VRAM mirror

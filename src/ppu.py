@@ -77,7 +77,7 @@ class ppu:
                         if (PPUMASK >>4) & 1  :  # Doit on afficher les sprites
                             # Display sprites
                             for i in range(64):
-                                    sprite = self.emulator.memory.OAM[self.memory.OAMADDR + i * 4:self.memory.OAMADDR + i * 4 + 4]
+                                    sprite = self.emulator.memory.OAM[self.emulator.memory.OAMADDR + i * 4:self.emulator.memory.OAMADDR + i * 4 + 4]
                                     s_y = sprite[0]
                                     s_x = sprite[3]
                                     s_tileId = sprite[1]
@@ -100,11 +100,11 @@ class ppu:
                         tile = pygame.transform.scale(tile, (int(256 * self.scale), int(240 * self.scale)))
                         self.display.blit(tile, (0, 0))
                         '''
-                        self.display.blit(self.cached_frame, (0, 0))
-                        pygame.display.update()
+                        self.emulator.display.blit(self.cached_frame, (0, 0))
+                        #pygame.display.update()
                         pygame.display.flip()
                         
-                        time.sleep(2)
+                        #time.sleep(2)
                         
                         if (PPUCTRL >> 7) & 1:
                                 self.emulator.raise_nmi()
@@ -182,17 +182,17 @@ class ppu:
                 return self.emulator.memory.read_rom(0x2007)
                 
         def dump_chr(self):
-                print(len(self.emulator.memory.cartridge.chr_rom)/16)
+                print(len(self.emulator.cartridge.chr_rom)/16)
                 
-                ar = self.createTile(self.emulator.memory.cartridge.chr_rom[:16])
+                ar = self.createTile(self.emulator.cartridge.chr_rom[:16])
                 tile = pygame.surfarray.make_surface(ar)
                 
                 c = 0
                 x = 2
                 y = 2
-                for c in range(len(self.emulator.memory.cartridge.chr_rom)//16):
+                for c in range(len(self.emulator.cartridge.chr_rom)//16):
                 
-                        ar = self.createTile(self.memory.getTile(0, c))
+                        ar = self.createTile(self.emulator.memory.getTile(0, c))
                         tile = pygame.surfarray.make_surface(ar)
                         tile = pygame.transform.scale(tile, (int(8 * self.scale), int(8 * self.scale)))
                         self.emulator.display.blit(tile, (x, y))
