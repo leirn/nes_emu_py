@@ -8,6 +8,8 @@ import pygame
 import traceback
 from pygame.locals import *
 import time
+import cpu_opcodes
+import re
 
 class nes_emulator:
     apu = 0
@@ -22,6 +24,7 @@ class nes_emulator:
     scale = 0
     pause = 0
     clock = 0
+    test_file = 0
     
     def __init__(self, cartridge_stream):
         pygame.init()
@@ -46,8 +49,8 @@ class nes_emulator:
         pygame.display.flip()
         
 
-    def start(self):
-        self.cpu.start()
+    def start(self, entry_point = None):
+        self.cpu.start(entry_point)
         continuer = 1
         frame_count = 0
 
@@ -128,3 +131,44 @@ class nes_emulator:
         
     def raise_irq(self):
         self.is_irq = 1
+        
+    def setTestMode(self, file_name):
+        self.cpu.test_mode = 1
+        self.test_file = file_name
+        
+    prev_opcode = -1
+    def check_test(self, cpu_status):
+        
+        opcode = self.memory.read_rom(cpu_status["PC"])
+        opcode_info = cpu_opcodes.opcodes[opcode]
+        
+        opcode_arg_1 = '  '
+        opcode_arg_2 = '  '
+        if cpu_opcodes.opcodes[opcode][2] > 1:
+            opcode_arg_1 = f"{self.memory.read_rom(cpu_status['PC']+1):02x}"
+        if cpu_opcodes.opcodes[opcode][2] > 2:
+            opcode_arg_2 = f"{self.memory.read_rom(cpu_status['PC']+2):02x}"
+        
+        print(f"{cpu_status['PC']:x}  {opcode:02x} {opcode_arg_1} {opcode_arg_2}  {cpu_opcodes.opcodes[opcode][1]:30}  A:{cpu_status['A']:02x} X:{cpu_status['X']:02x} Y:{cpu_status['Y']:02x} P:{cpu_status['P']:02x} SP:{cpu_status['SP']:02x} PPU:  0, 21 CYC:{cpu_status['CYC']}".upper())
+    
+        reference = self.test_file.readline()
+        print(reference)
+        
+        
+        ref_status = dict()
+        ref_status['PC'] = int(reference[0:4], 16)
+        
+        m = re.findall(r'A:(?P<A>[0-9A-Fa-f]{2}) X:(?P<X>[0-9A-Fa-f]{2}) Y:(?P<Y>[0-9A-Fa-f]{2}) P:(?P<P>[0-9A-Fa-f]{2}) SP:(?P<SP>[0-9A-Fa-f]{2})', reference)
+        ref_status['A']  = int(m[0][0], 16)
+        ref_status['X']  = int(m[0][1], 16)
+        ref_status['Y']  = int(m[0][2], 16)
+        ref_status['P']  = int(m[0][3], 16)
+        ref_status['SP'] = int(m[0][4], 16)
+        
+        if ref_status['PC'] != cpu_status['PC'] or (ref_status['A'] != cpu_status['A'] and self.prev_opcode != 0x68) or ref_status['X'] != cpu_status['X']  or ref_status['Y'] != cpu_status['Y']  or ref_status['P'] != cpu_status['P']: #  or ref_status['SP'] != cpu_status['SP']:
+                print("ERROR !! ERROR !! ERROR !!")
+                exit()
+        self.prev_opcode = opcode
+        print("")
+        
+        pass

@@ -12,8 +12,10 @@ import re
 from utils import format_hex_data
 
 class cpu:
-        debug = 1
+        test_mode = 0
+        debug = 0
         compteur = 0
+        total_cycles = 7 # Cout de l'init
         remaining_cycles = 0
         
         emulator = ""
@@ -42,11 +44,13 @@ class cpu:
                 self.emulator = emulator
         
         # initialise PC
-        def start(self):
+        def start(self, entry_point = None):
+                if entry_point:
+                        self.PC = entry_point
+                else:
                 # Equivalent to JMP ($FFFC)
-                self.PC = self.emulator.memory.read_rom_16(0xfffc)
+                        self.PC = self.emulator.memory.read_rom_16(0xfffc)
                 if self.debug : print(f"Entry point : 0x{format_hex_data(self.PC)}")
-                self.PC = 0xC000
                 return 1
         
         def nmi(self):
@@ -68,6 +72,7 @@ class cpu:
                 
                 self.PC = self.emulator.memory.read_rom_16(address)
                 self.remaining_cycles = 7
+                self.total_cyles += 7
         
         # next : execute the next opcode.
         # return the number of cycles used to execute
@@ -81,6 +86,9 @@ class cpu:
                         self.remaining_cycles -= 1
                         return
                 
+                
+                if self.test_mode == 1: self.emulator.check_test(self.get_cpu_status())
+                
                 opcode = self.emulator.memory.read_rom(self.PC)
                 try:
                         if self.debug > 0:
@@ -93,18 +101,30 @@ class cpu:
                                         else:
                                                 val = self.getAbsoluteAddress()
                                                 label = label.replace(l.group(0), f"{format_hex_data(val)}")
-                                #if opcode != 0x4c:print(f"Counter : {self.compteur:8}, SP : 0x{self.SP:02x}, PC : {format_hex_data(self.PC)} - fn_0x{opcode:02x} - {label:14}, A = {self.A:2x}, X = {self.X:2x}, Y = {self.Y:2x}, Flags NVxBDIZC : {self.getP():08b}")
-                                print(f"{self.PC:x}  {opcode:02x} F5 C5  {label:30}  A:{self.A:02x} X:{self.X:02x} Y:{self.Y:02x} P:{self.getP():02x} SP:{self.SP:02x} PPU:  0, 21 CYC:{self.compteur}")
-                        
+                                print(f"Counter : {self.compteur:8}, SP : 0x{self.SP:02x}, PC : {format_hex_data(self.PC)} - fn_0x{opcode:02x} - {label:14}, A = {self.A:2x}, X = {self.X:2x}, Y = {self.Y:2x}, Flags NVxBDIZC : {self.getP():08b}")
+                                
                         fn = getattr(self, f"fn_0x{opcode:02x}")
                         step, self.remaining_cycles = fn()
+                        
+                        self.total_cycles += self.remaining_cycles
+                        
                         self.PC += step
                         self.compteur += 1
                         return
                 except KeyError as e:
                         print(f"Unknow opcode 0x{opcode:02x} at {' '.join(a+b for a,b in zip(f'{self.PC:x}'[::2], f'{self.PC:x}'[1::2]))}")
                         raise e
-                
+                        
+        def get_cpu_status(self):
+                status = dict()
+                status["PC"] = self.PC
+                status["SP"] = self.SP
+                status["A"] = self.A
+                status["X"] = self.X
+                status["Y"] = self.Y
+                status["P"] = self.getP()
+                status["CYC"] = self.total_cycles
+                return status
 
         def getP(self):
                 return (self.flagN << 7) | (self.flagV << 6) | (1 << 5) | (self.flagB << 4) | (self.flagD << 3) | (self.flagI << 2) | (self.flagZ << 1) | self.flagC
@@ -215,7 +235,7 @@ class cpu:
         def setFlagZ(self, val):
                 self.flagZ = 1 if val == 0 else 0
 
-        def ADC(self, input):
+        def adc(self, input):
                 adc = input + self.A + self.flagC
                 self.flagC = adc >> 8
                 result = 255 & adc
@@ -229,49 +249,49 @@ class cpu:
         # ADC #$44
         # Immediate
         def fn_0x69(self) :
-                self.ADC(self.getImmediate())
+                self.adc(self.getImmediate())
                 return (2, 2)
 
         # ADC $44
         # Zero Page
         def fn_0x65(self) :
-                self.ADC(self.getZeroPageValue())
+                self.adc(self.getZeroPageValue())
                 return (2, 3)
 
         # ADC $44, X
         # Zero Page, X
         def fn_0x75(self) :
-                self.ADC(self.getZeroPageXValue())
+                self.adc(self.getZeroPageXValue())
                 return (2, 4)
 
         # ADC $4400
         # Absolute
         def fn_0x6d(self) :
-                self.ADC(self.getAbsoluteValue())
+                self.adc(self.getAbsoluteValue())
                 return (3, 4)
 
         # ADC $4400, X
         # Absolute, X
         def fn_0x7d(self) :
-                self.ADC(self.getAbsoluteXValue())
+                self.adc(self.getAbsoluteXValue())
                 return (3, 4)
 
         # ADC $4400, Y
         # Absolute, Y
         def fn_0x79(self) :
-                self.ADC(self.getAbsoluteYValue())
+                self.adc(self.getAbsoluteYValue())
                 return (3, 4)
 
         # ADC ($44, X)
         # Indirect, X
         def fn_0x61(self) :
-                self.ADC(self.getIndirectXValue())
+                self.adc(self.getIndirectXValue())
                 return (2, 6)
 
         # ADC ($44), Y
         # Indirect, Y
         def fn_0x71(self) :
-                self.ADC(self.getIndirectYValue())
+                self.adc(self.getIndirectYValue())
                 return (2, 5)
 
         # AND #$44
@@ -929,7 +949,6 @@ class cpu:
         # NOP
         # Implied
         def fn_0xea(self) :
-                print("NOP")
                 return (1, 2)
 
         # ORA #$44
@@ -1137,18 +1156,20 @@ class cpu:
                 return (0, 6)
 
         def SBC(self, input): # issue here, CBB4 in nestest.nes
-                input ^= 255
+                #input ^= 255
+                self.adc(255-input)
+                """
                 c = 1 - self.flagC
-                sum = self.A + input + c
+                sum = self.A - input + c
                 self.flagC = sum >> 8
-                result = 255 & sum
+                result = 255 & (sum % 256)
                 
                 self.flagV = not not ((self.A ^ result) & (input ^ result) & 0x80)
                 
                 self.A = result
                 
                 self.setFlagNZ(self.A)
-
+                """
         # SBC #$44
         # Immediate
         def fn_0xe9(self) :
