@@ -23,7 +23,7 @@ class cpu:
         X = 0
         Y = 0
         PC = 0
-        SP = 0xFD
+        SP = 0
         
         """
         C (carry)
@@ -47,6 +47,7 @@ class cpu:
         def start(self, entry_point = None):
                 if entry_point:
                         self.PC = entry_point
+                        self.SP = 0xFD
                 else:
                 # Equivalent to JMP ($FFFC)
                         self.PC = self.emulator.memory.read_rom_16(0xfffc)
@@ -72,7 +73,7 @@ class cpu:
                 
                 self.PC = self.emulator.memory.read_rom_16(address)
                 self.remaining_cycles = 7
-                self.total_cyles += 7
+                self.total_cycles += 7
         
         # next : execute the next opcode.
         # return the number of cycles used to execute
@@ -1298,7 +1299,8 @@ class cpu:
         # Implied
         def fn_0x08(self) :
                 # create status byte
-                self.push(self.getP())
+                p = self.getP() | (1 << 4)
+                self.push(p)
                 return (1, 3)
 
         # PLP
@@ -1354,7 +1356,7 @@ class cpu:
                 print("CPU")
                 print("Registers:")
                 print("A\t| X\t| Y\t| SP\t| PC")
-                print(f"0x{self.A:x}\t| 0x{self.X:x}\t| 0x{self.Y:x}\t| 0x{self.SP:x}\t| 0x{format_hex_data(self.PC)}")
+                print(f"0x{self.A:02x}\t| 0x{self.X:02x}\t| 0x{self.Y:02x}\t| 0x{self.SP:02x}\t| 0x{format_hex_data(self.PC)}")
                 print("")
                 print("Flags")
                 print("NVxBDIZC")

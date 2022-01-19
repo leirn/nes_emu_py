@@ -222,6 +222,6 @@ class ppu:
         def print_status(self):
                 print("PPU")
                 print("PPUCTRL  | PPUMASK  | PPUSTAT")
-                print(f"{self.getPPUCTRL():b} | {self.getPPUMASK():b} | {self.getPPUSTATUS():b}")
+                print(f"{self.getPPUCTRL():08b} | {self.getPPUMASK():08b} | {self.getPPUSTATUS():08b}")
                 print("")
                 pass
