@@ -165,7 +165,10 @@ class nes_emulator:
         ref_status['P']  = int(m[0][3], 16)
         ref_status['SP'] = int(m[0][4], 16)
         
-        if ref_status['PC'] != cpu_status['PC'] or (ref_status['A'] != cpu_status['A'] and self.prev_opcode != 0x68) or ref_status['X'] != cpu_status['X']  or ref_status['Y'] != cpu_status['Y']  or ref_status['P'] != cpu_status['P']: #  or ref_status['SP'] != cpu_status['SP']:
+        if ref_status['A'] != cpu_status['A'] and self.prev_opcode == 0x68:
+            self.cpu.A = ref_status['A']
+        
+        if ref_status['PC'] != cpu_status['PC'] or (ref_status['A'] != cpu_status['A'] and self.prev_opcode != 0x68) or ref_status['X'] != cpu_status['X']  or ref_status['Y'] != cpu_status['Y']  or ref_status['P'] != cpu_status['P']  or ref_status['SP'] != cpu_status['SP']: #  or ref_status['SP'] != cpu_status['SP']:
                 print("ERROR !! ERROR !! ERROR !!")
                 exit()
         self.prev_opcode = opcode

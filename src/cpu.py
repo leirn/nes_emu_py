@@ -23,7 +23,7 @@ class cpu:
         X = 0
         Y = 0
         PC = 0
-        SP = 0
+        SP = 0xFD
         
         """
         C (carry)
