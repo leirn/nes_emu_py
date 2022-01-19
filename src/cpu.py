@@ -398,7 +398,7 @@ class cpu:
         # Zero Page
         def fn_0x24(self) :
                 tocomp = self.getZeroPageValue()
-                value = tocomp | self.A
+                value = tocomp & self.A
                 self.setFlagZ(value)
                 self.flagN = (tocomp >> 7) & 1
                 self.flagV = (tocomp >> 6) & 1
@@ -408,7 +408,7 @@ class cpu:
         # Absolute
         def fn_0x2c(self) :
                 tocomp = self.getAbsoluteValue()
-                value = tocomp | self.A
+                value = tocomp & self.A
                 self.setFlagZ(value)
                 self.flagN = (tocomp >> 7) & 1
                 self.flagV = (tocomp >> 6) & 1
