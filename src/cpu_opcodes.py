@@ -280,4 +280,13 @@ opcodes = {
 	0xe3 :	["Indirect, X", 	"ISC ($44, X)", 	2, 		8, 		0	],
 	0xf3 :	["Indirect, Y", 	"ISC ($44), Y", 	2, 		4, 		0	],
 	
+	#SLO
+	0x07 :	["Zero Page", 		"SLO $44", 		2, 		5,		0	],
+	0x17 :	["Zero Page, X", 	"SLO $44, X", 	2, 		6, 		0	],
+	0x0f :	["Absolute", 		"SLO $4400", 	3, 		6, 		0	],
+	0x1f :	["Absolute, X", 	"SLO $4400, X", 	3, 		7, 		0	],
+	0x1b :	["Absolute, Y", 	"SLO $4400, Y", 	3, 		7, 		0	],
+	0x03 :	["Indirect, X", 	"SLO ($44, X)", 	2, 		8, 		0	],
+	0x13 :	["Indirect, Y", 	"SLO ($44), Y", 	2, 		8, 		0	],
+	
 	}

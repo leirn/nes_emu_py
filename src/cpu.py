@@ -793,7 +793,7 @@ class cpu:
                 value = 0 if value == 255 else value + 1
                 self.setIndirectY(value)
                 self.sbc(value)
-                return (2, 8)
+                return (2, 4)
 
         # EOR #$44
         # Immediate
@@ -1222,6 +1222,69 @@ class cpu:
                 self.A |= self.getIndirectYValue()
                 self.setFlagNZ(self.A)
                 return (2, 5)
+
+        # SLO $44
+        # Zero Page
+        def fn_0x07(self):
+                self.flagC = self.A >> 7
+                val = (self.A << 1) & 0b11111111
+                self.A |= self.getZeroPageValue()
+                self.setFlagNZ(self.A)
+                return (2, 5)
+
+        # SLO $44, X
+        # Zero Page, X
+        def fn_0x17(self):
+                self.flagC = self.A >> 7
+                self.A = (self.A << 1) & 0b11111111
+                self.A |= self.getZeroPageXValue()
+                self.setFlagNZ(self.A)
+                return (2, 6)
+
+        # SLO $4400
+        # Absolute
+        def fn_0x0f(self):
+                self.flagC = self.A >> 7
+                self.A = (self.A << 1) & 0b11111111
+                self.A |= self.getAbsoluteValue()
+                self.setFlagNZ(self.A)
+                return (3, 6)
+
+        # SLO $4400, X
+        # Absolute, X
+        def fn_0x1f(self):
+                self.flagC = self.A >> 7
+                self.A = (self.A << 1) & 0b11111111
+                self.A |= self.getAbsoluteXValue()
+                self.setFlagNZ(self.A)
+                return (3, 7)
+
+        # SLO $4400, Y
+        # Absolute, Y
+        def fn_0x1b(self):
+                self.flagC = self.A >> 7
+                self.A = (self.A << 1) & 0b11111111
+                self.A |= self.getAbsoluteYValue()
+                self.setFlagNZ(self.A)
+                return (3, 7)
+
+        # SLO ($44), X
+        # Indirect, X
+        def fn_0x03(self):
+                self.flagC = self.A >> 7
+                self.A = (self.A << 1) & 0b11111111
+                self.A |= self.getIndirectXValue()
+                self.setFlagNZ(self.A)
+                return (2, 8)
+
+        # SLO ($44, Y)
+        # Indirect, Y
+        def fn_0x13(self):
+                self.flagC = self.A >> 7
+                self.A = (self.A << 1) & 0b11111111
+                self.A |= self.getIndirectYValue()
+                self.setFlagNZ(self.A)
+                return (2, 8)
 
         # TAX
         # Implied
