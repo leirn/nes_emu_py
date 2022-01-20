@@ -180,6 +180,7 @@ opcodes = {
 	
 	#SBC
 	0xe9 :	["Immediate", 		"SBC #$44", 	2, 		2, 		0	],
+	0xeb :	["Immediate", 		"SBC #$44", 	2, 		2, 		0	], # Alias uncommented to 0xe9
 	0xe5 :	["Zero Page", 		"SBC $44", 		2, 		3,		0	],
 	0xf5 :	["Zero Page, X", 	"SBC $44, X", 	2, 		4, 		0	],
 	0xed :	["Absolute", 		"SBC $4400", 	3, 		4, 		0	],
@@ -251,14 +252,32 @@ opcodes = {
 	0xa7 :	["Zero Page", 		"LAX $44", 		2, 		3,		0	],
 	0xb7 :	["Zero Page, Y", 	"LAX $44, Y", 	2, 		4, 		0	],
 	0xaf :	["Absolute", 		"LAX $4400", 	3, 		4, 		0	],
-	0xbf :	["Absolute, Y", 		"LAX $4400, Y", 	3, 		4, 		1	],
-	0xa3 :	["Indirect, X", 		"LAX ($44, X)", 	2, 		6, 		0	],
-	0xb3 :	["Indirect, Y", 		"LAX ($44), Y", 	2, 		5, 		1	],
+	0xbf :	["Absolute, Y", 	"LAX $4400, Y", 	3, 		4, 		1	],
+	0xa3 :	["Indirect, X", 	"LAX ($44, X)", 	2, 		6, 		0	],
+	0xb3 :	["Indirect, Y", 	"LAX ($44), Y", 	2, 		5, 		1	],
 	
 	#SAX
 	0x87 :	["Zero Page", 		"SAX $44", 		2, 		3,		0	],
 	0x97 :	["Zero Page, Y", 	"SAX $44, Y", 	2, 		4, 		0	],
 	0x8f :	["Absolute", 		"SAX $4400", 	3, 		4, 		0	],
-	0x83 :	["Indirect, X", 		"SAX ($44, X)", 	2, 		6, 		0	],
+	0x83 :	["Indirect, X", 	"SAX ($44, X)", 	2, 		6, 		0	],
+	
+	#DCP
+	0xc7 :	["Zero Page", 		"DCP $44", 		2, 		5,		0	],
+	0xd7 :	["Zero Page, X", 	"DCP $44, X", 	2, 		6, 		0	],
+	0xcf :	["Absolute", 		"DCP $4400", 	3, 		6, 		0	],
+	0xdf :	["Absolute, X", 	"DCP $4400, X", 	3, 		7, 		0	],
+	0xdb :	["Absolute, Y", 	"DCP $4400, Y", 	3, 		7, 		0	],
+	0xc3 :	["Indirect, X", 	"DCP ($44, X)", 	2, 		8, 		0	],
+	0xd3 :	["Indirect, Y", 	"DCP ($44), Y", 	2, 		8, 		0	],
+	
+	#ISC
+	0xe7 :	["Zero Page", 		"ISC $44", 		2, 		5,		0	],
+	0xf7 :	["Zero Page, X", 	"ISC $44, X", 	2, 		6, 		0	],
+	0xef :	["Absolute", 		"ISC $4400", 	3, 		6, 		0	],
+	0xff :	["Absolute, X", 	"ISC $4400, X", 	3, 		7, 		0	],
+	0xfb :	["Absolute, Y", 	"ISC $4400, Y", 	3, 		7, 		0	],
+	0xe3 :	["Indirect, X", 	"ISC ($44, X)", 	2, 		8, 		0	],
+	0xf3 :	["Indirect, Y", 	"ISC ($44), Y", 	2, 		4, 		0	],
 	
 	}

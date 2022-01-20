@@ -177,6 +177,9 @@ class cpu:
         def getZeroPageXValue(self):
                 address = self.getZeroPageXAddress()
                 return self.emulator.memory.read_rom(address)
+        
+        def setZeroPageY(self, val):
+                self.emulator.memory.write_rom(self.getZeroPageYAddress(), val)
                 
         def getZeroPageYAddress(self):
                 return  (self.emulator.memory.read_rom(self.PC+1) + self.Y) & 255
@@ -204,6 +207,9 @@ class cpu:
         def getAbsoluteXValue(self):
                 address = self.getAbsoluteXAddress()
                 return self.emulator.memory.read_rom(address)
+        
+        def setAbsoluteY(self, val):
+                self.emulator.memory.write_rom(self.getAbsoluteYAddress(), val)
                 
         def getAbsoluteYAddress(self):
                 return (self.emulator.memory.read_rom_16(self.PC+1) + self.Y) & 0xFFFF
@@ -234,6 +240,9 @@ class cpu:
                 address = self.getIndirectYAddress()
                 print(f"Value Y address {address:x}")
                 return self.emulator.memory.read_rom(address)
+        
+        def setIndirectY(self, val):
+                self.emulator.memory.write_rom(self.getIndirectYAddress(), val)
         
         def setFlagNZ(self, val):
                 self.setFlagN(val)
@@ -513,96 +522,115 @@ class cpu:
                 self.PC = self.emulator.memory.read_rom_16(0xFFFE)
                 return (0, 7)
 
-        def cmp(self, val) :
-                if val >= 0:
+        def cmp(self, a, b) :
+                #a = a - 256 if a > 127 else a
+                #b = b - 256 if b > 127 else b
+                print(type(a))
+                if a > b:
+                        if a-b >= 0x80:
+                                self.flagC = 1
+                                self.flagN = 1
+                                self.flagZ = 0
+                        else:
+                                self.flagC = 1
+                                self.flagN = 0
+                                self.flagZ = 0
+                elif a == b:
                         self.flagC = 1
+                        self.flagN = 0
+                        self.flagZ = 1
                 else:  
-                        self.flagC = 0
-                self.setFlagNZ(val)
-                
+                        if b - a >= 0x80:
+                                self.flagC = 0
+                                self.flagN = 0
+                                self.flagZ = 0
+                        else:
+                                self.flagC = 0
+                                self.flagN = 1
+                                self.flagZ = 0
 
         # CMP #$44
         # Immediate
         def fn_0xc9(self) :
-                self.cmp(self.A - self.getImmediate())
+                self.cmp(self.A, self.getImmediate())
                 return (2, 2)
 
         # CMP $44
         # Zero Page
         def fn_0xc5(self) :
-                self.cmp(self.A - self.getZeroPageValue())
+                self.cmp(self.A, self.getZeroPageValue())
                 return (2, 3)
 
         # CMP $44, X
         # Zero Page, X
         def fn_0xd5(self) :
-                self.cmp(self.A - self.getZeroPageXValue())
+                self.cmp(self.A, self.getZeroPageXValue())
                 return (2, 4)
 
         # CMP $4400
         # Absolute
         def fn_0xcd(self) :
-                self.cmp(self.A - self.getAbsoluteValue())
+                self.cmp(self.A, self.getAbsoluteValue())
                 return (3, 4)
 
         # CMP $4400, X
         # Absolute, X
         def fn_0xdd(self) :
-                self.cmp(self.A - self.getAbsoluteXValue())
+                self.cmp(self.A, self.getAbsoluteXValue())
                 return (3, 4)
 
         # CMP $4400, Y
         # Absolute, Y
         def fn_0xd9(self) :
-                self.cmp(self.A - self.getAbsoluteYValue())
+                self.cmp(self.A, self.getAbsoluteYValue())
                 return (3, 4)
 
         # CMP ($44), X
         # Indirect, X
         def fn_0xc1(self) :
-                self.cmp(self.A - self.getIndirectXValue())
+                self.cmp(self.A, self.getIndirectXValue())
                 return (2, 6)
 
         # CMP ($44), Y
         # Indirect, Y
         def fn_0xd1(self) :
-                self.cmp(self.A - self.getIndirectYValue())
+                self.cmp(self.A, self.getIndirectYValue())
                 return (2, 5)
 
         # CPX #$44
         # Immediate
         def fn_0xe0(self) :
-                self.cmp(self.X - self.getImmediate())
+                self.cmp(self.X, self.getImmediate())
                 return (2, 2)
 
         # CPX $44
         # Zero Page
         def fn_0xe4(self) :
-                self.cmp(self.X - self.getZeroPageValue())
+                self.cmp(self.X, self.getZeroPageValue())
                 return (2, 3)
 
         # CPX $4400
         # Absolute
         def fn_0xec(self) :
-                self.cmp(self.X - self.getAbsoluteValue())
+                self.cmp(self.X, self.getAbsoluteValue())
                 return (3, 4)
 
         # CPY #$44
         # Immediate
         def fn_0xc0(self) :
-                self.cmp(self.Y - self.getImmediate())
+                self.cmp(self.Y, self.getImmediate())
                 return (2, 2)
 
         # CPY $44
         # Zero Page
         def fn_0xc4(self) :
-                self.cmp(self.Y - self.getZeroPageValue())
+                self.cmp(self.Y, self.getZeroPageValue())
                 return (2, 3)
 
         # CPY $4400
         # Absolute
         def fn_0xcc(self) :
-                self.cmp(self.Y - self.getAbsoluteValue())
+                self.cmp(self.Y, self.getAbsoluteValue())
                 return (3, 4)
 
         # DEC $44
@@ -640,6 +668,132 @@ class cpu:
                 self.setAbsoluteX(value)
                 self.setFlagNZ(value)
                 return (3, 7)
+
+        # DCP $44
+        # Zero Page
+        def fn_0xc7(self):
+                value = self.getZeroPageValue()
+                value = 255 if value == 0 else value - 1
+                self.setZeroPage(value)
+                self.cmp(self.A, value)
+                return (2, 5)
+
+        # DCP $44, X
+        # Zero Page, X
+        def fn_0xd7(self):
+                value = self.getZeroPageXValue()
+                value = 255 if value == 0 else value - 1
+                self.setZeroPageX(value)
+                self.cmp(self.A, value)
+                return (2, 6)
+
+        # DCP $4400
+        # Absolute
+        def fn_0xcf(self):
+                value = self.getAbsoluteValue()
+                value = 255 if value == 0 else value - 1
+                self.setAbsolute(value)
+                self.cmp(self.A, value)
+                return (3, 6)
+
+        # DCP $4400, X
+        # Absolute, X
+        def fn_0xdf(self):
+                value = self.getAbsoluteXValue()
+                value = 255 if value == 0 else value - 1
+                self.setAbsoluteX(value)
+                self.cmp(self.A, value)
+                return (3, 7)
+
+        # DCP $4400, Y
+        # Absolute, Y
+        def fn_0xdb(self):
+                value = self.getAbsoluteYValue()
+                value = 255 if value == 0 else value - 1
+                self.setAbsoluteY(value)
+                self.cmp(self.A, value)
+                return (3, 7)
+
+        # DCP ($44), X
+        # Indirect, X
+        def fn_0xc3(self):
+                value = self.getIndirectXValue()
+                value = 255 if value == 0 else value - 1
+                self.setIndirectX(value)
+                self.cmp(self.A, value)
+                return (2, 8)
+
+        # DCP ($44, Y)
+        # Indirect, Y
+        def fn_0xd3(self):
+                value = self.getIndirectYValue()
+                value = 255 if value == 0 else value - 1
+                self.setIndirectY(value)
+                self.cmp(self.A, value)
+                return (2, 8)
+
+        # ISC $44
+        # Zero Page
+        def fn_0xe7(self):
+                value = self.getZeroPageValue()
+                value = 0 if value == 255 else value + 1
+                self.setZeroPage(value)
+                self.sbc(value)
+                return (2, 5)
+
+        # ISC $44, X
+        # Zero Page, X
+        def fn_0xf7(self):
+                value = self.getZeroPageXValue()
+                value = 0 if value == 255 else value + 1
+                self.setZeroPageX(value)
+                self.sbc(value)
+                return (2, 6)
+
+        # ISC $4400
+        # Absolute
+        def fn_0xef(self):
+                value = self.getAbsoluteValue()
+                value = 0 if value == 255 else value + 1
+                self.setAbsolute(value)
+                self.sbc(value)
+                return (3, 6)
+
+        # ISC $4400, X
+        # Absolute, X
+        def fn_0xff(self):
+                value = self.getAbsoluteXValue()
+                value = 0 if value == 255 else value + 1
+                self.setAbsoluteX(value)
+                self.sbc(value)
+                return (3, 7)
+
+        # ISC $4400, Y
+        # Absolute, Y
+        def fn_0xfb(self):
+                value = self.getAbsoluteYValue()
+                value = 0 if value == 255 else value + 1
+                self.setAbsoluteY(value)
+                self.sbc(value)
+                return (3, 7)
+
+        # ISC ($44), X
+        # Indirect, X
+        def fn_0xe3(self):
+                value = self.getIndirectXValue()
+                value = 0 if value == 255 else value + 1
+                self.setIndirectX(value)
+                self.sbc(value)
+                return (2, 8)
+
+        # ISC ($44, Y)
+        # Indirect, Y
+        def fn_0xf3(self):
+                value = self.getIndirectYValue()
+                value = 0 if value == 255 else value + 1
+                self.setIndirectY(value)
+                self.sbc(value)
+                return (2, 8)
 
         # EOR #$44
         # Immediate
@@ -1252,67 +1406,58 @@ class cpu:
                 self.PC = (high << 8) + low + 1 # JSR increment only by two, and RTS add the third
                 return (0, 6)
 
-        def SBC(self, input): # issue here, CBB4 in nestest.nes
-                #input ^= 255
+        def sbc(self, input):
                 self.adc(255-input)
-                """
-                c = 1 - self.flagC
-                sum = self.A - input + c
-                self.flagC = sum >> 8
-                result = 255 & (sum % 256)
                 
-                self.flagV = not not ((self.A ^ result) & (input ^ result) & 0x80)
-                
-                self.A = result
-                
-                self.setFlagNZ(self.A)
-                """
-        # SBC #$44
+        # sbc #$44
         # Immediate
         def fn_0xe9(self) :
-                self.SBC(self.getImmediate())
+                self.sbc(self.getImmediate())
                 return (2, 2)
+        # 0xeb alias to 0x e9
+        def fn_0xeb(self) :
+                return self.fn_0xe9()
 
-        # SBC $44
+        # sbc $44
         # Zero Page
         def fn_0xe5(self) :
-                self.SBC(self.getZeroPageValue())
+                self.sbc(self.getZeroPageValue())
                 return (2, 3)
 
-        # SBC $44, X
+        # sbc $44, X
         # Zero Page, X
         def fn_0xf5(self) :
-                self.SBC(self.getZeroPageXValue())
+                self.sbc(self.getZeroPageXValue())
                 return (2, 4)
 
-        # SBC $4400
+        # sbc $4400
         # Absolute
         def fn_0xed(self) :
-                self.SBC(self.getAbsoluteValue())
+                self.sbc(self.getAbsoluteValue())
                 return (3, 4)
 
-        # SBC $4400, X
+        # sbc $4400, X
         # Absolute, X
         def fn_0xfd(self) :
-                self.SBC(self.getAbsoluteXValue())
+                self.sbc(self.getAbsoluteXValue())
                 return (3, 4)
 
-        # SBC $4400, Y
+        # sbc $4400, Y
         # Absolute, Y
         def fn_0xf9(self) :
-                self.SBC(self.getAbsoluteYValue())
+                self.sbc(self.getAbsoluteYValue())
                 return (3, 4)
 
-        # SBC ($44, X)
+        # sbc ($44, X)
         # Indirect, X
         def fn_0xe1(self) :
-                self.SBC(self.getIndirectXValue())
+                self.sbc(self.getIndirectXValue())
                 return (2, 6)
 
-        # SBC ($44), Y
+        # sbc ($44), Y
         # Indirect, Y
         def fn_0xf1(self) :
-                self.SBC(self.getIndirectYValue())
+                self.sbc(self.getIndirectYValue())
                 return (2, 5)
 
         # STA $44
@@ -1503,11 +1648,11 @@ class cpu:
                 self.setZeroPage(val)
                 return (2, 3)
         
-        #SAX $ 44, X
-        # Zero Page, X
+        #SAX $ 44, Y
+        # Zero Page, Y
         def fn_0x97(self) :
                 val = self.A & self.X
-                self.setZeroPageX(val)
+                self.setZeroPageY(val)
                 return (2, 4)
         
         #SAX $4400

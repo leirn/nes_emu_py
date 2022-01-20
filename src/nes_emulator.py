@@ -70,7 +70,7 @@ class nes_emulator:
                                 self.cpu.next()
                                 # 3 PPU dots per CPU cycles
                                 is_frame = 0
-                                is_frame |= self.ppu.next()
+                                #is_frame |= self.ppu.next()
                                 is_frame |= self.ppu.next()
                                 is_frame |= self.ppu.next()
                         except Exception as e:
@@ -154,7 +154,9 @@ class nes_emulator:
     
         reference = self.test_file.readline()
         print(reference)
-        self.memory.print_memory_page(self.memory.ROM, 0x1)
+        self.memory.print_memory_page(self.memory.ROM, 0x0)
+        print("")
+        self.memory.print_memory_page(self.memory.ROM, 0x6)
         
         
         
