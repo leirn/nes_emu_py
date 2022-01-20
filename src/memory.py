@@ -61,14 +61,26 @@ class memory:
                         return self.ROM[address]
         
         # NES is Little Endian
-        def read_rom_16(self, address):
+        def read_rom_16_no_crossing_page(self, address):
+                high_address = (address & 0xFF00) +((address + 1) & 0xFF)
+                print(f"High address : {high_address:04x}, Low address : {address:04x}")
                 if address > 0x7FFF:
                         low = self.mapper.read_rom(address)
-                        high = self.mapper.read_rom(address+1)
+                        high = self.mapper.read_rom(high_address) # So that reading never cross pages
                         return low + (high <<8)
                 else:
                         low = self.ROM[address]
-                        high = self.ROM[address+1]
+                        high = self.ROM[high_address] # So that reading never cross pages
+                        return low + (high <<8)
+        
+        def read_rom_16(self, address):
+                if address > 0x7FFF:
+                        low = self.mapper.read_rom(address)
+                        high = self.mapper.read_rom(address + 1) # So that reading never cross pages
+                        return low + (high <<8)
+                else:
+                        low = self.ROM[address]
+                        high = self.ROM[address + 1] # So that reading never cross pages
                         return low + (high <<8)
         
         
@@ -164,6 +176,10 @@ class memory:
                 self.print_memory_page(self.ROM, 0x0)
                 print("Stack")
                 self.print_memory_page(self.ROM, 0x1)
+                print("Page 2")
+                self.print_memory_page(self.ROM, 0x2)
+                print("Page 3")
+                self.print_memory_page(self.ROM, 0x3)
                 
         def print_memory_page(self, page, high = 0) :
                 for i in range(0, 256, 32):

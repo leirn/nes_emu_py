@@ -13,6 +13,7 @@ class ppu:
         line = 0
         col = 0
         cycle = 0
+        frame_count = 0
         
         cached_frame = ''
         frameParity = 0
@@ -118,6 +119,7 @@ class ppu:
                 if self.line == 262:
                         self.line = 0
                         self.frameParity = 1 - self.frameParity
+                        self.frame_count += 1
                         return FRAME_COMPLETED
                 return 0
 

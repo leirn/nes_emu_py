@@ -45,9 +45,14 @@ class cpu:
         
         # initialise PC
         def start(self, entry_point = None):
+                
+                # Start sequence push stack three time
+                self.push(0)
+                self.push(0)
+                self.push(0)
+                
                 if entry_point:
                         self.PC = entry_point
-                        self.SP = 0xFD
                 else:
                 # Equivalent to JMP ($FFFC)
                         self.PC = self.emulator.memory.read_rom_16(0xfffc)
@@ -79,9 +84,9 @@ class cpu:
         # return the number of cycles used to execute
         def next(self):
                 
-                if self.PC < 0x8000:
-                        if self.debug : print(f"PC out of PRG ROM : {self.PC:x}")
-                        exit()
+                #if self.PC < 0x8000:
+                #        if self.debug : print(f"PC out of PRG ROM : {self.PC:x}")
+                #        exit()
                 
                 if self.remaining_cycles > 0:
                         self.remaining_cycles -= 1
@@ -194,33 +199,40 @@ class cpu:
                 self.emulator.memory.write_rom(self.getAbsoluteXAddress(), val)
                 
         def getAbsoluteXAddress(self):
-                return self.emulator.memory.read_rom_16(self.PC+1) + self.X
+                return (self.emulator.memory.read_rom_16(self.PC+1) + self.X) & 0xFFFF
                 
         def getAbsoluteXValue(self):
                 address = self.getAbsoluteXAddress()
                 return self.emulator.memory.read_rom(address)
                 
         def getAbsoluteYAddress(self):
-                return self.emulator.memory.read_rom_16(self.PC+1) + self.Y
+                return (self.emulator.memory.read_rom_16(self.PC+1) + self.Y) & 0xFFFF
                 
         def getAbsoluteYValue(self):
                 address = self.getAbsoluteYAddress()
                 return self.emulator.memory.read_rom(address)
 
         def getIndirectXAddress(self):
-                address = (self.emulator.memory.read_rom(self.PC+1) + self.X) & 255
-                return self.emulator.memory.read_rom_16(address)
+                address = self.getZeroPageXAddress()
+                print(f"Indirect X address {address:x}")
+                return self.emulator.memory.read_rom_16_no_crossing_page(address)
 
         def getIndirectXValue(self):
                 address = self.getIndirectXAddress()
+                print(f"Value X address {address:x}")
                 return self.emulator.memory.read_rom(address)
+        
+        def setIndirectX(self, val):
+                self.emulator.memory.write_rom(self.getIndirectXAddress(), val)
 
         def getIndirectYAddress(self):
-                address = self.emulator.memory.read_rom(self.PC+1)
-                return self.emulator.memory.read_rom_16(address + self.Y)
+                address = self.getZeroPageAddress()
+                print(f"Indirect Y address {address:x}")
+                return 0xFFFF & (self.emulator.memory.read_rom_16_no_crossing_page(address )+ self.Y)
 
         def getIndirectYValue(self):
                 address = self.getIndirectYAddress()
+                print(f"Value Y address {address:x}")
                 return self.emulator.memory.read_rom(address)
         
         def setFlagNZ(self, val):
@@ -355,7 +367,7 @@ class cpu:
         # Accumulator
         def fn_0x0a(self) :
                 self.flagC = self.A >> 7
-                self.A = (self.A < 1) & 0b11111111
+                self.A = (self.A << 1) & 0b11111111
                 self.setFlagNZ(self.A)
                 return (1, 2)
 
@@ -364,8 +376,9 @@ class cpu:
         def fn_0x06(self) :
                 value = self.getZeroPageValue()
                 self.flagC = value >> 7
-                self.A = (self.A < 1) & 0b11111111
-                self.setFlagNZ(self.A)
+                value = (self.A << 1) & 0b11111111
+                self.setZeroPage(value)
+                self.setFlagNZ(value)
                 return (2, 5)
 
         # ASL $44, X
@@ -373,8 +386,9 @@ class cpu:
         def fn_0x16(self) :
                 value = self.getZeroPageXValue()
                 self.flagC = value >> 7
-                self.A = (self.A < 1) & 0b11111111
-                self.setFlagNZ(self.A)
+                value = (self.A << 1) & 0b11111111
+                self.setZeroPageX(value)
+                self.setFlagNZ(value)
                 return (2, 6)
 
         # ASL $4400
@@ -382,8 +396,9 @@ class cpu:
         def fn_0x0e(self) :
                 value = self.getAbsoluteValue()
                 self.flagC = value >> 7
-                self.A = (self.A < 1) & 0b11111111
-                self.setFlagNZ(self.A)
+                value = (self.A << 1) & 0b11111111
+                self.setAbsolute(value)
+                self.setFlagNZ(value)
                 return (3, 6)
 
         # ASL $4400, X
@@ -391,8 +406,9 @@ class cpu:
         def fn_0x1e(self) :
                 value = self.getAbsoluteXValue()
                 self.flagC = value >> 7
-                self.A = (self.A << 1) & 0b11111111
-                self.setFlagNZ(self.A)
+                value = (self.A << 1) & 0b11111111
+                self.setAbsoluteX(value)
+                self.setFlagNZ(value)
                 return (3, 7)
 
         # BIT $44
@@ -541,9 +557,15 @@ class cpu:
                 self.cmp(self.A - self.getAbsoluteYValue())
                 return (3, 4)
 
+        # CMP ($44), X
+        # Indirect, X
+        def fn_0xc1(self) :
+                self.cmp(self.A - self.getIndirectXValue())
+                return (2, 6)
+
         # CMP ($44), Y
         # Indirect, Y
-        def fn_0xc1(self) :
+        def fn_0xd1(self) :
                 self.cmp(self.A - self.getIndirectYValue())
                 return (2, 5)
 
@@ -763,16 +785,22 @@ class cpu:
         # Indirect
         def fn_0x6c(self) :
                 address = self.getAbsoluteAddress()
-                self.PC = self.emulator.memory.read_rom_16(address)
+                if address & 0xFF == 0xFF: # Strange behaviour in nestest.net where direct jump to re-aligned address where address at end of page
+                        address += 1
+                        print(f"JMP address : {address:4x}")
+                else:
+                        address = self.emulator.memory.read_rom_16(address)
+                print(f"JMP address : {address:4x}")
+                self.PC = address
                 return (0, 5)
 
         # JSR $5597
         # Absolute
         def fn_0x20(self) :
-                pc = self.PC + 3
+                pc = self.PC + 2
                 high = pc >> 8
                 low =  pc & 255
-                self.push(high)
+                self.push(high) # little endian
                 self.push(low)
                 self.PC = self.getAbsoluteAddress()
                 return (0, 6)
@@ -907,7 +935,7 @@ class cpu:
         # Accumulator
         def fn_0x4a(self) :
                 self.flagC = self.A & 1
-                self.A = self.A > 1
+                self.A = self.A >> 1
                 self.setFlagNZ(self.A)
                 return (1, 2)
 
@@ -916,8 +944,9 @@ class cpu:
         def fn_0x46(self) :
                 value = self.getZeroPageValue()
                 self.flagC = value & 1
-                self.A = value > 1
-                self.setFlagNZ(self.A)
+                value = value >> 1
+                self.setZeroPage(value)
+                self.setFlagNZ(value)
                 return (2, 5)
 
         # LSR $44, X
@@ -925,8 +954,9 @@ class cpu:
         def fn_0x56(self) :
                 value = self.getZeroPageXValue()
                 self.flagC = value & 1
-                self.A = value > 1
-                self.setFlagNZ(self.A)
+                value = value >> 1
+                self.setZeroPageX(value)
+                self.setFlagNZ(value)
                 return (2, 6)
 
         # LSR $4400
@@ -934,8 +964,9 @@ class cpu:
         def fn_0x4e(self) :
                 value = self.getAbsoluteValue()
                 self.flagC = value & 1
-                self.A = value > 1
-                self.setFlagNZ(self.A)
+                value = value >> 1
+                self.setAbsolute(value)
+                self.setFlagNZ(value)
                 return (3, 6)
 
         # LSR $4400, X
@@ -943,14 +974,44 @@ class cpu:
         def fn_0x5e(self) :
                 value = self.getAbsoluteXValue()
                 self.flagC = value & 1
-                self.A = value > 1
-                self.setFlagNZ(self.A)
+                value = value >> 1
+                self.setAbsoluteX(value)
+                self.setFlagNZ(value)
                 return (3, 7)
 
         # NOP
         # Implied
-        def fn_0xea(self) :
-                return (1, 2)
+        def fn_0xea(self) : return (1, 2)
+        def fn_0x1a(self) : return (1, 2)
+        def fn_0x3a(self) : return (1, 2)
+        def fn_0x5a(self) : return (1, 2)
+        def fn_0x7a(self) : return (1, 2)
+        def fn_0xda(self) : return (1, 2)
+        def fn_0xfa(self) : return (1, 2)
+        # DOP
+        def fn_0x04(self) : return (2, 3)
+        def fn_0x14(self) : return (2, 4)
+        def fn_0x34(self) : return (2, 4)
+        def fn_0x44(self) : return (2, 3)
+        def fn_0x54(self) : return (2, 4)
+        def fn_0x64(self) : return (2, 3)
+        def fn_0x74(self) : return (2, 4)
+        def fn_0x80(self) : return (2, 2)
+        def fn_0x82(self) : return (2, 2)
+        def fn_0x89(self) : return (2, 2)
+        def fn_0xc2(self) : return (2, 2)
+        def fn_0xd4(self) : return (2, 4)
+        def fn_0xe2(self) : return (2, 2)
+        def fn_0xf4(self) : return (2, 4)
+
+        #TOP
+        def fn_0x0c(self) : return (3, 4)
+        def fn_0x1c(self) : return (3, 4)
+        def fn_0x3c(self) : return (3, 4)
+        def fn_0x5c(self) : return (3, 4)
+        def fn_0x7c(self) : return (3, 4)
+        def fn_0xdc(self) : return (3, 4)
+        def fn_0xfc(self) : return (3, 4)
 
         # ORA #$44
         # Immediate
@@ -1064,77 +1125,112 @@ class cpu:
                 self.setFlagNZ(self.Y)
                 return (1, 2)
 
-        def rol(self, val):
-                self.A = (val << 1) | (self.flagC)
-                self.flagC = self.A >> 8
-                self.A &= 255
-                self.setFlagNZ(self.A)
-
         # ROL A
         # Accumulator
         def fn_0x2a(self) :
-                self.rol(self.A)
+                val = self.A
+                self.A = (self.A << 1) | (self.flagC)
+                self.flagC = self.A >> 8
+                self.A &= 255
+                self.setFlagNZ(self.A)
                 return (1, 2)
                 
 
         # ROL $44
         # Zero Page
         def fn_0x26(self) :
-                self.rol(self.getZeroPageValue())
+                val = self.getZeroPageValue()
+                val = (val << 1) | (self.flagC)
+                self.flagC = val >> 8
+                val &= 255
+                self.setZeroPage(val)
+                self.setFlagNZ(val)
                 return (2, 5)
 
         # ROL $44, X
         # Zero Page, X
         def fn_0x36(self) :
-                self.rol(self.getZeroPageXValue())
+                val = self.getZeroPageXValue()
+                val = (val << 1) | (self.flagC)
+                self.flagC = val >> 8
+                val &= 255
+                self.setZeroPageX(val)
+                self.setFlagNZ(val)
                 return (2, 6)
 
         # ROL $4400
         # Absolute
         def fn_0x2e(self) :
-                self.rol(self.getAbsoluteValue())
+                val = self.getAbsoluteValue()
+                val = (val << 1) | (self.flagC)
+                self.flagC = val >> 8
+                val &= 255
+                self.setAbsolute(val)
+                self.setFlagNZ(val)
                 return (3, 6)
 
         # ROL $4400, X
         # Absolute, X
         def fn_0x3e(self) :
-                self.rol(self.getAbsoluteXValue())
+                val = self.getAbsoluteXValue()
+                val = (val << 1) | (self.flagC)
+                self.flagC = val >> 8
+                val &= 255
+                self.setAbsoluteX(val)
+                self.setFlagNZ(val)
                 return (3, 7)
-
-        def ror(self, val):
-                carry = val & 1
-                self.A = (val >> 1) | (self.flagC << 7)
-                self.flagC = carry
-                self.setFlagNZ(self.A)
 
         # ROR A
         # Accumulator
         def fn_0x6a(self) :
-                self.ror(self.A)
+                carry = self.A & 1
+                self.A = (self.A >> 1) | (self.flagC << 7)
+                self.flagC = carry
+                self.setFlagNZ(self.A)
                 return (1, 2)
 
         # ROR $44
         # Zero Page
         def fn_0x66(self) :
-                self.ror(self.getZeroPageValue())
+                val = self.getZeroPageValue()
+                carry = val & 1
+                val = (val >> 1) | (self.flagC << 7)
+                self.flagC = carry
+                self.setZeroPage(val)
+                self.setFlagNZ(val)
                 return (2, 5)
 
         # ROR $44, X
         # Zero Page, X
         def fn_0x76(self) :
-                self.ror(self.getZeroPageXValue())
+                val = self.getZeroPageXValue()
+                carry = val & 1
+                val = (val >> 1) | (self.flagC << 7)
+                self.flagC = carry
+                self.setZeroPageX(val)
+                self.setFlagNZ(val)
                 return (2, 6)
 
         # ROR $4400
         # Absolute
         def fn_0x6e(self) :
-                self.ror(self.getAbsoluteValue())
+                val = self.getAbsoluteValue()
+                carry = val & 1
+                val = (val >> 1) | (self.flagC << 7)
+                self.flagC = carry
+                self.setAbsolute(val)
+                self.setFlagNZ(val)
                 return (3, 6)
 
         # ROR $4400, X
         # Absolute, X
         def fn_0x7e(self) :
-                self.ror(self.getAbsoluteXValue())
+                val = self.getAbsoluteXValue()
+                carry = val & 1
+                val = (val >> 1) | (self.flagC << 7)
+                self.flagC = carry
+                self.setAbsoluteX(val)
+                self.setFlagNZ(val)
                 return (3, 7)
 
         # RTI
@@ -1153,7 +1249,7 @@ class cpu:
         def fn_0x60(self) :
                 low = self.pop()
                 high = self.pop()
-                self.PC = (high << 8) + low
+                self.PC = (high << 8) + low + 1 # JSR increment only by two, and RTS add the third
                 return (0, 6)
 
         def SBC(self, input): # issue here, CBB4 in nestest.nes
@@ -1210,7 +1306,7 @@ class cpu:
         # SBC ($44, X)
         # Indirect, X
         def fn_0xe1(self) :
-                self.SBC(self.getIndirectValue())
+                self.SBC(self.getIndirectXValue())
                 return (2, 6)
 
         # SBC ($44), Y
@@ -1351,6 +1447,83 @@ class cpu:
                 address = self.getAbsoluteAddress()
                 self.emulator.memory.write_rom(address, self.Y)
                 return (3, 4)
+                
+        # LAX $44
+        # Zero Page
+        def fn_0xa7(self) :
+                self.A = self.getZeroPageValue()
+                self.X = self.A
+                self.setFlagNZ(self.A)
+                return (2, 3)
+
+        # LAX $44, Y
+        # Zero Page, Y
+        def fn_0xb7(self) :
+                self.A = self.getZeroPageYValue()
+                self.X = self.A
+                self.setFlagNZ(self.A)
+                return (2, 4)
+
+        # LAX $4400
+        # Absolute
+        def fn_0xaf(self) :
+                self.A = self.getAbsoluteValue()
+                self.X = self.A
+                self.setFlagNZ(self.A)
+                return (3, 4)
+
+        # LAX $4400, Y
+        # Absolute, Y
+        def fn_0xbf(self) :
+                self.A = self.getAbsoluteYValue()
+                self.X = self.A
+                self.setFlagNZ(self.A)
+                return (3, 4)
+
+        # LAX ($44, X)
+        # Indirect, X
+        def fn_0xa3(self) :
+                self.A = self.getIndirectXValue()
+                self.X = self.A
+                self.setFlagNZ(self.A)
+                return (2, 6)
+
+        # LAX ($44), Y
+        # Indirect, Y
+        def fn_0xb3(self) :
+                self.A = self.getIndirectYValue()
+                self.X = self.A
+                self.setFlagNZ(self.A)
+                return (2, 5)
+        
+        #SAX $44
+        # Zero Page
+        def fn_0x87(self) :
+                val = self.A & self.X
+                self.setZeroPage(val)
+                return (2, 3)
+        
+        #SAX $ 44, X
+        # Zero Page, X
+        def fn_0x97(self) :
+                val = self.A & self.X
+                self.setZeroPageX(val)
+                return (2, 4)
+        
+        #SAX $4400
+        # Absolute
+        def fn_0x8f(self) :
+                val = self.A & self.X
+                self.setAbsolute(val)
+                return (3, 4)
+        
+        #SAX
+        # Indirect, X
+        def fn_0x83(self) :
+                val = self.A & self.X
+                self.setIndirectX(val)
+                return (2, 6)
+
                 
         def print_status(self) :
                 print("CPU")

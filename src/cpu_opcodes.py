@@ -54,7 +54,7 @@ opcodes = {
 	0xdd :	["Absolute, X", 		"CMP $4400, X", 	3, 		4, 		1	],
 	0xd9 :	["Absolute, Y", 		"CMP $4400, Y", 	3, 		4, 		1	],
 	0xc1 :	["Indirect, X", 		"CMP ($44, X)", 	2, 		6, 		0	],
-	0xc1 :	["Indirect, Y", 		"CMP ($44), Y", 	2, 		5, 		1	],
+	0xd1 :	["Indirect, Y", 		"CMP ($44), Y", 	2, 		5, 		1	],
 	
 	#CPX
 	0xe0 :	["Immediate", 		"CPX #$44", 	2, 		2, 		0	],
@@ -214,4 +214,51 @@ opcodes = {
 	0x84 :	["Zero Page", 		"STY $44", 		2, 		3,		0	],
 	0x94 :	["Zero Page, X", 	"STY $44, X", 	2, 		4, 		0	],
 	0x8c :	["Absolute", 		"STY $4400", 	3, 		4, 		0	],
+	
+	# Undocument opcodes
+	#NOP
+	0x1a:	["Implied",		"NOP",		1,		2,		0	],
+	0x3a:	["Implied",		"NOP",		1,		2,		0	],
+	0x5a:	["Implied",		"NOP",		1,		2,		0	],
+	0x7a:	["Implied",		"NOP",		1,		2,		0	],
+	0xda:	["Implied",		"NOP",		1,		2,		0	],
+	0xfa: 	["Implied",		"NOP",		1,		2,		0	],
+	#DOP
+	0x04:	["Zero Page",		"DOP",		2,		3,		0	],
+	0x14:	["Zero Page, X",		"DOP",		2,		4,		0	],
+	0x34:	["Zero Page, X",		"DOP",		2,		4,		0	],
+	0x44:	["Zero Page",		"DOP",		2,		3,		0	],
+	0x54:	["Zero Page, X",		"DOP",		2,		4,		0	],
+	0x64:	["Zero Page",		"DOP",		2,		3,		0	],
+	0x74:	["Zero Page, X",		"DOP",		2,		4,		0	],
+	0x80:	["Immediate",		"DOP",		2,		2,		0	],
+	0x82:	["Immediate",		"DOP",		2,		2,		0	],
+	0x89:	["Immediate",		"DOP",		2,		2,		0	],
+	0xc2:	["Immediate",		"DOP",		2,		2,		0	],
+	0xd4:	["Zero Page, X",		"DOP",		2,		4,		0	],
+	0xe2:	["Immediate",		"DOP",		2,		2,		0	],
+	0xf4: 	["Zero Page, X",		"DOP",		2,		4,		0	],
+	#TOP
+	0x0c: 	["Absolute",		"TOP",		3,		4,		0	],
+	0x1c: 	["Absolute, X",		"TOP",		3,		4,		1	],
+	0x3c: 	["Absolute, X",		"TOP",		3,		4,		1	],
+	0x5c: 	["Absolute, X",		"TOP",		3,		4,		1	],
+	0x7c: 	["Absolute, X",		"TOP",		3,		4,		1	],
+	0xdc: 	["Absolute, X",		"TOP",		3,		4,		1	],
+	0xfc: 	["Absolute, X",		"TOP",		3,		4,		1	],
+	
+	#LAX
+	0xa7 :	["Zero Page", 		"LAX $44", 		2, 		3,		0	],
+	0xb7 :	["Zero Page, Y", 	"LAX $44, Y", 	2, 		4, 		0	],
+	0xaf :	["Absolute", 		"LAX $4400", 	3, 		4, 		0	],
+	0xbf :	["Absolute, Y", 		"LAX $4400, Y", 	3, 		4, 		1	],
+	0xa3 :	["Indirect, X", 		"LAX ($44, X)", 	2, 		6, 		0	],
+	0xb3 :	["Indirect, Y", 		"LAX ($44), Y", 	2, 		5, 		1	],
+	
+	#SAX
+	0x87 :	["Zero Page", 		"SAX $44", 		2, 		3,		0	],
+	0x97 :	["Zero Page, Y", 	"SAX $44, Y", 	2, 		4, 		0	],
+	0x8f :	["Absolute", 		"SAX $4400", 	3, 		4, 		0	],
+	0x83 :	["Indirect, X", 		"SAX ($44, X)", 	2, 		6, 		0	],
+	
 	}

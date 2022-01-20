@@ -1,3 +1,5 @@
+# http://users.telenet.be/kim1-6502/6502/proman.html#92
+
 import cpu
 import memory
 import apu
@@ -148,10 +150,12 @@ class nes_emulator:
         if cpu_opcodes.opcodes[opcode][2] > 2:
             opcode_arg_2 = f"{self.memory.read_rom(cpu_status['PC']+2):02x}"
         
-        print(f"{cpu_status['PC']:x}  {opcode:02x} {opcode_arg_1} {opcode_arg_2}  {cpu_opcodes.opcodes[opcode][1]:30}  A:{cpu_status['A']:02x} X:{cpu_status['X']:02x} Y:{cpu_status['Y']:02x} P:{cpu_status['P']:02x} SP:{cpu_status['SP']:02x} PPU:  0, 21 CYC:{cpu_status['CYC']}".upper())
+        print(f"{cpu_status['PC']:x}  {opcode:02x} {opcode_arg_1} {opcode_arg_2}  {cpu_opcodes.opcodes[opcode][1]:30}  A:{cpu_status['A']:02x} X:{cpu_status['X']:02x} Y:{cpu_status['Y']:02x} P:{cpu_status['P']:02x} SP:{cpu_status['SP']:02x} PPU:{self.ppu.line}, {self.ppu.col} CYC:{cpu_status['CYC']}".upper())
     
         reference = self.test_file.readline()
         print(reference)
+        self.memory.print_memory_page(self.memory.ROM, 0x1)
+        
         
         
         ref_status = dict()
@@ -164,10 +168,6 @@ class nes_emulator:
         ref_status['P']  = int(m[0][3], 16)
         ref_status['SP'] = int(m[0][4], 16)
         
-        #if ref_status['A'] != cpu_status['A'] and self.prev_opcode == 0x68:
-        #    self.cpu.A = ref_status['A']
-        
-        #if ref_status['PC'] != cpu_status['PC'] or (ref_status['A'] != cpu_status['A'] and self.prev_opcode != 0x68) or ref_status['X'] != cpu_status['X']  or ref_status['Y'] != cpu_status['Y']  or ref_status['P'] != cpu_status['P']  or ref_status['SP'] != cpu_status['SP']: #  or ref_status['SP'] != cpu_status['SP']:
         if ref_status['PC'] != cpu_status['PC'] or ref_status['A'] != cpu_status['A'] or ref_status['X'] != cpu_status['X']  or ref_status['Y'] != cpu_status['Y']  or ref_status['P'] != cpu_status['P']  or ref_status['SP'] != cpu_status['SP']: #  or ref_status['SP'] != cpu_status['SP']:
                 raise Exception("ERROR !! ERROR !! ERROR !!")
         self.prev_opcode = opcode
