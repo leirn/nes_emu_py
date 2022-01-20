@@ -156,11 +156,16 @@ class memory:
         def print_status(self):
                 print("Memory status")
                 print("OAMADDR\t| PPUADDR")
-                print(f"{self.OAMADDR:x}\t| {format_hex_data(self.PPUADDR)}")
+                print(f"{self.OAMADDR:04x}\t| {self.PPUADDR:04x}")
                 print("")
-                print("OAM")
-                print(f"{' '.join([f'{i:02x}' for i in self.OAM])}")
+                #print("OAM")
+                #self.print_memory_page(self.OAM, 0)
                 print("Zero Page")
-                print(f"{' '.join([f'{i:02x}' for i in self.ROM[:0x100]])}")
+                self.print_memory_page(self.ROM, 0x0)
                 print("Stack")
-                print(f"{' '.join([f'{i:02x}' for i in self.ROM[0x0100:0x0200]])}")
+                self.print_memory_page(self.ROM, 0x1)
+                
+        def print_memory_page(self, page, high = 0) :
+                for i in range(0, 256, 32):
+                        print(f"{(high << 8) + i:04x}:{(high << 8) + i + 31 :04x}    {' '.join([f'{i:02x}' for i in page[(high << 8) + i:(high << 8) + i + 32]])}")
+                pass
