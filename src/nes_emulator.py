@@ -155,10 +155,6 @@ class nes_emulator:
         reference = self.test_file.readline()
         print(reference)
         self.memory.print_memory_page(self.memory.ROM, 0x0)
-        print("")
-        self.memory.print_memory_page(self.memory.ROM, 0x6)
-        
-        
         
         ref_status = dict()
         ref_status['PC'] = int(reference[0:4], 16)
@@ -171,9 +167,14 @@ class nes_emulator:
         ref_status['SP'] = int(m[0][4], 16)
         m = re.findall(r'CYC:(?P<A>[0-9A-Fa-f]+)', reference)
         ref_status['CYC']  = int(m[0])
+        m = re.findall(r'PPU:[ ]*([0-9]+),[ ]*([0-9]+)', reference)
+        ref_status['PPU_LINE']  = int(m[0][0])
+        ref_status['PPU_COL']  = int(m[0][1])
         
-        if ref_status['PC'] != cpu_status['PC'] or ref_status['A'] != cpu_status['A'] or ref_status['X'] != cpu_status['X']  or ref_status['Y'] != cpu_status['Y']  or ref_status['P'] != cpu_status['P']  or ref_status['SP'] != cpu_status['SP'] or ref_status['CYC'] != cpu_status['CYC']: 
-                raise Exception("ERROR !! ERROR !! ERROR !!")
+        for i in ["PC", "A", "X", "Y", "P", "SP"]: # On hold : CYC, PPU_LINE, PPU_COL
+                if ref_status[i] != cpu_status[i] : 
+                        raise Exception(f"{i} Error : {cpu_status[i]} instead of {ref_status[i]}")
+             
         self.prev_opcode = opcode
         print("")
         

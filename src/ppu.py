@@ -98,14 +98,12 @@ class ppu:
                         self.setVBlank()
 
                         self.emulator.display.blit(self.cached_frame, (0, 0))
-                        #pygame.display.update()
                         pygame.display.flip()
                         
                         #time.sleep(2)
                         
                         if (PPUCTRL >> 7) & 1:
                                 self.emulator.raise_nmi()
-                        return 0
                 elif (self.line, self.col) == (261, 3): 
                         self.clearVBlank()
                 
@@ -115,12 +113,12 @@ class ppu:
                         self.line = (self.line + 1) 
                         
         
-                # End of frame
-                if self.line == 262:
-                        self.line = 0
-                        self.frameParity = 1 - self.frameParity
-                        self.frame_count += 1
-                        return FRAME_COMPLETED
+                        # End of frame
+                        if self.line == 262:
+                                self.line = 0
+                                self.frameParity = 1 - self.frameParity
+                                self.frame_count += 1
+                                return FRAME_COMPLETED
                 return 0
 
         def setVBlank(self):

@@ -122,6 +122,8 @@ class cpu:
                 status["Y"] = self.Y
                 status["P"] = self.getP()
                 status["CYC"] = self.total_cycles
+                status["PPU_LINE"] = self.emulator.ppu.line
+                status["PPU_COL"] = self.emulator.ppu.col
                 return status
 
         def getP(self):
