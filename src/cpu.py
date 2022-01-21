@@ -17,6 +17,7 @@ class cpu:
         compteur = 0
         total_cycles = 7 # Cout de l'init
         remaining_cycles = 0
+        additional_cycle = 0
         
         emulator = ""
         A = 0
@@ -98,29 +99,20 @@ class cpu:
                 opcode = self.emulator.memory.read_rom(self.PC)
                 try:
                         if self.debug > 0:
-                                label = cpu_opcodes.opcodes[opcode][1]
-                                l = re.search(r'[0-9]+', label)
-                                if l:
-                                        if len(l.group(0)) == 2:
-                                                val = self.getImmediate()
-                                                label = label.replace(l.group(0), f"{val:x}") 
-                                        else:
-                                                val = self.getAbsoluteAddress()
-                                                label = label.replace(l.group(0), f"{format_hex_data(val)}")
-                                print(f"Counter : {self.compteur:8}, SP : 0x{self.SP:02x}, PC : {format_hex_data(self.PC)} - fn_0x{opcode:02x} - {label:14}, A = {self.A:2x}, X = {self.X:2x}, Y = {self.Y:2x}, Flags NVxBDIZC : {self.getP():08b}")
+                                self.print_status_summary()
                                 
                         fn = getattr(self, f"fn_0x{opcode:02x}")
                         step, self.remaining_cycles = fn()
-                        
+                        self.remaining_cycles += self.additional_cycle
                         self.total_cycles += self.remaining_cycles
-                        
+                        self.additional_cycle = 0
                         self.PC += step
                         self.compteur += 1
                         return
                 except KeyError as e:
                         print(f"Unknow opcode 0x{opcode:02x} at {' '.join(a+b for a,b in zip(f'{self.PC:x}'[::2], f'{self.PC:x}'[1::2]))}")
                         raise e
-                        
+        
         def get_cpu_status(self):
                 status = dict()
                 status["PC"] = self.PC
@@ -202,7 +194,11 @@ class cpu:
                 self.emulator.memory.write_rom(self.getAbsoluteXAddress(), val)
                 
         def getAbsoluteXAddress(self):
-                return (self.emulator.memory.read_rom_16(self.PC+1) + self.X) & 0xFFFF
+                address = self.emulator.memory.read_rom_16(self.PC+1)
+                target_address = (address + self.X) & 0xFFFF
+                if  address & 0xFF00 != target_address & 0xFF00:
+                        self.additional_cycle += 1
+                return target_address
                 
         def getAbsoluteXValue(self):
                 address = self.getAbsoluteXAddress()
@@ -212,7 +208,11 @@ class cpu:
                 self.emulator.memory.write_rom(self.getAbsoluteYAddress(), val)
                 
         def getAbsoluteYAddress(self):
-                return (self.emulator.memory.read_rom_16(self.PC+1) + self.Y) & 0xFFFF
+                address = self.emulator.memory.read_rom_16(self.PC+1)
+                target_address = (address + self.Y) & 0xFFFF
+                if  address & 0xFF00 != target_address & 0xFF00:
+                        self.additional_cycle += 1
+                return target_address
                 
         def getAbsoluteYValue(self):
                 address = self.getAbsoluteYAddress()
@@ -234,7 +234,10 @@ class cpu:
         def getIndirectYAddress(self):
                 address = self.getZeroPageAddress()
                 print(f"Indirect Y address {address:x}")
-                return 0xFFFF & (self.emulator.memory.read_rom_16_no_crossing_page(address )+ self.Y)
+                target_address = 0xFFFF & (self.emulator.memory.read_rom_16_no_crossing_page(address )+ self.Y)
+                if  address & 0xFF00 != target_address & 0xFF00:
+                        self.additional_cycle += 1
+                return target_address
 
         def getIndirectYValue(self):
                 address = self.getIndirectYAddress()
@@ -443,73 +446,103 @@ class cpu:
         # BPL
         # Relative
         def fn_0x10(self) :
+                old_pc = self.PC + 2
                 unsigned = self.getImmediate()
                 signed = unsigned - 256 if unsigned > 127 else unsigned
                 if self.flagN == 0:
                         self.PC += signed
+                        self.additional_cycle += 1
+                        if self.PC & 0xFF00 != old_pc & 0xFF00:
+                                self.additional_cycle += 1
                 return (2, 2)
 
         # BMI
         # Relative
         def fn_0x30(self) :
+                old_pc = self.PC + 2
                 unsigned = self.getImmediate()
                 signed = unsigned - 256 if unsigned > 127 else unsigned
                 if self.flagN == 1:
                         self.PC += signed
+                        self.additional_cycle += 1
+                        if self.PC & 0xFF00 != old_pc & 0xFF00:
+                                self.additional_cycle = 1
                 return (2, 2)
 
         # BVC
         # Relative
         def fn_0x50(self) :
+                old_pc = self.PC + 2
                 unsigned = self.getImmediate()
                 signed = unsigned - 256 if unsigned > 127 else unsigned
                 if self.flagV == 0:
                         self.PC += signed
+                        self.additional_cycle += 1
                 return (2, 2)
 
         # BVS
         # Relative
         def fn_0x70(self) :
+                old_pc = self.PC + 2
                 unsigned = self.getImmediate()
                 signed = unsigned - 256 if unsigned > 127 else unsigned
                 if self.flagV == 1:
                         self.PC += signed
+                        self.additional_cycle += 1
+                        if self.PC & 0xFF00 != old_pc & 0xFF00:
+                                self.additional_cycle = 1
                 return (2, 2)
 
         # BCC
         # Relative
         def fn_0x90(self) :
+                old_pc = self.PC + 2
                 unsigned = self.getImmediate()
                 signed = unsigned - 256 if unsigned > 127 else unsigned
                 if self.flagC == 0:
                         self.PC += signed
+                        self.additional_cycle += 1
+                        if self.PC & 0xFF00 != old_pc & 0xFF00:
+                                self.additional_cycle = 1
                 return (2, 2)
 
         # BCS
         # Relative
         def fn_0xb0(self) :
+                old_pc = self.PC + 2
                 unsigned = self.getImmediate()
                 signed = unsigned - 256 if unsigned > 127 else unsigned
                 if self.flagC == 1:
                         self.PC += signed
+                        self.additional_cycle += 1
+                        if self.PC & 0xFF00 != old_pc & 0xFF00:
+                                self.additional_cycle = 1
                 return (2, 2)
 
         # BNE
         # Relative
         def fn_0xd0(self) :
+                old_pc = self.PC + 2
                 unsigned = self.getImmediate()
                 signed = unsigned - 256 if unsigned > 127 else unsigned
                 if self.flagZ == 0:
                         self.PC += signed
+                        self.additional_cycle += 1
+                        if self.PC & 0xFF00 != old_pc & 0xFF00:
+                                self.additional_cycle = 1
                 return (2, 2)
 
         # BEQ
         # Relative
         def fn_0xf0(self) :
+                old_pc = self.PC + 2
                 unsigned = self.getImmediate()
                 signed = unsigned - 256 if unsigned > 127 else unsigned
                 if self.flagZ == 1:
                         self.PC += signed
+                        self.additional_cycle += 1
+                        if self.PC & 0xFF00 != old_pc & 0xFF00:
+                                self.additional_cycle = 1
                 return (2, 2)
 
         # BRK
@@ -523,9 +556,6 @@ class cpu:
                 return (0, 7)
 
         def cmp(self, a, b) :
-                #a = a - 256 if a > 127 else a
-                #b = b - 256 if b > 127 else b
-                print(type(a))
                 if a > b:
                         if a-b >= 0x80:
                                 self.flagC = 1
@@ -1743,6 +1773,21 @@ class cpu:
                 print("NVxBDIZC")
                 print(f"{self.getP():08b}")
                 print("")
+                
+        
+        
+        def print_status_summary(self) :
+                label = cpu_opcodes.opcodes[opcode][1]
+                l = re.search(r'[0-9]+', label)
+                if l:
+                        if len(l.group(0)) == 2:
+                                val = self.getImmediate()
+                                label = label.replace(l.group(0), f"{val:x}") 
+                        else:
+                                val = self.getAbsoluteAddress()
+                                label = label.replace(l.group(0), f"{format_hex_data(val)}")
+                print(f"Counter : {self.compteur:8}, SP : 0x{self.SP:02x}, PC : {format_hex_data(self.PC)} - fn_0x{opcode:02x} - {label:14}, A = {self.A:2x}, X = {self.X:2x}, Y = {self.Y:2x}, Flags NVxBDIZC : {self.getP():08b}")
+                                
                 
                 
  

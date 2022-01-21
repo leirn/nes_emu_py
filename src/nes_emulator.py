@@ -70,7 +70,7 @@ class nes_emulator:
                                 self.cpu.next()
                                 # 3 PPU dots per CPU cycles
                                 is_frame = 0
-                                #is_frame |= self.ppu.next()
+                                is_frame |= self.ppu.next()
                                 is_frame |= self.ppu.next()
                                 is_frame |= self.ppu.next()
                         except Exception as e:
@@ -83,7 +83,7 @@ class nes_emulator:
                                 self.clock.tick(60)
                                 print(f"FPS = {self.clock.get_fps()}")
                         
-                        #time.sleep(0.0001)
+                        #time.sleep(0.01)
                 
                 # http://www.pygame.org/docs/ref/key.html
                 for event in pygame.event.get():
@@ -169,8 +169,10 @@ class nes_emulator:
         ref_status['Y']  = int(m[0][2], 16)
         ref_status['P']  = int(m[0][3], 16)
         ref_status['SP'] = int(m[0][4], 16)
+        m = re.findall(r'CYC:(?P<A>[0-9A-Fa-f]+)', reference)
+        ref_status['CYC']  = int(m[0])
         
-        if ref_status['PC'] != cpu_status['PC'] or ref_status['A'] != cpu_status['A'] or ref_status['X'] != cpu_status['X']  or ref_status['Y'] != cpu_status['Y']  or ref_status['P'] != cpu_status['P']  or ref_status['SP'] != cpu_status['SP']: #  or ref_status['SP'] != cpu_status['SP']:
+        if ref_status['PC'] != cpu_status['PC'] or ref_status['A'] != cpu_status['A'] or ref_status['X'] != cpu_status['X']  or ref_status['Y'] != cpu_status['Y']  or ref_status['P'] != cpu_status['P']  or ref_status['SP'] != cpu_status['SP'] or ref_status['CYC'] != cpu_status['CYC']: 
                 raise Exception("ERROR !! ERROR !! ERROR !!")
         self.prev_opcode = opcode
         print("")

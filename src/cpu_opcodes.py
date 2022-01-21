@@ -34,14 +34,14 @@ opcodes = {
 	0x2c:	["Absolute",		"BIT $4400",	3,		4,		0	],
 	
 	#BRANCH # Cycle count impact depending or branching actually done
-	0x10:	["Relative",		"BPL #$44",		2,		2,		0	],
-	0x30:	["Relative",		"BMI #$44",		2,		2,		0	],
-	0x50:	["Relative",		"BVC #$44",		2,		2,		0	],
-	0x70:	["Relative",		"BVS #$44",		2,		2,		0	],
-	0x90:	["Relative",		"BCC #$44",		2,		2,		0	],
-	0xb0:	["Relative",		"BCS #$44",		2,		2,		0	],
-	0xd0:	["Relative",		"BNE #$44",		2,		2,		0	],
-	0xf0:		["Relative",		"BEQ #$44",		2,		2,		0	],
+	0x10:	["Relative",		"BPL #$44",		2,		2,		1	],
+	0x30:	["Relative",		"BMI #$44",		2,		2,		1	],
+	0x50:	["Relative",		"BVC #$44",		2,		2,		1	],
+	0x70:	["Relative",		"BVS #$44",		2,		2,		1	],
+	0x90:	["Relative",		"BCC #$44",		2,		2,		1	],
+	0xb0:	["Relative",		"BCS #$44",		2,		2,		1	],
+	0xd0:	["Relative",		"BNE #$44",		2,		2,		1	],
+	0xf0:		["Relative",		"BEQ #$44",		2,		2,		1	],
 	
 	#BREAK
 	0x00:	["Implied",		"BRK",		1,		7,		0	],
