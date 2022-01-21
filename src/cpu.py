@@ -15,7 +15,7 @@ class cpu:
         test_mode = 0
         debug = 0
         compteur = 0
-        total_cycles = 7 # Cout de l'init
+        total_cycles = 0
         remaining_cycles = 0
         additional_cycle = 0
         
@@ -58,6 +58,9 @@ class cpu:
                 # Equivalent to JMP ($FFFC)
                         self.PC = self.emulator.memory.read_rom_16(0xfffc)
                 if self.debug : print(f"Entry point : 0x{format_hex_data(self.PC)}")
+                
+                 total_cycles = 7 # Cout de l'init
+                
                 return 1
         
         def nmi(self):
