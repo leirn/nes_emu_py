@@ -58,7 +58,8 @@ class cpu:
                 # Equivalent to JMP ($FFFC)
                         self.PC = self.emulator.memory.read_rom_16(0xfffc)
                 if self.debug : print(f"Entry point : 0x{format_hex_data(self.PC)}")
-                total_cycles = 7 # Cout de l'init
+                self.total_cycles = 7 # Cout de l'init
+                self.remaining_cycles = 7
                 
                 return 1
         
@@ -94,9 +95,6 @@ class cpu:
                 if self.remaining_cycles > 0:
                         self.remaining_cycles -= 1
                         return
-                
-                
-                if self.test_mode == 1: self.emulator.check_test(self.get_cpu_status())
                 
                 opcode = self.emulator.memory.read_rom(self.PC)
                 try:

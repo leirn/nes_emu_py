@@ -27,6 +27,7 @@ class nes_emulator:
     pause = 0
     clock = 0
     test_file = 0
+    test_mode = 0
     
     def __init__(self, cartridge_stream):
         pygame.init()
@@ -53,6 +54,9 @@ class nes_emulator:
 
     def start(self, entry_point = None):
         self.cpu.start(entry_point)
+        self.ppu.next()
+        self.ppu.next()
+        self.ppu.next()
         continuer = 1
         frame_count = 0
 
@@ -78,6 +82,9 @@ class nes_emulator:
                                 self.print_status()
                                 print(traceback.format_exc())
                                 exit()
+                        
+                        if self.test_mode == 1 and self.cpu.remaining_cycles == 0: self.check_test(self.cpu.get_cpu_status())
+                                
                         if is_frame & ppu.FRAME_COMPLETED > 0:
                                 frame_count += 1
                                 self.clock.tick(60)
@@ -134,6 +141,7 @@ class nes_emulator:
         self.is_irq = 1
         
     def setTestMode(self, file_name):
+        self.test_mode = 1
         self.cpu.test_mode = 1
         self.test_file = file_name
         
