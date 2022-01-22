@@ -58,8 +58,7 @@ class cpu:
                 # Equivalent to JMP ($FFFC)
                         self.PC = self.emulator.memory.read_rom_16(0xfffc)
                 if self.debug : print(f"Entry point : 0x{format_hex_data(self.PC)}")
-                
-                 total_cycles = 7 # Cout de l'init
+                total_cycles = 7 # Cout de l'init
                 
                 return 1
         
@@ -81,7 +80,7 @@ class cpu:
                 self.flagI = 0
                 
                 self.PC = self.emulator.memory.read_rom_16(address)
-                self.remaining_cycles = 7
+                self.remaining_cycles = 7 - 1 # do not count current cycle twice
                 self.total_cycles += 7
         
         # next : execute the next opcode.
@@ -107,7 +106,8 @@ class cpu:
                         fn = getattr(self, f"fn_0x{opcode:02x}")
                         step, self.remaining_cycles = fn()
                         self.remaining_cycles += self.additional_cycle
-                        self.total_cycles += self.remaining_cycles
+                        self.total_cycles += self.remaining_cycles 
+                        self.remaining_cycles -= 1 # Do not count current cycle twice
                         self.additional_cycle = 0
                         self.PC += step
                         self.compteur += 1

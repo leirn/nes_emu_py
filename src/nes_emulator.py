@@ -83,7 +83,7 @@ class nes_emulator:
                                 self.clock.tick(60)
                                 print(f"FPS = {self.clock.get_fps()}")
                         
-                        #time.sleep(0.01)
+                        time.sleep(0.01)
                 
                 # http://www.pygame.org/docs/ref/key.html
                 for event in pygame.event.get():
