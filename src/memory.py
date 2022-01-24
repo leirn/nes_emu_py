@@ -45,7 +45,11 @@ class memory:
                 elif address == 0x2007:
                         return self.read_ppu_memory_at_ppuaddr()
                 elif address >= 0x3f00 and address < 0x4000:
-                        return self.palette_VRAM[address % 0x20]
+                        if address % 4 == 0:
+                                address = 0
+                        else:
+                                address = address % 0x20
+                        return self.palette_VRAM[address]
                 elif address < 0x4000: # PPU mirroring
                         return self.ROM[0x2000 + (address % 0x8)]
                 elif address == 0x4016: # Handling joystick
@@ -102,7 +106,11 @@ class memory:
                                 self.ROM[address] = value
                         return 0
                 elif address >= 0x3f00 and address < 0x4000:
-                        self.palette_VRAM[address % 0x20] = value
+                        if address % 4 == 0:
+                                address = 0
+                        else:
+                                address = address % 0x20
+                        self.palette_VRAM[address] = value
                         return 0
                 elif address == 0x4014 : # OAMDMA
                         value = value << 8
@@ -137,7 +145,11 @@ class memory:
                                 self.PPUADDR += 1 if (self.PPUADDR >> 2) & 1 == 0 else 0x20
                                 return val
                         elif address < 0x4000 : # palette
-                                return self.palette_VRAM[self.PPUADDR % 0x20]
+                                if address % 4 == 0:
+                                        address = 0
+                                else:
+                                        address = address % 0x20
+                                return self.palette_VRAM[address]
                         else:
                                 raise Error("Out of PPU memory range")
                 
@@ -150,7 +162,11 @@ class memory:
                         elif address < 0x3F00: # VRAM mirror
                                 return self.VRAM[address - 0X3000]
                         elif address < 0x4000 : # palette
-                                return self.palette_VRAM[self.PPUADDR % 0x20]
+                                if address % 4 == 0:
+                                        palette_address = 0
+                                else:
+                                        palette_address = address % 0x20
+                                return self.palette_VRAM[palette_address]
                         else:
                                 raise Error("Out of PPU memory range")
         
@@ -165,8 +181,12 @@ class memory:
                                 self.VRAM[self.PPUADDR - 0x3000] = value
                                 VRAM_increment = (self.read_rom(0x2000) >> 2) & 1
                                 self.PPUADDR += 1 if VRAM_increment == 0 else 0x20
-                        else: # palette
-                                self.palette_VRAM[self.PPUADDR % 0x20] = value
+                        elif self.PPUADDR < 0x4000: # palette
+                                if self.PPUADDR % 4 == 0:
+                                        address = 0
+                                else:
+                                        address = self.PPUADDR % 0x20
+                                self.palette_VRAM[address] = value
                                 VRAM_increment = (self.read_rom(0x2000) >> 2) & 1
                                 self.PPUADDR += 1 if VRAM_increment == 0 else 0x20
                 

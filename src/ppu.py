@@ -57,18 +57,26 @@ class ppu:
                 nametable = PPUCTRL & 0b11
                 nametableAddress = {0 : 0x2000, 1 : 0x2400, 2 : 0x2800, 3 : 0x2C00}[nametable]
                 backgroundPatternTableAddress = ((PPUCTRL >> 4) & 1) * 0x1000
+
+                attribute_table = nametableAddress + 0xC0
+
                 # update background
                 if (PPUMASK >>3) & 1 and self.line < 240 and self.col < 256 and self.col % 8 == 0 and self.line % 8 == 0 :	# Update pixel
                         
-                        
                         tileIndex = self.col // 8 + (32 * self.line // 8)
+
+                        attribute_address = (self.line % 0x20) * 0x8 + (self.col % 0x20)
+                        attribute =  self.emulator.memory.read_ppu_memory(attribute_table + attribute_address)
+
+                        shift = ((self.col // 8) % 2) + ((self.line // 8) % 2) << 1
+                        color_palette = (attribute >> shift) & 0b11
                                 
                         #read background info in VRAM
-                        bgTileIndex = self.emulator.memory.read_ppu_memory(0x2000 + backgroundPatternTableAddress + tileIndex) # 0x2000 to aligne with VRAM start
+                        bgTileIndex = self.emulator.memory.read_ppu_memory(nametableAddress + backgroundPatternTableAddress + tileIndex) 
                         if self.debug : print (f"Tile ID : {tileIndex} - Tile content : {bgTileIndex:x}")
                         
                         tileData = self.emulator.memory.getTile(backgroundPatternTableAddress, bgTileIndex)
-                        tile = self.createTile(tileData, 0, 1)
+                        tile = self.createTile(tileData, color_palette, 1)
                         tile = pygame.transform.scale(tile, (int(8 * self.scale), int(8 * self.scale)))
                         self.frame_background.blit(tile, (self.col * self.scale, self.line * self.scale))
                 
@@ -91,7 +99,7 @@ class ppu:
                                     s_palette = s_param  & 3
                                     
                                     sprite_tile = self.emulator.memory.getTile(backgroundPatternTableAddress, s_tileId)
-                                    tile = self.createTile(sprite_tile, 0, 1)
+                                    tile = self.createTile(sprite_tile, s_palette, 1)
                                     tile = pygame.transform.scale(tile, (int(8 * self.scale), int(8 * self.scale)))
                                     
                                     tile = pygame.transform.flip(tile, (s_param >> 7) & 1, (s_param >> 6) & 1)
@@ -218,7 +226,6 @@ class ppu:
                         palette.append(self.palette[self.emulator.memory.read_ppu_memory(address + 1)])
                         palette.append(self.palette[self.emulator.memory.read_ppu_memory(address + 2)])
                         palette.append(self.palette[self.emulator.memory.read_ppu_memory(address + 3)])
-                
                 for i in range(8):
                         for j in range(8):
                                 bit1 = (array_of_byte[i] >> (7-j)) & 1
