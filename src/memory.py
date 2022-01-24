@@ -47,8 +47,7 @@ class memory:
                 elif address < 0x4000: # PPU mirroring
                         return self.ROM[0x2000 + (address % 0x8)]
                 elif address == 0x4016: # Handling joystick
-                        #if self.debug : 
-                        print(f"Joystick 1 read {self.ctrl1_status:b}")
+                        if self.debug : print(f"Joystick 1 read {self.ctrl1_status:b}")
                         value = self.ctrl1_status & 1
                         self.ctrl1_status = self.ctrl1_status >> 1
                         return value
@@ -63,7 +62,7 @@ class memory:
         # NES is Little Endian
         def read_rom_16_no_crossing_page(self, address):
                 high_address = (address & 0xFF00) +((address + 1) & 0xFF)
-                print(f"High address : {high_address:04x}, Low address : {address:04x}")
+                if self.debug : print(f"High address : {high_address:04x}, Low address : {address:04x}")
                 if address > 0x7FFF:
                         low = self.mapper.read_rom(address)
                         high = self.mapper.read_rom(high_address) # So that reading never cross pages
@@ -107,10 +106,9 @@ class memory:
                                 raise Exception("OAM trop court")
                         return 514
                 elif address == 0x4016: # Handling joystick
-                        #if self.debug : 
-                        print(f"Joystick write {value:b}")
+                        if self.debug : print(f"Joystick write {value:b}")
                         if value & 1 == 0:
-                                print(f"Saved {self.emulator.ctrl1.status:b}")
+                                if self.debug : print(f"Saved {self.emulator.ctrl1.status:b}")
                                 # store joypad value
                                 self.ctrl1_status = self.emulator.ctrl1.status
                                 self.ctrl2_status = self.emulator.ctrl2.status
@@ -127,11 +125,11 @@ class memory:
                                 return self.cartridge.prg_rom[self.PPUADDR] # CHR_ROM ADDRESS
                         elif self.PPUADDR < 0x3000: # VRAM
                                 val =  self.VRAM[self.PPUADDR - 0x2000]
-                                self.PPUADDR += 1 if VRAM_increment == 0 else 0x20
+                                self.PPUADDR += 1 if (self.PPUADDR >> 2) & 1 == 0 else 0x20
                                 return val
                         elif self.PPUADDR < 0x3F00: # VRAM mirror
                                 val =  self.VRAM[self.PPUADDR - 0X3000]
-                                self.PPUADDR += 1 if VRAM_increment == 0 else 0x20
+                                self.PPUADDR += 1 if (self.PPUADDR >> 2) & 1 == 0 else 0x20
                                 return val
                         elif address < 0x4000 : # palette
                                 return self.palette_VRAM[self.PPUADDR % 0x20]

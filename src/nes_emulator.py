@@ -90,7 +90,7 @@ class nes_emulator:
                                 self.clock.tick(60)
                                 print(f"FPS = {self.clock.get_fps()}")
                         
-                        time.sleep(0.01)
+                        #time.sleep(0.01)
                 
                 # http://www.pygame.org/docs/ref/key.html
                 for event in pygame.event.get():
@@ -161,8 +161,14 @@ class nes_emulator:
         print(f"{cpu_status['PC']:x}  {opcode:02x} {opcode_arg_1} {opcode_arg_2}  {cpu_opcodes.opcodes[opcode][1]:30}  A:{cpu_status['A']:02x} X:{cpu_status['X']:02x} Y:{cpu_status['Y']:02x} P:{cpu_status['P']:02x} SP:{cpu_status['SP']:02x} PPU:{self.ppu.line}, {self.ppu.col} CYC:{cpu_status['CYC']}".upper())
     
         reference = self.test_file.readline()
+        
+        if reference == "":
+            print("Test file completed")
+            exit()
+        
         print(reference)
         self.memory.print_memory_page(self.memory.ROM, 0x0)
+        self.memory.print_memory_page(self.memory.ROM, 0x6)
         
         ref_status = dict()
         ref_status['PC'] = int(reference[0:4], 16)
@@ -185,5 +191,3 @@ class nes_emulator:
              
         self.prev_opcode = opcode
         print("")
-        
-        pass

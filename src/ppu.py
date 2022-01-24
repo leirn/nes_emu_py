@@ -63,7 +63,7 @@ class ppu:
                         if self.debug : print (f"Tile ID : {tileIndex} - Tile content : {bgTileIndex:x}")
                         
                         tileData = self.emulator.memory.getTile(backgroundPatternTableAddress, bgTileIndex)
-                        tile = self.createTile(tileData)
+                        tile = self.createTile(tileData, 0)
                         tile = pygame.surfarray.make_surface(tile)
                         tile = pygame.transform.scale(tile, (int(8 * self.scale), int(8 * self.scale)))
                         self.cached_frame.blit(tile, (self.col * self.scale, self.line * self.scale))
@@ -85,7 +85,7 @@ class ppu:
                                     s_param = sprite[2]
                                     
                                     sprite_tile = self.emulator.memory.getTile(backgroundPatternTableAddress, s_tileId)
-                                    tile = self.createTile(sprite_tile)
+                                    tile = self.createTile(sprite_tile, 1)
                                     tile = pygame.surfarray.make_surface(tile)
                                     tile = pygame.transform.scale(tile, (int(8 * self.scale), int(8 * self.scale)))
                                     
@@ -180,7 +180,7 @@ class ppu:
         def dump_chr(self):
                 print(len(self.emulator.cartridge.chr_rom)/16)
                 
-                ar = self.createTile(self.emulator.cartridge.chr_rom[:16])
+                ar = self.createTile(self.emulator.cartridge.chr_rom[:16], 1, 0)
                 tile = pygame.surfarray.make_surface(ar)
                 
                 c = 0
@@ -198,7 +198,13 @@ class ppu:
                                 y += 10 * self.scale
 
                 
-        def createTile(self, array_of_byte):
+        def createTile(self, array_of_byte, is_sprite = 0, palette = 0):
+                palette = []
+                palette.append(self.palette[0x01])
+                palette.append(self.palette[0x23])
+                palette.append(self.palette[0x27])
+                palette.append(self.palette[0x30])
+                
                 a = [[0,   0,   0]] * 8
                 a = [a] * 8
                 a = np.array([[(0, 0, 0) for x in range(8)] for y in range(8)])
@@ -208,14 +214,7 @@ class ppu:
                                 bit2 = (array_of_byte[8 + i] >> (7-j)) & 1
                                 
                                 color_code = bit1 | (bit2 << 1)
-                                if color_code == 0:
-                                        a[j][i] = self.palette[1]
-                                elif color_code == 1:
-                                        a[j][i] = self.palette[0x23]
-                                elif color_code == 2:
-                                        a[j][i] = self.palette[0x27]
-                                elif color_code == 3:
-                                        a[j][i] = self.palette[0x30]
+                                a[j][i] = palette[color_code]
                                 
                 return a
         

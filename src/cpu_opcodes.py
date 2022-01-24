@@ -289,4 +289,31 @@ opcodes = {
 	0x03 :	["Indirect, X", 	"SLO ($44, X)", 	2, 		8, 		0	],
 	0x13 :	["Indirect, Y", 	"SLO ($44), Y", 	2, 		8, 		0	],
 	
+	#RLA
+	0x27 :	["Zero Page", 		"RLA $44", 		2, 		5,		0	],
+	0x37 :	["Zero Page, X", 	"RLA $44, X", 	2, 		6, 		0	],
+	0x2f :	["Absolute", 		"RLA $4400", 	3, 		6, 		0	],
+	0x3f :	["Absolute, X", 	"RLA $4400, X", 	3, 		7, 		0	],
+	0x3b :	["Absolute, Y", 	"RLA $4400, Y", 	3, 		7, 		0	],
+	0x23 :	["Indirect, X", 	"RLA ($44, X)", 	2, 		8, 		0	],
+	0x33 :	["Indirect, Y", 	"RLA ($44), Y", 	2, 		8, 		0	],
+	
+	#RRA
+	0x67 :	["Zero Page", 		"RRA $44", 		2, 		5,		0	],
+	0x77 :	["Zero Page, X", 	"RRA $44, X", 	2, 		6, 		0	],
+	0x6f :	["Absolute", 		"RRA $4400", 	3, 		6, 		0	],
+	0x7f :	["Absolute, X", 	"RRA $4400, X", 	3, 		7, 		0	],
+	0x7b :	["Absolute, Y", 	"RRA $4400, Y", 	3, 		7, 		0	],
+	0x63 :	["Indirect, X", 	"RRA ($44, X)", 	2, 		8, 		0	],
+	0x73 :	["Indirect, Y", 	"RRA ($44), Y", 	2, 		8, 		0	],
+	
+	#SRE
+	0x47 :	["Zero Page", 		"SRE $44", 		2, 		5,		0	],
+	0x57 :	["Zero Page, X", 	"SRE $44, X", 	2, 		6, 		0	],
+	0x4f :	["Absolute", 		"SRE $4400", 	3, 		6, 		0	],
+	0x5f :	["Absolute, X", 	"SRE $4400, X", 	3, 		7, 		0	],
+	0x5b :	["Absolute, Y", 	"SRE $4400, Y", 	3, 		7, 		0	],
+	0x43 :	["Indirect, X", 	"SRE ($44, X)", 	2, 		8, 		0	],
+	0x53 :	["Indirect, Y", 	"SRE ($44), Y", 	2, 		8, 		0	],
+	
 	}
