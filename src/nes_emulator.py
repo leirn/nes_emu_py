@@ -37,6 +37,7 @@ class nes_emulator:
         self.cartridge.parse_rom(cartridge_stream)
         
         self.display = pygame.display.set_mode( (int(256 * self.scale), int(240 * self.scale)))
+        self.display.fill((0, 0, 0))
         
         self.ctrl1 = inputs.nes_controller()
         self.ctrl2 = inputs.nes_controller()
