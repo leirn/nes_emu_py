@@ -45,7 +45,7 @@ class memory:
                         return self.ROM[address % 0x800]
                 elif address == 0x2002: # PPUSTATUS
                         # Reset PPUADDR and PPUSCROLL
-                        self.PPUSCROLL = 0
+                        #self.PPUSCROLL = 0 # Scrolling doesn't work if uncommented
                         self.PPUADDR = 0
                         value = self.ROM[0x2002]
                         self.ROM[0x2002] = value & 0b1111111
@@ -108,6 +108,7 @@ class memory:
                                 self.OAM[self.OAMADDR] = value
                         elif address == 0x2005:
                                 self.PPUSCROLL = ((self.PPUSCROLL << 8 ) + value ) & 0xffff
+                                print(f"Update scroll with value {value}, PPUSCROLL = {self.PPUSCROLL:x}")
                         elif address == 0x2006:
                                 self.PPUADDR = ((self.PPUADDR << 8 ) + value ) & 0xffff
                         elif address == 0x2007:
@@ -154,19 +155,19 @@ class memory:
                                 val =  self.VRAM[self.PPUADDR - 0X3000]
                                 self.PPUADDR += 1 if (self.PPUADDR >> 2) & 1 == 0 else 0x20
                                 return val
-                        elif address < 0x4000 : # palette
-                                if address % 4 == 0:
+                        elif self.PPUADDR < 0x4000 : # palette
+                                if self.PPUADDR % 4 == 0:
                                         address = 0
                                 else:
-                                        address = address % 0x20
+                                        address = self.PPUADDR % 0x20
                                 return self.palette_VRAM[address]
                         else:
-                                raise Error("Out of PPU memory range")
+                                raise Exception("Out of PPU memory range")
                 
                 
         def read_ppu_memory(self, address):
                         if address < 0x2000:
-                                return self.emulator.xcartridge.prg_rom[address] # CHR_ROM ADDRESS
+                                return self.PRG[address] # CHR_ROM ADDRESS
                         elif address < 0x3000: # VRAM
                                 return self.VRAM[address - 0x2000]
                         elif address < 0x3F00: # VRAM mirror
@@ -178,7 +179,7 @@ class memory:
                                         palette_address = address % 0x20
                                 return self.palette_VRAM[palette_address]
                         else:
-                                raise Error("Out of PPU memory range")
+                                raise Exception("Out of PPU memory range")
         
         def write_ppu_memory_at_ppuaddr(self, value):
                         if self.PPUADDR < 0x2000:
