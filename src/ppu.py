@@ -18,10 +18,10 @@ class ppu:
         frameParity = 0
         
         palette = [
-                        (84,  84,  84, 255), 	(0,  30, 116, 255),		(8, 16, 144, 255),		(48, 0, 136, 255), 		(68, 0, 100, 255),  		(92, 0,  48, 255),   	(84, 4, 0, 255),   		(60, 24, 0, 255),   		(32, 42, 0, 255), 		(8, 58, 0, 255),    		(0, 64, 0, 255),    		(0, 60, 0, 255),    		(0, 50, 60, 255),    	(0,   0,   0, 255),		(0,   0,   0, 255),		(0,   0,   0, 255),
-                        (152, 150, 152, 255),   	(8,  76, 196, 255),   	(48, 50, 236, 255),   	(92, 30, 228, 255),  	(136, 20, 176, 255), 	(160, 20, 100, 255),  	(152, 34, 32, 255),  	(120, 60, 0, 255),   	(84, 90, 0, 255),   		(40, 114, 0, 255),    	(8, 124, 0, 255),    	(0, 118, 40, 255),    	(0, 102, 120, 255),    	(0,   0,   0, 255),		(0,   0,   0, 255),		(0,   0,   0, 255),
-                        (236, 238, 236, 255),    (76, 154, 236, 255),  	(120, 124, 236, 255),  	(176, 98, 236, 255),  	(228, 84, 236, 255), 	(236, 88, 180, 255),  	(236, 106, 100, 255),  	(212, 136, 32, 255),  	(160, 170, 0, 255),  	(116, 196, 0, 255),   	(76, 208, 32, 255),   	(56, 204, 108, 255),   	(56, 180, 204, 255),   	(60,  60,  60, 255),		(0,   0,   0, 255),		(0,   0,   0, 255),
-                        (236, 238, 236, 255),  	(168, 204, 236, 255),  	(188, 188, 236, 255),  	(212, 178, 236, 255),  	(236, 174, 236, 255),	(236, 174, 212, 255),  	(236, 180, 176, 255),  	(228, 196, 144, 255),  	(204, 210, 120, 255),  	(180, 222, 120, 255),  	(168, 226, 144, 255),  	(152, 226, 180, 255),  	(160, 214, 228, 255),  	(160, 162, 160, 255),	(0,   0,   0, 255),		(0,   0,   0, 255),
+                        (84,  84,  84, 255), 	(0,  30, 116, 255),	(8, 16, 144, 255),	(48, 0, 136, 255), 	(68, 0, 100, 255),  	(92, 0,  48, 255),   	(84, 4, 0, 255),   	(60, 24, 0, 255),   	(32, 42, 0, 255), 	(8, 58, 0, 255),    	(0, 64, 0, 255),    	(0, 60, 0, 255),    	(0, 50, 60, 255),    	(0,   0,   0, 255),	(0,   0,   0, 255),	(0,   0,   0, 255),
+                        (152, 150, 152, 255),   (8,  76, 196, 255),   	(48, 50, 236, 255),   	(92, 30, 228, 255),  	(136, 20, 176, 255), 	(160, 20, 100, 255),  	(152, 34, 32, 255),  	(120, 60, 0, 255),   	(84, 90, 0, 255),   	(40, 114, 0, 255),    	(8, 124, 0, 255),    	(0, 118, 40, 255),    	(0, 102, 120, 255),    	(0,   0,   0, 255),	(0,   0,   0, 255),	(0,   0,   0, 255),
+                        (236, 238, 236, 255),   (76, 154, 236, 255),  	(120, 124, 236, 255),  	(176, 98, 236, 255),  	(228, 84, 236, 255), 	(236, 88, 180, 255),  	(236, 106, 100, 255),  	(212, 136, 32, 255),  	(160, 170, 0, 255),  	(116, 196, 0, 255),   	(76, 208, 32, 255),   	(56, 204, 108, 255),   	(56, 180, 204, 255),   	(60,  60,  60, 255),	(0,   0,   0, 255),	(0,   0,   0, 255),
+                        (236, 238, 236, 255),  	(168, 204, 236, 255),  	(188, 188, 236, 255),  	(212, 178, 236, 255),  	(236, 174, 236, 255),	(236, 174, 212, 255),  	(236, 180, 176, 255),  	(228, 196, 144, 255),  	(204, 210, 120, 255),  	(180, 222, 120, 255),  	(168, 226, 144, 255),  	(152, 226, 180, 255),  	(160, 214, 228, 255),  	(160, 162, 160, 255),	(0,   0,   0, 255),	(0,   0,   0, 255),
                 ]
         
         def __init__(self, emulator):
@@ -43,13 +43,12 @@ class ppu:
         def next(self):
                 if self.line == 0 and self.col == 0:
                         self.frame_sprite = []
-                        self.frame_background = pygame.Surface((int(self.scale * 256), int(self.scale * 240)), pygame.SRCALPHA) # Le background
-                        self.frame_background = self.frame_background.convert_alpha()
-                        self.frame_sprite.append(pygame.Surface((int(self.scale * 256), int(self.scale * 240)), pygame.SRCALPHA)) # Les sprites derri�re le bg
-                        self.frame_sprite[0] = self.frame_sprite[0].convert_alpha()
-                        self.frame_sprite.append(pygame.Surface((int(self.scale * 256), int(self.scale * 240)), pygame.SRCALPHA)) # Les sprites devant le bg
-                        self.frame_sprite[1] = self.frame_sprite[1].convert_alpha()
-                        # Parcourir les 
+                        self.frame_background = pygame.Surface((256, 240), pygame.SRCALPHA, 32) # Le background
+                        #self.frame_background = self.frame_background.convert_alpha()
+                        self.frame_sprite.append(pygame.Surface(((256, 240)), pygame.SRCALPHA, 32)) # Les sprites derri�re le bg
+                        #self.frame_sprite[0] = self.frame_sprite[0].convert_alpha()
+                        self.frame_sprite.append(pygame.Surface(((256, 240)), pygame.SRCALPHA, 32)) # Les sprites devant le bg
+                        #self.frame_sprite[1] = self.frame_sprite[1].convert_alpha()
                 
                 PPUCTRL = self.getPPUCTRL()
                 PPUMASK = self.getPPUMASK()
@@ -58,27 +57,30 @@ class ppu:
                 nametableAddress = {0 : 0x2000, 1 : 0x2400, 2 : 0x2800, 3 : 0x2C00}[nametable]
                 backgroundPatternTableAddress = ((PPUCTRL >> 4) & 1) * 0x1000
 
-                attribute_table = nametableAddress + 0xC0
+                attribute_table = nametableAddress + 0x3C0
 
                 # update background
                 if (PPUMASK >>3) & 1 and self.line < 240 and self.col < 256 and self.col % 8 == 0 and self.line % 8 == 0 :	# Update pixel
                         
                         tileIndex = self.col // 8 + (32 * self.line // 8)
 
-                        attribute_address = (self.line % 0x20) * 0x8 + (self.col % 0x20)
+                        attribute_address = (self.line // 0x20) * 0x8 + (self.col // 0x20) # Attribut pour un bloc de 32x32
                         attribute =  self.emulator.memory.read_ppu_memory(attribute_table + attribute_address)
 
-                        shift = ((self.col // 8) % 2) + ((self.line // 8) % 2) << 1
-                        color_palette = (attribute >> shift) & 0b11
+                        shift = (((self.col % 0x20) // 16) % 2) + ((((self.line % 0x20) // 16) % 2) << 1) # Une couleur par bloc de 16*16
+                        color_palette = (attribute >> (shift * 2)) & 0b11
                                 
                         #read background info in VRAM
                         bgTileIndex = self.emulator.memory.read_ppu_memory(nametableAddress + backgroundPatternTableAddress + tileIndex) 
                         if self.debug : print (f"Tile ID : {tileIndex} - Tile content : {bgTileIndex:x}")
                         
                         tileData = self.emulator.memory.getTile(backgroundPatternTableAddress, bgTileIndex)
-                        tile = self.createTile(tileData, color_palette, 1)
-                        tile = pygame.transform.scale(tile, (int(8 * self.scale), int(8 * self.scale)))
-                        self.frame_background.blit(tile, (self.col * self.scale, self.line * self.scale))
+                        tile = self.createTile(tileData, color_palette, 0)
+                        #tile = pygame.transform.scale(tile, (int(8 * self.scale), int(8 * self.scale)))
+                        self.frame_background.blit(tile, (self.col, self.line))
+
+                        print(f"Tile {tileIndex} : x : {self.col}, y : {self.line}, Color zone : {shift}, Palette : {color_palette}, attribute_adr = {attribute_address}, attribute = {attribute:08b}")
+
                 
                 self.col  = (self.col + 1) % 340
                                                 
@@ -107,9 +109,18 @@ class ppu:
                                     if self.debug : print(f"Tile {i} : {s_tileId} - {s_x} - {s_y}")
                                     self.frame_sprite[s_is_foreground].blit(tile, (s_x * self.scale, (s_y - 1) * self.scale))
                         
+                                    if i == 0: #chek for Sprint 0 Hit
+                                        
+                                        pass
+
                         # Update screen
                         self.setVBlank()
                         self.emulator.display.fill((0, 0, 0))
+                        # To scale
+                        self.frame_sprite[0]  = pygame.transform.scale(self.frame_sprite[0], (int(self.scale * 256), int(self.scale * 240)))
+                        self.frame_sprite[1]  = pygame.transform.scale(self.frame_sprite[1], (int(self.scale * 256), int(self.scale * 240)))
+                        self.frame_background = pygame.transform.scale(self.frame_background, (int(self.scale * 256), int(self.scale * 240)))
+                        #Blit
                         self.emulator.display.blit(self.frame_sprite[0], (0, 0))
                         self.emulator.display.blit(self.frame_background, (0, 0))
                         self.emulator.display.blit(self.frame_sprite[1], (0, 0))
@@ -121,6 +132,7 @@ class ppu:
                                 self.emulator.raise_nmi()
                 elif (self.line, self.col) == (261, 3): 
                         self.clearVBlank()
+                        self.clearSprite0Hit()
                 
                 
                 if self.col == 0:
@@ -145,7 +157,18 @@ class ppu:
                 
         def clearVBlank(self):
                 val = self.getPPUSTATUS()
-                val &= 0b01111111
+                val &= 0b11111111
+                self.setPPUSTATUS(val)
+                pass
+        def setSprite0Hit(self):
+                val = self.getPPUSTATUS()
+                val |= 0b01000000
+                self.setPPUSTATUS(val)
+                pass
+                
+        def clearSprite0Hit(self):
+                val = self.getPPUSTATUS()
+                val &= 0b10111111
                 self.setPPUSTATUS(val)
                 pass
         
@@ -216,13 +239,17 @@ class ppu:
         def createTile(self, array_of_byte, palette_address = -1, is_sprite = 0):
                 surface = pygame.Surface((8, 8), pygame.SRCALPHA)
 
-                palette = [((0, 0, 0, 0))]
+                palette = []
                 if palette_address == -1:
+                        palette.append((0, 0, 0, 0))
                         palette.append(self.palette[0x23])
                         palette.append(self.palette[0x27])
                         palette.append(self.palette[0x30])
                 else:
                         address = 0x3f00 + (0x10 * is_sprite) + (0x4 * palette_address)
+                        if is_sprite == 0: palette.append((0, 0, 0, 0))
+                        else : 
+                                palette.append(self.palette[self.emulator.memory.read_ppu_memory(address)])
                         palette.append(self.palette[self.emulator.memory.read_ppu_memory(address + 1)])
                         palette.append(self.palette[self.emulator.memory.read_ppu_memory(address + 2)])
                         palette.append(self.palette[self.emulator.memory.read_ppu_memory(address + 3)])

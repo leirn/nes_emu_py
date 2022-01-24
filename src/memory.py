@@ -12,6 +12,7 @@ class memory:
         palette_VRAM = bytearray(b'\0' *  0x20)
         OAM =           bytearray(b'\0' * 0x100)
         PPUADDR = 0
+        PPUSCROLL = 0
         OAMADDR = 0
         
         emulator = b''
@@ -42,6 +43,13 @@ class memory:
                         return self.mapper.read_rom(address)
                 elif address < 0x2000: # RAM mirroring
                         return self.ROM[address % 0x800]
+                elif address == 0x2002: # PPUSTATUS
+                        # Reset PPUADDR and PPUSCROLL
+                        self.PPUSCROLL = 0
+                        self.PPUADDR = 0
+                        value = self.ROM[0x2002]
+                        self.ROM[0x2002] = value & 0b1111111
+                        return value
                 elif address == 0x2007:
                         return self.read_ppu_memory_at_ppuaddr()
                 elif address >= 0x3f00 and address < 0x4000:
@@ -98,6 +106,8 @@ class memory:
                                 self.OAMADDR = value
                         elif address == 0x2004:
                                 self.OAM[self.OAMADDR] = value
+                        elif address == 0x2005:
+                                self.PPUSCROLL = ((self.PPUSCROLL << 8 ) + value ) & 0xffff
                         elif address == 0x2006:
                                 self.PPUADDR = ((self.PPUADDR << 8 ) + value ) & 0xffff
                         elif address == 0x2007:
@@ -135,7 +145,7 @@ class memory:
                 
         def read_ppu_memory_at_ppuaddr(self):
                         if self.PPUADDR < 0x2000:
-                                return self.cartridge.prg_rom[self.PPUADDR] # CHR_ROM ADDRESS
+                                return self.PRG[self.PPUADDR] # CHR_ROM ADDRESS
                         elif self.PPUADDR < 0x3000: # VRAM
                                 val =  self.VRAM[self.PPUADDR - 0x2000]
                                 self.PPUADDR += 1 if (self.PPUADDR >> 2) & 1 == 0 else 0x20
