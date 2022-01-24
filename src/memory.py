@@ -44,6 +44,8 @@ class memory:
                         return self.ROM[address % 0x800]
                 elif address == 0x2007:
                         return self.read_ppu_memory_at_ppuaddr()
+                elif address >= 0x3f00 and address < 0x4000:
+                        return self.palette_VRAM[address % 0x20]
                 elif address < 0x4000: # PPU mirroring
                         return self.ROM[0x2000 + (address % 0x8)]
                 elif address == 0x4016: # Handling joystick
@@ -86,7 +88,7 @@ class memory:
         def write_rom(self, address, value):
                 if address > 0x7FFF:
                         if self.debug : print(f"Illegal write to address 0x{format_hex_data(address)}")
-                elif address >= 0x2000 and address < 0x4000:
+                elif address >= 0x2000 and address < 0x3f00:
                         address = 0x2000 + (address % 8)
                         if address == 0x2003:
                                 self.OAMADDR = value
@@ -98,6 +100,9 @@ class memory:
                                 self.write_ppu_memory_at_ppuaddr(value)
                         else:
                                 self.ROM[address] = value
+                        return 0
+                elif address >= 0x3f00 and address < 0x4000:
+                        self.palette_VRAM[address % 0x20] = value
                         return 0
                 elif address == 0x4014 : # OAMDMA
                         value = value << 8
@@ -162,6 +167,8 @@ class memory:
                                 self.PPUADDR += 1 if VRAM_increment == 0 else 0x20
                         else: # palette
                                 self.palette_VRAM[self.PPUADDR % 0x20] = value
+                                VRAM_increment = (self.read_rom(0x2000) >> 2) & 1
+                                self.PPUADDR += 1 if VRAM_increment == 0 else 0x20
                 
         def print_status(self):
                 print("Memory status")
@@ -178,8 +185,10 @@ class memory:
                 self.print_memory_page(self.ROM, 0x2)
                 print("Page 3")
                 self.print_memory_page(self.ROM, 0x3)
+                print("Palette")
+                self.print_memory_page(self.palette_VRAM)
                 
         def print_memory_page(self, page, high = 0) :
-                for i in range(0, 256, 32):
+                for i in range(0, min(256, len(page)), 32):
                         print(f"{(high << 8) + i:04x}:{(high << 8) + i + 31 :04x}    {' '.join([f'{i:02x}' for i in page[(high << 8) + i:(high << 8) + i + 32]])}")
                 pass
