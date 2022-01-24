@@ -1,5 +1,4 @@
 import pygame
-import numpy as np
 import time
 
 NMI = 0b10
@@ -19,10 +18,10 @@ class ppu:
         frameParity = 0
         
         palette = [
-                        [84,  84,  84], 	[0,  30, 116],		[8, 16, 144],		[48, 0, 136], 		[68, 0, 100],  		[92, 0,  48],   	[84, 4, 0],   		[60, 24, 0],   		[32, 42, 0], 		[8, 58, 0],    		[0, 64, 0],    		[0, 60, 0],    		[0, 50, 60],    	[0,   0,   0],		[0,   0,   0],		[0,   0,   0],
-                        [152, 150, 152],   	[8,  76, 196],   	[48, 50, 236],   	[92, 30, 228],  	[136, 20, 176], 	[160, 20, 100],  	[152, 34, 32],  	[120, 60, 0],   	[84, 90, 0],   		[40, 114, 0],    	[8, 124, 0],    	[0, 118, 40],    	[0, 102, 120],    	[0,   0,   0],		[0,   0,   0],		[0,   0,   0],
-                        [236, 238, 236],    [76, 154, 236],  	[120, 124, 236],  	[176, 98, 236],  	[228, 84, 236], 	[236, 88, 180],  	[236, 106, 100],  	[212, 136, 32],  	[160, 170, 0],  	[116, 196, 0],   	[76, 208, 32],   	[56, 204, 108],   	[56, 180, 204],   	[60,  60,  60],		[0,   0,   0],		[0,   0,   0],
-                        [236, 238, 236],  	[168, 204, 236],  	[188, 188, 236],  	[212, 178, 236],  	[236, 174, 236],	[236, 174, 212],  	[236, 180, 176],  	[228, 196, 144],  	[204, 210, 120],  	[180, 222, 120],  	[168, 226, 144],  	[152, 226, 180],  	[160, 214, 228],  	[160, 162, 160],	[0,   0,   0],		[0,   0,   0],
+                        [84,  84,  84, 255], 	[0,  30, 116, 255],		[8, 16, 144, 255],		[48, 0, 136, 255], 		[68, 0, 100, 255],  		[92, 0,  48, 255],   	[84, 4, 0, 255],   		[60, 24, 0, 255],   		[32, 42, 0, 255], 		[8, 58, 0, 255],    		[0, 64, 0, 255],    		[0, 60, 0, 255],    		[0, 50, 60, 255],    	[0,   0,   0, 255],		[0,   0,   0, 255],		[0,   0,   0, 255],
+                        [152, 150, 152, 255],   	[8,  76, 196, 255],   	[48, 50, 236, 255],   	[92, 30, 228, 255],  	[136, 20, 176, 255], 	[160, 20, 100, 255],  	[152, 34, 32, 255],  	[120, 60, 0, 255],   	[84, 90, 0, 255],   		[40, 114, 0, 255],    	[8, 124, 0, 255],    	[0, 118, 40, 255],    	[0, 102, 120, 255],    	[0,   0,   0, 255],		[0,   0,   0, 255],		[0,   0,   0, 255],
+                        [236, 238, 236, 255],    [76, 154, 236, 255],  	[120, 124, 236, 255],  	[176, 98, 236, 255],  	[228, 84, 236, 255], 	[236, 88, 180, 255],  	[236, 106, 100, 255],  	[212, 136, 32, 255],  	[160, 170, 0, 255],  	[116, 196, 0, 255],   	[76, 208, 32, 255],   	[56, 204, 108, 255],   	[56, 180, 204, 255],   	[60,  60,  60, 255],		[0,   0,   0, 255],		[0,   0,   0, 255],
+                        [236, 238, 236, 255],  	[168, 204, 236, 255],  	[188, 188, 236, 255],  	[212, 178, 236, 255],  	[236, 174, 236, 255],	[236, 174, 212, 255],  	[236, 180, 176, 255],  	[228, 196, 144, 255],  	[204, 210, 120, 255],  	[180, 222, 120, 255],  	[168, 226, 144, 255],  	[152, 226, 180, 255],  	[160, 214, 228, 255],  	[160, 162, 160, 255],	[0,   0,   0, 255],		[0,   0,   0, 255],
                 ]
         
         def __init__(self, emulator):
@@ -43,7 +42,13 @@ class ppu:
         # https://bugzmanov.github.io/nes_ebook/chapter_6_4.html
         def next(self):
                 if self.line == 0 and self.col == 0:
-                        self.cached_frame = pygame.Surface((int(self.scale * 256), int(self.scale * 240))) # il faudrait recréer une nouvelle frame en cache
+                        self.frame_sprite = []
+                        self.frame_background = pygame.Surface((int(self.scale * 256), int(self.scale * 240)), pygame.SRCALPHA) # Le background
+                        self.frame_background = self.frame_background.convert_alpha()
+                        self.frame_sprite.append(pygame.Surface((int(self.scale * 256), int(self.scale * 240)), pygame.SRCALPHA)) # Les sprites derrière le bg
+                        self.frame_sprite[0] = self.frame_sprite[0].convert_alpha()
+                        self.frame_sprite.append(pygame.Surface((int(self.scale * 256), int(self.scale * 240)), pygame.SRCALPHA)) # Les sprites devant le bg
+                        self.frame_sprite[1] = self.frame_sprite[1].convert_alpha()
                         # Parcourir les 
                 
                 PPUCTRL = self.getPPUCTRL()
@@ -64,9 +69,8 @@ class ppu:
                         
                         tileData = self.emulator.memory.getTile(backgroundPatternTableAddress, bgTileIndex)
                         tile = self.createTile(tileData)
-                        tile = pygame.surfarray.make_surface(tile)
                         tile = pygame.transform.scale(tile, (int(8 * self.scale), int(8 * self.scale)))
-                        self.cached_frame.blit(tile, (self.col * self.scale, self.line * self.scale))
+                        self.frame_background.blit(tile, (self.col * self.scale, self.line * self.scale))
                 
                 self.col  = (self.col + 1) % 340
                                                 
@@ -83,21 +87,24 @@ class ppu:
                                     s_x = sprite[3]
                                     s_tileId = sprite[1]
                                     s_param = sprite[2]
+                                    s_is_foreground = (s_param >> 5) & 1
+                                    s_palette = s_param  & 3
                                     
                                     sprite_tile = self.emulator.memory.getTile(backgroundPatternTableAddress, s_tileId)
                                     tile = self.createTile(sprite_tile)
-                                    tile = pygame.surfarray.make_surface(tile)
                                     tile = pygame.transform.scale(tile, (int(8 * self.scale), int(8 * self.scale)))
                                     
                                     tile = pygame.transform.flip(tile, (s_param >> 7) & 1, (s_param >> 6) & 1)
                                     
                                     if self.debug : print(f"Tile {i} : {s_tileId} - {s_x} - {s_y}")
-                                    self.cached_frame.blit(tile, (s_x * self.scale, (s_y - 1) * self.scale))
+                                    self.frame_sprite[s_is_foreground].blit(tile, (s_x * self.scale, (s_y - 1) * self.scale))
                         
                         # Update screen
                         self.setVBlank()
-
-                        self.emulator.display.blit(self.cached_frame, (0, 0))
+                        self.emulator.display.fill((0, 0, 0))
+                        self.emulator.display.blit(self.frame_sprite[0], (0, 0))
+                        self.emulator.display.blit(self.frame_background, (0, 0))
+                        self.emulator.display.blit(self.frame_sprite[1], (0, 0))
                         pygame.display.flip()
                         
                         #time.sleep(2)
@@ -121,12 +128,17 @@ class ppu:
                                 return FRAME_COMPLETED
                 return 0
 
+        # TODO : Vlbank status should be cleared after reading by CPU
         def setVBlank(self):
-                # TODO : To be implemented to update PPUCTRL
+                val = self.getPPUSTATUS()
+                val |= 0b10000000
+                self.setPPUSTATUS(val)
                 pass
                 
         def clearVBlank(self):
-                # TODO : To be implemented to update PPUCTRL
+                val = self.getPPUSTATUS()
+                val &= 0b01111111
+                self.setPPUSTATUS(val)
                 pass
         
         def setPPUCTRL(self, val):
@@ -179,29 +191,23 @@ class ppu:
                 
         def dump_chr(self):
                 print(len(self.emulator.cartridge.chr_rom)/16)
-                
-                ar = self.createTile(self.emulator.cartridge.chr_rom[:16])
-                tile = pygame.surfarray.make_surface(ar)
-                
                 c = 0
                 x = 2
                 y = 2
                 for c in range(len(self.emulator.cartridge.chr_rom)//16):
                 
-                        ar = self.createTile(self.emulator.memory.getTile(0, c))
-                        tile = pygame.surfarray.make_surface(ar)
+                        tile = self.createTile(self.emulator.memory.getTile(0, c))
                         tile = pygame.transform.scale(tile, (int(8 * self.scale), int(8 * self.scale)))
                         self.emulator.display.blit(tile, (x, y))
-                        x += 10 * self.scale
-                        if x > 256 * self.scale:
-                                x = 1
+                        if (x +  10 * self.scale)  > 256 * self.scale:
+                                x = 2
                                 y += 10 * self.scale
-
+                        else :
+                                x += 10 * self.scale
                 
         def createTile(self, array_of_byte):
-                a = [[0,   0,   0]] * 8
-                a = [a] * 8
-                a = np.array([[(0, 0, 0) for x in range(8)] for y in range(8)])
+                surface = pygame.Surface((8, 8), pygame.SRCALPHA)
+                
                 for i in range(8):
                         for j in range(8):
                                 bit1 = (array_of_byte[i] >> (7-j)) & 1
@@ -209,15 +215,15 @@ class ppu:
                                 
                                 color_code = bit1 | (bit2 << 1)
                                 if color_code == 0:
-                                        a[j][i] = self.palette[1]
-                                elif color_code == 1:
-                                        a[j][i] = self.palette[0x23]
+                                        surface.set_at((j, i), (0, 0, 0, 0)) # Color 0 is always transparent
+                                if color_code == 1:
+                                        surface.set_at((j, i), self.palette[0x23])
                                 elif color_code == 2:
-                                        a[j][i] = self.palette[0x27]
+                                        surface.set_at((j, i), self.palette[0x27])
                                 elif color_code == 3:
-                                        a[j][i] = self.palette[0x30]
+                                        surface.set_at((j, i), self.palette[0x30])
                                 
-                return a
+                return surface
         
         def print_status(self):
                 print("PPU")

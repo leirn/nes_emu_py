@@ -46,7 +46,6 @@ class cpu:
         
         # initialise PC
         def start(self, entry_point = None):
-                
                 # Start sequence push stack three time
                 self.push(0)
                 self.push(0)
