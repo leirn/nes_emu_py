@@ -1,3 +1,11 @@
+'''Cartridge module'''
+
+# Preventing direct execution
+if __name__ == '__main__':
+    print("This module cannot be executed. Please use main.py")
+    exit()
+
+
 # https://formats.kaitai.io/ines/
 
 class cartridge:

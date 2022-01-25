@@ -1,3 +1,10 @@
+'''Emulator inputs classes'''
+
+# Preventing direct execution
+if __name__ == '__main__':
+    print("This module cannot be executed. Please use main.py")
+    exit()
+
 class nes_controller:
     status = 0
     

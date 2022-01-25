@@ -1,3 +1,11 @@
+'''Some utility functions'''
+
+# Preventing direct execution
+if __name__ == '__main__':
+    print("This module cannot be executed. Please use main.py")
+    exit()
+
+
 def format_hex_data(val):
     """Format hex data with spaces every two hexadecimal characters
     

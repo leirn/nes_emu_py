@@ -1,4 +1,9 @@
+'''CPU Opcodes definition'''
 
+# Preventing direct execution
+if __name__ == '__main__':
+    print("This module cannot be executed. Please use main.py")
+    exit()
 
 opcodes = {
     #HEX, 	MODE, 			SYNTAX, 		LEN,		TIME, 	PAGE_CROSS

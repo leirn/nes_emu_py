@@ -1,3 +1,11 @@
+'''Memory manager and routing module'''
+
+# Preventing direct execution
+if __name__ == '__main__':
+    print("This module cannot be executed. Please use main.py")
+    exit()
+
+
 import mappers
 from utils import format_hex_data
 

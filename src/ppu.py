@@ -1,5 +1,12 @@
+'''The emulator PPU module'''
+
 import time
 import pygame
+
+# Preventing direct execution
+if __name__ == '__main__':
+    print("This module cannot be executed. Please use main.py")
+    exit()
 
 NMI = 0b10
 FRAME_COMPLETED = 0b1
