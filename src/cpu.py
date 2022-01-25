@@ -15,7 +15,7 @@ if __name__ == '__main__':
 
 # https://www.gladir.com/CODER/ASM6502/referenceopcode.htm
 import sys
-import cpu_opcodes
+from cpu_opcodes import OPCODES
 import re
 from utils import format_hex_data
 
@@ -54,7 +54,9 @@ class Cpu:
 
     # initialise PC
     def start(self, entry_point = None):
-        # Start sequence push stack three time
+        '''Execute 6502 Start sequence'''
+
+        #Start sequence push stack three time
         self.push(0)
         self.push(0)
         self.push(0)
@@ -71,16 +73,20 @@ class Cpu:
         return 1
 
     def nmi(self):
-        # Execute an NMI
+        ''' Raises an NMI interruption'''
         if self.debug : print("NMI interruption detected")
         self.general_interrupt(0xFFFA)
 
     def irq(self):
+        ''' Raises an IRQ interruption'''
         if self.debug : print("IRQ interruption detected")
         self.general_interrupt(0xFFFE)
 
     def general_interrupt(self, address):
+        '''General interruption sequence used for NMI and IRQ
 
+        Interruptions last for 7 CPU cycles
+        '''
         self.push(self.PC >> 8)
         self.push(self.PC & 255)
         self.push(self.getP())
@@ -91,9 +97,15 @@ class Cpu:
         self.remaining_cycles = 7 - 1 # do not count current cycle twice
         self.total_cycles += 7
 
-    # next : execute the next opcode.
-    # return the number of cycles used to execute
     def next(self):
+        ''' Execute the next CPU cycles.
+
+        If There are remaining cycles from previous opcode execution, does noting.
+        Otherwise, execute the next opcode
+
+        Raises:
+            Exception when opcode is unknown
+        '''
         if self.remaining_cycles > 0:
             self.remaining_cycles -= 1
             return
@@ -117,6 +129,7 @@ class Cpu:
             raise e
 
     def get_cpu_status(self):
+        ''' Return a dictionnary containing the current CPU Status. Usefull for debugging'''
         status = dict()
         status["PC"] = self.PC
         status["SP"] = self.SP
@@ -130,9 +143,17 @@ class Cpu:
         return status
 
     def getP(self):
+        '''Returns the P register which contains the flag status.
+
+        Bit 5 is always set to 1
+        '''
         return (self.flagN << 7) | (self.flagV << 6) | (1 << 5) | (self.flagB << 4) | (self.flagD << 3) | (self.flagI << 2) | (self.flagZ << 1) | self.flagC
 
     def setP(self, p):
+        '''Set the P register which contains the flag status.
+
+        When setting the P Register, the break flag is not set.
+        '''
         self.flagC = p & 1
         self.flagZ = (p >> 1) & 1
         self.flagI = (p >> 2) & 1
@@ -142,26 +163,29 @@ class Cpu:
         self.flagN = (p >> 7) & 1
 
     def push(self, val):
+        '''Push value into stack'''
         self.emulator.memory.write_rom(0x0100 | self.SP, val)
         self.SP = 255 if self.SP == 0 else self.SP - 1
 
     def pop(self):
+        '''Pop value from stack'''
         self.SP = 0 if self.SP == 255 else self.SP + 1
         return self.emulator.memory.read_rom(0x0100 | self.SP)
 
-    # Get 8 bit immediate value on PC + 1
     def getImmediate(self):
+        '''Get 8 bit immediate value on PC + 1'''
         return self.emulator.memory.read_rom(self.PC+1)
 
     def setZeroPage(self, val):
+        '''Write val into Zero Page memory. Address is given as opcode 1-byte argument'''
         self.emulator.memory.write_rom(self.getZeroPageAddress(), val)
 
-    # Alias to getImmediate
     def getZeroPageAddress(self):
+        '''Get ZeroPage address to be used for current opcode. Alias to get_immediate'''
         return self.getImmediate()
 
-    # Get 8 bit zeropage value on 8 bit (PC + 1)
     def getZeroPageValue(self):
+        '''Get val from Zero Page memory. Address is given as opcode 1-byte argument'''
         address= self.getImmediate()
         return self.emulator.memory.read_rom(address)
 
@@ -169,7 +193,7 @@ class Cpu:
         self.emulator.memory.write_rom(self.getZeroPageXAddress(), val)
 
     def getZeroPageXAddress(self):
-        return  (self.emulator.memory.read_rom(self.PC+1) + self.X) & 255
+        return (self.emulator.memory.read_rom(self.PC+1) + self.X) & 255
 
     def getZeroPageXValue(self):
         address = self.getZeroPageXAddress()
@@ -249,24 +273,27 @@ class Cpu:
         self.emulator.memory.write_rom(self.getIndirectYAddress(), val)
 
     def setFlagNZ(self, val):
+        '''Sets flags N and Z according to value'''
         self.setFlagN(val)
         self.setFlagZ(val)
 
     def setFlagN(self, val):
+        ''' Set Negative Flag according to value'''
         if val < 0:
             self.flagN = 1
         else:
             self.flagN = val >> 7
 
     def setFlagZ(self, val):
+        ''' Set Zero Flag according to value'''
         self.flagZ = 1 if val == 0 else 0
 
-    def adc(self, input):
-        adc = input + self.A + self.flagC
+    def adc(self, val):
+        adc = val + self.A + self.flagC
         self.flagC = adc >> 8
         result = 255 & adc
 
-        self.flagV = not not ((self.A ^ result) & (input ^ result) & 0x80)
+        self.flagV = not not ((self.A ^ result) & (val ^ result) & 0x80)
 
         self.A = result
 
@@ -548,6 +575,7 @@ class Cpu:
 
     # BRK
     # Implied
+    # TODO : Should set B flag to 1
     def fn_0x00(self) :
         self.PC += 1
         self.push(self.PC >> 8)
@@ -1166,6 +1194,8 @@ class Cpu:
 
     # NOP
     # Implied
+    # Disabling no-self-use pylint control
+    # pylint: disable=R0201
     def fn_0xea(self) : return (1, 2)
     def fn_0x1a(self) : return (1, 2)
     def fn_0x3a(self) : return (1, 2)
@@ -1197,6 +1227,8 @@ class Cpu:
     def fn_0x7c(self) : return (3, 4)
     def fn_0xdc(self) : return (3, 4)
     def fn_0xfc(self) : return (3, 4)
+    # Restoring no-self-use pylint control
+    # pylint: enable=R0201
 
     # ORA #$44
     # Immediate
@@ -1551,7 +1583,6 @@ class Cpu:
     # ROL A
     # Accumulator
     def fn_0x2a(self) :
-        val = self.A
         self.A = (self.A << 1) | (self.flagC)
         self.flagC = self.A >> 8
         self.A &= 255
@@ -1673,8 +1704,8 @@ class Cpu:
         self.PC = (high << 8) + low + 1 # JSR increment only by two, and RTS add the third
         return (0, 6)
 
-    def sbc(self, input):
-        self.adc(255-input)
+    def sbc(self, val):
+        self.adc(255-val)
 
     # sbc #$44
     # Immediate
@@ -1938,6 +1969,7 @@ class Cpu:
 
 
     def print_status(self) :
+        '''Print CPU Status'''
         print("CPU")
         print("Registers:")
         print("A\t| X\t| Y\t| SP\t| PC")
@@ -1951,7 +1983,7 @@ class Cpu:
 
 
     def print_status_summary(self) :
-        label = cpu_opcodes.opcodes[opcode][1]
+        label = OPCODES[opcode][1]
         l = re.search(r'[0-9]+', label)
         if l:
             if len(l.group(0)) == 2:

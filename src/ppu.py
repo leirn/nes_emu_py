@@ -77,17 +77,16 @@ class Ppu:
     # https://wiki.nesdev.org/w/index.php?title=PPU_registers
     # https://bugzmanov.github.io/nes_ebook/chapter_6_4.html
     def next(self):
+        '''Execute the next PPU Cycle'''
+
+        PPUCTRL = self.getPPUCTRL()
+        PPUMASK = self.getPPUMASK()
         if self.line == 0 and self.col == 0:
             self.frame_sprite = []
             self.frame_background = pygame.Surface((256 * 2, 240 * 2), pygame.SRCALPHA, 32) # Le background
-            #self.frame_background = self.frame_background.convert_alpha()
             self.frame_sprite.append(pygame.Surface(((256, 240)), pygame.SRCALPHA, 32)) # Les sprites derri�re le bg
-            #self.frame_sprite[0] = self.frame_sprite[0].convert_alpha()
             self.frame_sprite.append(pygame.Surface(((256, 240)), pygame.SRCALPHA, 32)) # Les sprites devant le bg
-            #self.frame_sprite[1] = self.frame_sprite[1].convert_alpha()
 
-            PPUCTRL = self.getPPUCTRL()
-            PPUMASK = self.getPPUMASK()
             if (PPUMASK >>3) & 1 and self.col == 0 and self.line == 0 :	# Update pixel
                 flipping = PPUCTRL & 0b11
                 mirrors = {
@@ -104,38 +103,6 @@ class Ppu:
                 self.frame_background.blit(quarter, (0, 240))
                 quarter = self.bg_quarter(mirrors[flipping][3])
                 self.frame_background.blit(quarter, (256, 240))
-
-        PPUCTRL = self.getPPUCTRL()
-        PPUMASK = self.getPPUMASK()
-        # Current nametable
-        nametable = PPUCTRL & 0b11
-        nametableAddress = {0 : 0x2000, 1 : 0x2400, 2 : 0x2800, 3 : 0x2C00}[nametable]
-        nametableAddress = 0x2000
-        backgroundPatternTableAddress = ((PPUCTRL >> 4) & 1) * 0x1000
-
-        attribute_table = nametableAddress + 0x3C0
-        """
-        # update background
-        if (PPUMASK >>3) & 1 and self.line < 240 and self.col < 256 and self.col % 8 == 0 and self.line % 8 == 0 :	# Update pixel
-            tileIndex = self.col // 8 + (32 * self.line // 8)
-
-            attribute_address = (self.line // 0x20) * 0x8 + (self.col // 0x20) # Attribut pour un bloc de 32x32
-            attribute =  self.emulator.memory.read_ppu_memory(attribute_table + attribute_address)
-
-            shift = (((self.col % 0x20) // 16) % 2) + ((((self.line % 0x20) // 16) % 2) << 1) # Une couleur par bloc de 16*16
-            color_palette = (attribute >> (shift * 2)) & 0b11
-
-            #read background info in VRAM
-            bgTileIndex = self.emulator.memory.read_ppu_memory(nametableAddress + backgroundPatternTableAddress + tileIndex)
-            if self.debug : print (f"Tile ID : {tileIndex} - Tile content : {bgTileIndex:x}")
-
-            tileData = self.emulator.memory.getTile(backgroundPatternTableAddress, bgTileIndex)
-            tile = self.createTile(tileData, color_palette, 0)
-            #tile = pygame.transform.scale(tile, (int(8 * self.scale), int(8 * self.scale)))
-            self.frame_background.blit(tile, (self.col, self.line))
-
-            #print(f"Tile {tileIndex} : x : {self.col}, y : {self.line}, Color zone : {shift}, Palette : {color_palette}, attribute_adr = {attribute_address}, attribute = {attribute:08b}")
-        """
 
         self.col  = (self.col + 1) % 340
 

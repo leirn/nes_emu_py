@@ -2,6 +2,7 @@
 
 # http://users.telenet.be/kim1-6502/6502/proman.html#92
 
+import time
 import cpu
 import memory
 import apu
@@ -11,11 +12,15 @@ import cartridge
 import pygame
 import traceback
 from pygame.locals import *
-import time
 from cpu_opcodes import OPCODES
 import re
 
 class NesEmulator:
+    '''Main class handling the whole emulator execution
+
+    Arg:
+        cartridge_stream - Cartridge stream to be read in order to load the cartridge
+    '''
     apu = 0
     cpu = 0
     ppu = 0
@@ -56,6 +61,7 @@ class NesEmulator:
 
 
     def start(self, entry_point = None):
+        '''Starts the Emulator execution'''
         self.cpu.start(entry_point)
         self.ppu.next()
         self.ppu.next()
@@ -64,83 +70,97 @@ class NesEmulator:
         frame_count = 0
 
         while continuer:
-                if not self.pause:
-                        #Check for NMI
-                        if self.is_nmi:
-                                self.is_nmi = False
-                                self.cpu.nmi()
-                        if not self.cpu.flagI and self.is_irq: # Interrupt flag is ON
-                                self.cpu.irq()
-                        #Check for IRQ
-                        try:
-                                #Execute next CPU instruction
-                                self.cpu.next()
-                                # 3 PPU dots per CPU cycles
-                                is_frame = 0
-                                is_frame |= self.ppu.next()
-                                is_frame |= self.ppu.next()
-                                is_frame |= self.ppu.next()
-                        except Exception as e:
-                                print(e)
-                                self.print_status()
-                                print(traceback.format_exc())
-                                exit()
+            if not self.pause:
+                #Check for NMI
+                if self.is_nmi:
+                    self.is_nmi = False
+                    self.cpu.nmi()
+                if not self.cpu.flagI and self.is_irq: # Interrupt flag is ON
+                    self.cpu.irq()
+                #Check for IRQ
+                try:
+                    #Execute next CPU instruction
+                    self.cpu.next()
+                    # 3 PPU dots per CPU cycles
+                    is_frame = 0
+                    is_frame |= self.ppu.next()
+                    is_frame |= self.ppu.next()
+                    is_frame |= self.ppu.next()
+                except Exception as e:
+                    print(e)
+                    self.print_status()
+                    print(traceback.format_exc())
+                    exit()
 
-                        if self.test_mode == 1 and self.cpu.remaining_cycles == 0: self.check_test(self.cpu.get_cpu_status())
+                if self.test_mode == 1 and self.cpu.remaining_cycles == 0: self.check_test(self.cpu.get_cpu_status())
 
-                        if is_frame & ppu.FRAME_COMPLETED > 0:
-                                frame_count += 1
-                                self.clock.tick(60)
-                                print(f"FPS = {self.clock.get_fps()}")
+                if is_frame & ppu.FRAME_COMPLETED > 0:
+                    frame_count += 1
+                    self.clock.tick(60)
+                    print(f"FPS = {self.clock.get_fps()}")
 
-                        #time.sleep(0.01)
+                #time.sleep(0.01)
 
-                # http://www.pygame.org/docs/ref/key.html
-                for event in pygame.event.get():
-                        if event.type == QUIT:
-                                continuer = 0
-                        elif event.type == KEYDOWN:
-                                if event.key == K_UP: 		self.ctrl1.setUp()
-                                elif event.key == K_DOWN: 	self.ctrl1.setDown()
-                                elif event.key == K_LEFT: 	self.ctrl1.setLeft()
-                                elif event.key == K_RIGHT: 	self.ctrl1.setRight()
-                                elif event.key == K_RETURN: 	self.ctrl1.setStart()
-                                elif event.key == K_ESCAPE: 	self.ctrl1.setSelect()
-                                elif event.key == K_LCTRL: 	self.ctrl1.setA()
-                                elif event.key == K_LALT: 	self.ctrl1.setB()
-                                elif event.key == K_q: 		continuer = 0
-                                elif event.key == K_p: 		self.togglePause()
-                                elif event.key == K_s:
-                                        self.print_status()
+            # http://www.pygame.org/docs/ref/key.html
+            for event in pygame.event.get():
+                if event.type == QUIT:
+                    continuer = 0
+                elif event.type == KEYDOWN:
+                    if event.key == K_UP: 		self.ctrl1.setUp()
+                    elif event.key == K_DOWN: 	self.ctrl1.setDown()
+                    elif event.key == K_LEFT: 	self.ctrl1.setLeft()
+                    elif event.key == K_RIGHT: 	self.ctrl1.setRight()
+                    elif event.key == K_RETURN: 	self.ctrl1.setStart()
+                    elif event.key == K_ESCAPE: 	self.ctrl1.setSelect()
+                    elif event.key == K_LCTRL: 	self.ctrl1.setA()
+                    elif event.key == K_LALT: 	self.ctrl1.setB()
+                    elif event.key == K_q: 		continuer = 0
+                    elif event.key == K_p: 		self.togglePause()
+                    elif event.key == K_s:
+                        self.print_status()
 
-                        elif event.type == KEYUP:
-                                if event.key == K_UP: 		self.ctrl1.clearUp()
-                                elif event.key == K_DOWN: 	self.ctrl1.clearDown()
-                                elif event.key == K_LEFT:	self.ctrl1.clearLeft()
-                                elif event.key == K_RIGHT: 	self.ctrl1.clearRight()
-                                elif event.key == K_RETURN:     self.ctrl1.clearStart()
-                                elif event.key == K_ESCAPE:     self.ctrl1.clearSelect()
-                                elif event.key == K_LCTRL: 	self.ctrl1.clearA()
-                                elif event.key == K_LALT: 	self.ctrl1.clearB()
+                    elif event.type == KEYUP:
+                        if event.key == K_UP: 		self.ctrl1.clearUp()
+                        elif event.key == K_DOWN: 	self.ctrl1.clearDown()
+                        elif event.key == K_LEFT:	self.ctrl1.clearLeft()
+                        elif event.key == K_RIGHT: 	self.ctrl1.clearRight()
+                        elif event.key == K_RETURN:     self.ctrl1.clearStart()
+                        elif event.key == K_ESCAPE:     self.ctrl1.clearSelect()
+                        elif event.key == K_LCTRL: 	self.ctrl1.clearA()
+                        elif event.key == K_LALT: 	self.ctrl1.clearB()
 
 
     def reset(self):
+        '''Reset the emulator
+
+        TODO : Implement the functionnality
+        '''
         pass
 
     def resize(self):
+        '''Resize the diplay
+
+        TODO : Implement the functionnality
+        '''
         pass
 
     def print_status(self):
-            self.cpu.print_status()
-            self.ppu.print_status()
-            self.memory.print_status()
+        '''Display Emulator status'''
+        self.cpu.print_status()
+        self.ppu.print_status()
+        self.memory.print_status()
+        self.cartidge.print_status()
 
     def togglePause(self):
+        '''Toggle pause on the emulator execution'''
         self.pause = 1 - self.pause
+
     def raise_nmi(self):
+        '''Raises an NMI interrup'''
         self.is_nmi = 1
 
     def raise_irq(self):
+        '''Raises an IRQ interrup'''
         self.is_irq = 1
 
     def setTestMode(self, file_name):
@@ -148,9 +168,9 @@ class NesEmulator:
         self.cpu.test_mode = 1
         self.test_file = file_name
 
-    prev_opcode = -1
-    def check_test(self, cpu_status):
 
+    def check_test(self, cpu_status):
+        ''' Performs test execution against reference execution log to find descrepancies'''
         opcode = self.memory.read_rom(cpu_status["PC"])
         opcode_info = OPCODES[opcode]
 
@@ -189,8 +209,8 @@ class NesEmulator:
         ref_status['PPU_COL']  = int(m[0][1])
 
         for i in ["PC", "A", "X", "Y", "P", "SP"]: # On hold : CYC, PPU_LINE, PPU_COL
-                if ref_status[i] != cpu_status[i] :
-                        raise Exception(f"{i} Error : {cpu_status[i]} instead of {ref_status[i]}")
+            if ref_status[i] != cpu_status[i] :
+                raise Exception(f"{i} Error : {cpu_status[i]} instead of {ref_status[i]}")
 
         self.prev_opcode = opcode
         print("")
