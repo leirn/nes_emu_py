@@ -138,16 +138,19 @@ class ppu:
                             
                         if (PPUMASK >>4) & 1  :  # Doit on afficher les sprites
                             # Display sprites
+                            print("Entering display sprinte loop")
+                            sprite_pattern_table_address = ((PPUCTRL >> 3) & 1) * 0x1000
                             for i in range(64):
-                                    sprite = self.emulator.memory.OAM[self.emulator.memory.OAMADDR + i * 4:self.emulator.memory.OAMADDR + i * 4 + 4]
+                                    #sprite = self.emulator.memory.OAM[self.emulator.memory.OAMADDR + i * 4:self.emulator.memory.OAMADDR + i * 4 + 4]
+                                    sprite = self.emulator.memory.OAM[i * 4:i * 4 + 4]
                                     s_y = sprite[0]
                                     s_x = sprite[3]
                                     s_tileId = sprite[1]
                                     s_param = sprite[2]
-                                    s_is_foreground = (s_param >> 5) & 1
-                                    s_palette = s_param  & 3
+                                    s_is_foreground = (s_param >> 5) & 1 # 0 is front, 1 is back
+                                    s_palette = s_param & 0b11
                                     
-                                    sprite_tile = self.emulator.memory.getTile(backgroundPatternTableAddress, s_tileId)
+                                    sprite_tile = self.emulator.memory.getTile(sprite_pattern_table_address, s_tileId)
                                     tile = self.createTile(sprite_tile, s_palette, 1)
                                     tile = pygame.transform.scale(tile, (int(8 * self.scale), int(8 * self.scale)))
                                     
@@ -162,7 +165,7 @@ class ppu:
 
                         # Update screen
                         self.setVBlank()
-                        self.emulator.display.fill((0, 0, 0))
+                        self.emulator.display.fill(self.palette[self.emulator.memory.read_ppu_memory(0x3f00)]) # Couleur de fond transparene du backgroundaddress = 0x3f00 + (0x10 * is_sprite) + (0x4 * palette_address)
                         x = self.x_scroll % 256
                         y = self.y_scroll % 240
                         pygame.draw.rect(self.frame_background, (255, 0, 0), pygame.Rect(x - 1, y - 1, x + 257, y + 241), 2)
@@ -172,12 +175,10 @@ class ppu:
                         self.frame_sprite[1]  = pygame.transform.scale(self.frame_sprite[1],  (int(self.scale * 256), int(self.scale * 240)))
                         self.frame_background = pygame.transform.scale(self.frame_background, (int(self.scale * 256 * 2), int(self.scale * 240 * 2)))
                         #Blit
-                        self.emulator.display.blit(self.frame_sprite[0], (x, y))
-                        self.emulator.display.blit(self.frame_background, (0, 0))
                         self.emulator.display.blit(self.frame_sprite[1], (x, y))
+                        self.emulator.display.blit(self.frame_background, (0, 0))
+                        self.emulator.display.blit(self.frame_sprite[0], (x, y))
                         pygame.display.flip()
-                        
-                        print(f"X Scroll : {x}, Y Scroll : {y}")
                         
                         #time.sleep(2)
                         
@@ -298,16 +299,13 @@ class ppu:
         def createTile(self, array_of_byte, palette_address = -1, is_sprite = 0):
                 surface = pygame.Surface((8, 8), pygame.SRCALPHA)
                 palette = []
+                palette.append((0, 0, 0, 0))
                 if palette_address == -1:
-                        palette.append((0, 0, 0, 0))
                         palette.append(self.palette[0x23])
                         palette.append(self.palette[0x27])
                         palette.append(self.palette[0x30])
                 else:
                         address = 0x3f00 + (0x10 * is_sprite) + (0x4 * palette_address)
-                        if is_sprite == 0: palette.append((0, 0, 0, 0))
-                        else : 
-                                palette.append(self.palette[self.emulator.memory.read_ppu_memory(address)])
                         palette.append(self.palette[self.emulator.memory.read_ppu_memory(address + 1)])
                         palette.append(self.palette[self.emulator.memory.read_ppu_memory(address + 2)])
                         palette.append(self.palette[self.emulator.memory.read_ppu_memory(address + 3)])

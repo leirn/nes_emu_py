@@ -108,7 +108,6 @@ class memory:
                                 self.OAM[self.OAMADDR] = value
                         elif address == 0x2005:
                                 self.PPUSCROLL = ((self.PPUSCROLL << 8 ) + value ) & 0xffff
-                                print(f"Update scroll with value {value}, PPUSCROLL = {self.PPUSCROLL:x}")
                         elif address == 0x2006:
                                 self.PPUADDR = ((self.PPUADDR << 8 ) + value ) & 0xffff
                         elif address == 0x2007:
@@ -206,8 +205,6 @@ class memory:
                 print("OAMADDR\t| PPUADDR")
                 print(f"{self.OAMADDR:04x}\t| {self.PPUADDR:04x}")
                 print("")
-                #print("OAM")
-                #self.print_memory_page(self.OAM, 0)
                 print("Zero Page")
                 self.print_memory_page(self.ROM, 0x0)
                 print("Stack")
@@ -218,6 +215,8 @@ class memory:
                 self.print_memory_page(self.ROM, 0x3)
                 print("Palette")
                 self.print_memory_page(self.palette_VRAM)
+                print("OAM")
+                self.print_memory_page(self.OAM, 0)
                 
         def print_memory_page(self, page, high = 0) :
                 for i in range(0, min(256, len(page)), 32):
