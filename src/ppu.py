@@ -1,5 +1,5 @@
-import pygame
 import time
+import pygame
 
 NMI = 0b10
 FRAME_COMPLETED = 0b1
@@ -233,54 +233,71 @@ class ppu:
         pass
     
     def setPPUCTRL(self, val):
+        """Set the PPUCTRL Register"""
         self.emulator.memory.write_rom(0x2000, val)
 
     def getPPUCTRL(self):
+        """Returns the PPUCTRL Register"""
         return self.emulator.memory.read_rom(0x2000)
     
     def setPPUMASK(self, val):
+        """Set the PPUMASK Register"""
         self.emulator.memory.write_rom(0x2001, val)
 
     def getPPUMASK(self):
+        """Returns the PPUMASK Register"""
         return self.emulator.memory.read_rom(0x2001)
     
     def setPPUSTATUS(self, val):
+        """Set the PPUUSTATUS Register"""
         self.emulator.memory.write_rom(0x2002, val)
 
     def getPPUSTATUS(self):
+        """Returns the PPUUSTATUS Register"""
         return self.emulator.memory.read_rom(0x2002)
     
     def setPPU_OAMADDR(self, val):
+        """Set the OAMADDR Register"""
         self.emulator.memory.write_rom(0x2003, val)
 
     def getPPU_OAMADDR(self):
+        """Returns the OAMADDR Register"""
         return self.emulator.memory.read_rom(0x2003)
     
     def setPPU_OAMDATA(self, val):
+        """Set the OAMDATA Register"""
         self.emulator.memory.write_rom(0x2004, val)
 
     def getPPU_OAMDATA(self):
+        """Returns the OAMDATA Register"""
         return self.emulator.memory.read_rom(0x2004)
     
     def setPPUSCROLL(self, val):
+        """Set the SCROLL Register"""
         self.emulator.memory.PPUSCROLL
 
     def getPPUSCROLL(self):
+        """Returns the SCROLL Register"""
         return self.emulator.memory.PPUSCROLL
     
     def setPPUADDR(self, val):
+        """Set the PPUADDR Register"""
         self.emulator.memory.write_rom(0x2006, val)
 
     def getPPUADDR(self):
+        """Returns the PPUADDR Register"""
         return self.emulator.memory.read_rom(0x2006)
     
     def setPPUDATA(self, val):
+        """Set the PPUDATA Register"""
         self.emulator.memory.write_rom(0x2007, val)
 
     def getPPUDATA(self):
+        """Returns the PPUDATA Register"""
         return self.emulator.memory.read_rom(0x2007)
         
     def dump_chr(self):
+        """ Display the tiles in CHR Memory. Useful for debugging."""
         print(len(self.emulator.cartridge.chr_rom)/16)
         c = 0
         x = 2
@@ -297,6 +314,13 @@ class ppu:
                 x += 10 * self.scale
         
     def createTile(self, array_of_byte, palette_address = -1, is_sprite = 0):
+        """ Create a tile pygame surface from tile array of bytes and palette address
+        
+        Arguments:
+        array_of_byte -- The 8 bytes to make a surface from
+        palette_address -- The palette to use, from 0 to 4. -1 is used for default palette
+        is_sprite -- Allows to select between background and sprite palettes
+        """
         surface = pygame.Surface((8, 8), pygame.SRCALPHA)
         palette = []
         palette.append((0, 0, 0, 0))
@@ -319,8 +343,8 @@ class ppu:
         return surface
     
     def print_status(self):
+        """Print the PPU status"""
         print("PPU")
         print("PPUCTRL  | PPUMASK  | PPUSTAT")
         print(f"{self.getPPUCTRL():08b} | {self.getPPUMASK():08b} | {self.getPPUSTATUS():08b}")
         print("")
-        pass
