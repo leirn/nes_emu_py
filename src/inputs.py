@@ -7,55 +7,74 @@ if __name__ == '__main__':
     sys.exit()
 
 class NesController:
-    status = 0
+    '''Class to handle Input controllers
 
+    Var:
+        Status is a one byte status of the controller
+    '''
     def __init__(self):
-        pass
+        self.status = 0
 
-    def setA(self):
+    def set_a(self):
+        '''Set when A button is press'''
         self.status |= 1
 
-    def clearA(self):
+    def clear_a(self):
+        '''Clear when A button is released'''
         self.status &= 0b11111110
 
-    def setB(self):
+    def set_b(self):
+        '''Set when B button is press'''
         self.status |= 0b10
 
-    def clearB(self):
+    def clear_b(self):
+        '''Clear when B button is released'''
         self.status &= 0b11111101
 
-    def setSelect(self):
+    def set_select(self):
+        '''Set when Select button is press'''
         self.status |= 0b100
 
-    def clearSelect(self):
+    def clear_select(self):
+        '''Clear when Select button is released'''
         self.status &= 0b11111011
 
-    def setStart(self):
+    def set_start(self):
+        '''Set when Start button is press'''
         self.status |= 0b1000
 
-    def clearStart(self):
+    def clear_start(self):
+        '''Clear when Start button is released'''
         self.status &= 0b11110111
 
-    def setUp(self):
+    def set_up(self):
+        '''Set when Up button is press'''
         self.status |= 0b10000
 
-    def clearUp(self):
+    def clear_up(self):
+        '''Clear when Up button is released'''
         self.status &= 0b11101111
 
-    def setDown(self):
+    def set_down(self):
+        '''Set when Down button is press'''
         self.status |= 0b100000
 
-    def clearDown(self):
+    def clear_down(self):
+        '''Clear when Down button is released'''
         self.status &= 0b11011111
 
-    def setLeft(self):
+    def set_left(self):
+        '''Set when Left button is press'''
         self.status |= 0b1000000
 
-    def clearLeft(self):
+    def clear_left(self):
+        '''Clear when Left button is released'''
         self.status &= 0b10111111
 
-    def setRight(self):
+    def set_right(self):
+        '''Set when Right button is press'''
         self.status |= 0b10000000
 
-    def clearRight(self):
+    def clear_right(self):
+        '''Clear when Right button is released'''
         self.status &= 0b01111111

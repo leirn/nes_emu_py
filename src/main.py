@@ -27,7 +27,7 @@ args = parser.parse_args()
 emulator = nes_emulator.NesEmulator(open(args[0], 'rb'))
 
 if options.test_file:
-    emulator.setTestMode(open(options.test_file, 'r'))
+    emulator.set_test_mode(open(options.test_file, 'r'))
     emulator.start(0xC000)
 else:
     emulator.start()

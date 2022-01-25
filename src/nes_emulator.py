@@ -106,29 +106,27 @@ class NesEmulator:
                 if event.type == QUIT:
                     continuer = 0
                 elif event.type == KEYDOWN:
-                    if event.key == K_UP: 		self.ctrl1.setUp()
-                    elif event.key == K_DOWN: 	self.ctrl1.setDown()
-                    elif event.key == K_LEFT: 	self.ctrl1.setLeft()
-                    elif event.key == K_RIGHT: 	self.ctrl1.setRight()
-                    elif event.key == K_RETURN: 	self.ctrl1.setStart()
-                    elif event.key == K_ESCAPE: 	self.ctrl1.setSelect()
-                    elif event.key == K_LCTRL: 	self.ctrl1.setA()
-                    elif event.key == K_LALT: 	self.ctrl1.setB()
+                    if event.key == K_UP: 		self.ctrl1.set_up()
+                    elif event.key == K_DOWN: 	self.ctrl1.set_down()
+                    elif event.key == K_LEFT: 	self.ctrl1.set_left()
+                    elif event.key == K_RIGHT: 	self.ctrl1.set_right()
+                    elif event.key == K_RETURN: self.ctrl1.set_start()
+                    elif event.key == K_ESCAPE: self.ctrl1.set_select()
+                    elif event.key == K_LCTRL: 	self.ctrl1.set_a()
+                    elif event.key == K_LALT: 	self.ctrl1.set_b()
                     elif event.key == K_q: 		continuer = 0
-                    elif event.key == K_p: 		self.togglePause()
-                    elif event.key == K_s:
-                        self.print_status()
+                    elif event.key == K_p: 		self.toggle_pause()
+                    elif event.key == K_s:      self.print_status()
 
-                    elif event.type == KEYUP:
-                        if event.key == K_UP: 		self.ctrl1.clearUp()
-                        elif event.key == K_DOWN: 	self.ctrl1.clearDown()
-                        elif event.key == K_LEFT:	self.ctrl1.clearLeft()
-                        elif event.key == K_RIGHT: 	self.ctrl1.clearRight()
-                        elif event.key == K_RETURN:     self.ctrl1.clearStart()
-                        elif event.key == K_ESCAPE:     self.ctrl1.clearSelect()
-                        elif event.key == K_LCTRL: 	self.ctrl1.clearA()
-                        elif event.key == K_LALT: 	self.ctrl1.clearB()
-
+                elif event.type == KEYUP:
+                    if event.key == K_UP: 		self.ctrl1.clear_up()
+                    elif event.key == K_DOWN: 	self.ctrl1.clear_down()
+                    elif event.key == K_LEFT:	self.ctrl1.clear_left()
+                    elif event.key == K_RIGHT: 	self.ctrl1.clear_right()
+                    elif event.key == K_RETURN: self.ctrl1.clear_start()
+                    elif event.key == K_ESCAPE: self.ctrl1.clear_select()
+                    elif event.key == K_LCTRL: 	self.ctrl1.clear_a()
+                    elif event.key == K_LALT: 	self.ctrl1.clear_b()
 
     def reset(self):
         '''Reset the emulator
@@ -151,7 +149,7 @@ class NesEmulator:
         self.memory.print_status()
         self.cartidge.print_status()
 
-    def togglePause(self):
+    def toggle_pause(self):
         '''Toggle pause on the emulator execution'''
         self.pause = 1 - self.pause
 
@@ -163,7 +161,8 @@ class NesEmulator:
         '''Raises an IRQ interrup'''
         self.is_irq = 1
 
-    def setTestMode(self, file_name):
+    def set_test_mode(self, file_name):
+        '''Activate test mode and set the execution reference file'''
         self.test_mode = 1
         self.cpu.test_mode = 1
         self.test_file = file_name
