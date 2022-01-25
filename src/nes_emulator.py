@@ -12,7 +12,7 @@ import pygame
 import traceback
 from pygame.locals import *
 import time
-import cpu_opcodes
+from cpu_opcodes import OPCODES
 import re
 
 class NesEmulator:
@@ -30,30 +30,30 @@ class NesEmulator:
     clock = 0
     test_file = 0
     test_mode = 0
-    
+
     def __init__(self, cartridge_stream):
         pygame.init()
         self.scale = 2
-        
+
         self.cartridge = cartridge.Cartridge()
         self.cartridge.parse_rom(cartridge_stream)
-        
+
         self.display = pygame.display.set_mode( (int(256 * self.scale * 2), int(240 * self.scale * 2)))
         self.display.fill((0, 0, 0))
-        
+
         self.ctrl1 = inputs.NesController()
         self.ctrl2 = inputs.NesController()
         self.memory = memory.Memory(self)
         self.cpu = cpu.Cpu(self)
         self.ppu = ppu.Ppu(self)
         self.apu = apu.Apu(self)
-        
+
         self.clock = pygame.time.Clock()
-        
+
         self.ppu.dump_chr()
         pygame.display.update()
         pygame.display.flip()
-        
+
 
     def start(self, entry_point = None):
         self.cpu.start(entry_point)
@@ -81,20 +81,20 @@ class NesEmulator:
                                 is_frame |= self.ppu.next()
                                 is_frame |= self.ppu.next()
                         except Exception as e:
-                                print(e)	
+                                print(e)
                                 self.print_status()
                                 print(traceback.format_exc())
                                 exit()
-                        
+
                         if self.test_mode == 1 and self.cpu.remaining_cycles == 0: self.check_test(self.cpu.get_cpu_status())
-                                
+
                         if is_frame & ppu.FRAME_COMPLETED > 0:
                                 frame_count += 1
                                 self.clock.tick(60)
                                 print(f"FPS = {self.clock.get_fps()}")
-                        
+
                         #time.sleep(0.01)
-                
+
                 # http://www.pygame.org/docs/ref/key.html
                 for event in pygame.event.get():
                         if event.type == QUIT:
@@ -110,9 +110,9 @@ class NesEmulator:
                                 elif event.key == K_LALT: 	self.ctrl1.setB()
                                 elif event.key == K_q: 		continuer = 0
                                 elif event.key == K_p: 		self.togglePause()
-                                elif event.key == K_s: 		
+                                elif event.key == K_s:
                                         self.print_status()
-                                
+
                         elif event.type == KEYUP:
                                 if event.key == K_UP: 		self.ctrl1.clearUp()
                                 elif event.key == K_DOWN: 	self.ctrl1.clearDown()
@@ -122,11 +122,11 @@ class NesEmulator:
                                 elif event.key == K_ESCAPE:     self.ctrl1.clearSelect()
                                 elif event.key == K_LCTRL: 	self.ctrl1.clearA()
                                 elif event.key == K_LALT: 	self.ctrl1.clearB()
-                                
-        
+
+
     def reset(self):
         pass
-        
+
     def resize(self):
         pass
 
@@ -134,48 +134,48 @@ class NesEmulator:
             self.cpu.print_status()
             self.ppu.print_status()
             self.memory.print_status()
-            
+
     def togglePause(self):
         self.pause = 1 - self.pause
     def raise_nmi(self):
         self.is_nmi = 1
-        
+
     def raise_irq(self):
         self.is_irq = 1
-        
+
     def setTestMode(self, file_name):
         self.test_mode = 1
         self.cpu.test_mode = 1
         self.test_file = file_name
-        
+
     prev_opcode = -1
     def check_test(self, cpu_status):
-        
+
         opcode = self.memory.read_rom(cpu_status["PC"])
-        opcode_info = cpu_opcodes.opcodes[opcode]
-        
+        opcode_info = OPCODES[opcode]
+
         opcode_arg_1 = '  '
         opcode_arg_2 = '  '
-        if cpu_opcodes.opcodes[opcode][2] > 1:
+        if OPCODES[opcode][2] > 1:
             opcode_arg_1 = f"{self.memory.read_rom(cpu_status['PC']+1):02x}"
-        if cpu_opcodes.opcodes[opcode][2] > 2:
+        if OPCODES[opcode][2] > 2:
             opcode_arg_2 = f"{self.memory.read_rom(cpu_status['PC']+2):02x}"
-        
-        print(f"{cpu_status['PC']:x}  {opcode:02x} {opcode_arg_1} {opcode_arg_2}  {cpu_opcodes.opcodes[opcode][1]:30}  A:{cpu_status['A']:02x} X:{cpu_status['X']:02x} Y:{cpu_status['Y']:02x} P:{cpu_status['P']:02x} SP:{cpu_status['SP']:02x} PPU:{self.ppu.line}, {self.ppu.col} CYC:{cpu_status['CYC']}".upper())
-    
+
+        print(f"{cpu_status['PC']:x}  {opcode:02x} {opcode_arg_1} {opcode_arg_2}  {OPCODES[opcode][1]:30}  A:{cpu_status['A']:02x} X:{cpu_status['X']:02x} Y:{cpu_status['Y']:02x} P:{cpu_status['P']:02x} SP:{cpu_status['SP']:02x} PPU:{self.ppu.line}, {self.ppu.col} CYC:{cpu_status['CYC']}".upper())
+
         reference = self.test_file.readline()
-        
+
         if reference == "":
             print("Test file completed")
             exit()
-        
+
         print(reference)
         self.memory.print_memory_page(self.memory.ROM, 0x0)
         self.memory.print_memory_page(self.memory.ROM, 0x6)
-        
+
         ref_status = dict()
         ref_status['PC'] = int(reference[0:4], 16)
-        
+
         m = re.findall(r'A:(?P<A>[0-9A-Fa-f]{2}) X:(?P<X>[0-9A-Fa-f]{2}) Y:(?P<Y>[0-9A-Fa-f]{2}) P:(?P<P>[0-9A-Fa-f]{2}) SP:(?P<SP>[0-9A-Fa-f]{2})', reference)
         ref_status['A']  = int(m[0][0], 16)
         ref_status['X']  = int(m[0][1], 16)
@@ -187,10 +187,10 @@ class NesEmulator:
         m = re.findall(r'PPU:[ ]*([0-9]+),[ ]*([0-9]+)', reference)
         ref_status['PPU_LINE']  = int(m[0][0])
         ref_status['PPU_COL']  = int(m[0][1])
-        
+
         for i in ["PC", "A", "X", "Y", "P", "SP"]: # On hold : CYC, PPU_LINE, PPU_COL
-                if ref_status[i] != cpu_status[i] : 
+                if ref_status[i] != cpu_status[i] :
                         raise Exception(f"{i} Error : {cpu_status[i]} instead of {ref_status[i]}")
-             
+
         self.prev_opcode = opcode
         print("")

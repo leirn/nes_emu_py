@@ -12,7 +12,7 @@ from utils import format_hex_data
 
 class Memory:
     debug = 0
-    
+
     mapper = ""
     mapper_name = 0
     ROM =           bytearray(b'\0' * 0x10000)
@@ -23,15 +23,15 @@ class Memory:
     PPUADDR = 0
     PPUSCROLL = 0
     OAMADDR = 0
-    
+
     emulator = b''
     ctrl1_status = 0
     ctrl2_status = 0
-    
-    
+
+
     def __init__(self, emulator):
         self.emulator = emulator
-        
+
         try:
             module = __import__("mappers")
             class_ = getattr(module, f"Mapper{self.emulator.cartridge.mapper}")
@@ -41,12 +41,12 @@ class Memory:
             print(f"Unreconized mapper {self.emulator.cartridge.mapper}")
             print(e)
             exit()
-        
+
     def getTile(self, bank, tile):
         if self.debug : print(f"{len(self.cartridge.chr_rom):x} - {tile} - {bank + 16 * tile:x}:{bank + 16 * tile + 16:x}")
         tile =  self.emulator.cartridge.chr_rom[bank + 16 * tile:bank + 16 * tile + 16]
         return tile
-            
+
     def read_rom(self, address):
         if address > 0x7FFF:
             return self.mapper.read_rom(address)
@@ -81,7 +81,7 @@ class Memory:
             return value
         else:
             return self.ROM[address]
-    
+
     # NES is Little Endian
     def read_rom_16_no_crossing_page(self, address):
         high_address = (address & 0xFF00) +((address + 1) & 0xFF)
@@ -94,7 +94,7 @@ class Memory:
             low = self.ROM[address]
             high = self.ROM[high_address] # So that reading never cross pages
             return low + (high <<8)
-    
+
     def read_rom_16(self, address):
         if address > 0x7FFF:
             low = self.mapper.read_rom(address)
@@ -104,8 +104,8 @@ class Memory:
             low = self.ROM[address]
             high = self.ROM[address + 1] # So that reading never cross pages
             return low + (high <<8)
-    
-    
+
+
     def write_rom(self, address, value):
         if address > 0x7FFF:
             if self.debug : print(f"Illegal write to address 0x{format_hex_data(address)}")
@@ -144,14 +144,14 @@ class Memory:
                 # store joypad value
                 self.ctrl1_status = self.emulator.ctrl1.status
                 self.ctrl2_status = self.emulator.ctrl2.status
-                
+
         elif address < 0x2000:
             self.ROM[address % 0x800] = value
         else:
             self.ROM[address] = value
-        return 0 
-        
-        
+        return 0
+
+
     def read_ppu_memory_at_ppuaddr(self):
             if self.PPUADDR < 0x2000:
                 return self.PRG[self.PPUADDR] # CHR_ROM ADDRESS
@@ -171,8 +171,8 @@ class Memory:
                 return self.palette_VRAM[address]
             else:
                 raise Exception("Out of PPU memory range")
-        
-        
+
+
     def read_ppu_memory(self, address):
             if address < 0x2000:
                 return self.PRG[address] # CHR_ROM ADDRESS
@@ -188,7 +188,7 @@ class Memory:
                 return self.palette_VRAM[palette_address]
             else:
                 raise Exception("Out of PPU memory range")
-    
+
     def write_ppu_memory_at_ppuaddr(self, value):
             if self.PPUADDR < 0x2000:
                 pass # CHR_ROM ADDRESS
@@ -208,7 +208,7 @@ class Memory:
                 self.palette_VRAM[address] = value
                 VRAM_increment = (self.read_rom(0x2000) >> 2) & 1
                 self.PPUADDR += 1 if VRAM_increment == 0 else 0x20
-        
+
     def print_status(self):
         print("Memory status")
         print("OAMADDR\t| PPUADDR")
@@ -226,7 +226,7 @@ class Memory:
         self.print_memory_page(self.palette_VRAM)
         print("OAM")
         self.print_memory_page(self.OAM, 0)
-        
+
     def print_memory_page(self, page, high = 0) :
         for i in range(0, min(256, len(page)), 32):
             print(f"{(high << 8) + i:04x}:{(high << 8) + i + 31 :04x}    {' '.join([f'{i:02x}' for i in page[(high << 8) + i:(high << 8) + i + 32]])}")

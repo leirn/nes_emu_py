@@ -26,14 +26,14 @@ class Cpu:
     total_cycles = 0
     remaining_cycles = 0
     additional_cycle = 0
-    
+
     emulator = ""
     A = 0
     X = 0
     Y = 0
     PC = 0
     SP = 0
-    
+
     """
     C (carry)
     N (negative)
@@ -48,17 +48,17 @@ class Cpu:
     flagI = 1
     flagZ = 0
     flagC = 0
-    
+
     def __init__(self, emulator):
         self.emulator = emulator
-    
+
     # initialise PC
     def start(self, entry_point = None):
         # Start sequence push stack three time
         self.push(0)
         self.push(0)
         self.push(0)
-        
+
         if entry_point:
             self.PC = entry_point
         else:
@@ -67,46 +67,46 @@ class Cpu:
         if self.debug : print(f"Entry point : 0x{format_hex_data(self.PC)}")
         self.total_cycles = 7 # Cout de l'init
         self.remaining_cycles = 7
-        
+
         return 1
-    
+
     def nmi(self):
         # Execute an NMI
         if self.debug : print("NMI interruption detected")
         self.general_interrupt(0xFFFA)
-        
+
     def irq(self):
         if self.debug : print("IRQ interruption detected")
         self.general_interrupt(0xFFFE)
-        
+
     def general_interrupt(self, address):
-        
+
         self.push(self.PC >> 8)
         self.push(self.PC & 255)
         self.push(self.getP())
-        
+
         self.flagI = 0
-        
+
         self.PC = self.emulator.memory.read_rom_16(address)
         self.remaining_cycles = 7 - 1 # do not count current cycle twice
         self.total_cycles += 7
-    
+
     # next : execute the next opcode.
     # return the number of cycles used to execute
     def next(self):
         if self.remaining_cycles > 0:
             self.remaining_cycles -= 1
             return
-        
+
         opcode = self.emulator.memory.read_rom(self.PC)
         try:
             if self.debug > 0:
                 self.print_status_summary()
-                
+
             fn = getattr(self, f"fn_0x{opcode:02x}")
             step, self.remaining_cycles = fn()
             self.remaining_cycles += self.additional_cycle
-            self.total_cycles += self.remaining_cycles 
+            self.total_cycles += self.remaining_cycles
             self.remaining_cycles -= 1 # Do not count current cycle twice
             self.additional_cycle = 0
             self.PC += step
@@ -115,7 +115,7 @@ class Cpu:
         except KeyError as e:
             print(f"Unknow opcode 0x{opcode:02x} at {' '.join(a+b for a,b in zip(f'{self.PC:x}'[::2], f'{self.PC:x}'[1::2]))}")
             raise e
-    
+
     def get_cpu_status(self):
         status = dict()
         status["PC"] = self.PC
@@ -144,7 +144,7 @@ class Cpu:
     def push(self, val):
         self.emulator.memory.write_rom(0x0100 | self.SP, val)
         self.SP = 255 if self.SP == 0 else self.SP - 1
-        
+
     def pop(self):
         self.SP = 0 if self.SP == 255 else self.SP + 1
         return self.emulator.memory.read_rom(0x0100 | self.SP)
@@ -164,61 +164,61 @@ class Cpu:
     def getZeroPageValue(self):
         address= self.getImmediate()
         return self.emulator.memory.read_rom(address)
-    
+
     def setZeroPageX(self, val):
         self.emulator.memory.write_rom(self.getZeroPageXAddress(), val)
-        
+
     def getZeroPageXAddress(self):
         return  (self.emulator.memory.read_rom(self.PC+1) + self.X) & 255
-        
+
     def getZeroPageXValue(self):
         address = self.getZeroPageXAddress()
         return self.emulator.memory.read_rom(address)
-    
+
     def setZeroPageY(self, val):
         self.emulator.memory.write_rom(self.getZeroPageYAddress(), val)
-        
+
     def getZeroPageYAddress(self):
         return  (self.emulator.memory.read_rom(self.PC+1) + self.Y) & 255
-        
+
     def getZeroPageYValue(self):
         address = self.getZeroPageYAddress()
         return self.emulator.memory.read_rom(address)
-    
+
     def setAbsolute(self, val):
         self.emulator.memory.write_rom(self.getAbsoluteAddress(), val)
-        
+
     def getAbsoluteAddress(self):
         return self.emulator.memory.read_rom_16(self.PC+1)
-        
+
     def getAbsoluteValue(self):
         address = self.getAbsoluteAddress()
         return self.emulator.memory.read_rom(address)
-    
+
     def setAbsoluteX(self, val):
         self.emulator.memory.write_rom(self.getAbsoluteXAddress(), val)
-        
+
     def getAbsoluteXAddress(self):
         address = self.emulator.memory.read_rom_16(self.PC+1)
         target_address = (address + self.X) & 0xFFFF
         if  address & 0xFF00 != target_address & 0xFF00:
             self.additional_cycle += 1
         return target_address
-        
+
     def getAbsoluteXValue(self):
         address = self.getAbsoluteXAddress()
         return self.emulator.memory.read_rom(address)
-    
+
     def setAbsoluteY(self, val):
         self.emulator.memory.write_rom(self.getAbsoluteYAddress(), val)
-        
+
     def getAbsoluteYAddress(self):
         address = self.emulator.memory.read_rom_16(self.PC+1)
         target_address = (address + self.Y) & 0xFFFF
         if  address & 0xFF00 != target_address & 0xFF00:
             self.additional_cycle += 1
         return target_address
-        
+
     def getAbsoluteYValue(self):
         address = self.getAbsoluteYAddress()
         return self.emulator.memory.read_rom(address)
@@ -230,7 +230,7 @@ class Cpu:
     def getIndirectXValue(self):
         address = self.getIndirectXAddress()
         return self.emulator.memory.read_rom(address)
-    
+
     def setIndirectX(self, val):
         self.emulator.memory.write_rom(self.getIndirectXAddress(), val)
 
@@ -244,14 +244,14 @@ class Cpu:
     def getIndirectYValue(self):
         address = self.getIndirectYAddress()
         return self.emulator.memory.read_rom(address)
-    
+
     def setIndirectY(self, val):
         self.emulator.memory.write_rom(self.getIndirectYAddress(), val)
-    
+
     def setFlagNZ(self, val):
         self.setFlagN(val)
         self.setFlagZ(val)
-    
+
     def setFlagN(self, val):
         if val < 0:
             self.flagN = 1
@@ -265,11 +265,11 @@ class Cpu:
         adc = input + self.A + self.flagC
         self.flagC = adc >> 8
         result = 255 & adc
-        
+
         self.flagV = not not ((self.A ^ result) & (input ^ result) & 0x80)
-        
+
         self.A = result
-        
+
         self.setFlagNZ(self.A)
 
     # ADC #$44
@@ -570,7 +570,7 @@ class Cpu:
             self.flagC = 1
             self.flagN = 0
             self.flagZ = 1
-        else:  
+        else:
             if b - a >= 0x80:
                 self.flagC = 0
                 self.flagN = 0
@@ -1108,7 +1108,7 @@ class Cpu:
         self.Y =self.getAbsoluteValue()
         self.setFlagNZ(self.Y)
         return (3, 4)
-        
+
     # LDY $4400, X
     # Absolute, X
     def fn_0xbc(self) :
@@ -1369,7 +1369,7 @@ class Cpu:
         val = (val << 1) | (self.flagC)
         self.flagC = val >> 8
         val &= 255
-        self.setIndirectY(val)  
+        self.setIndirectY(val)
         self.fn_0x31() # AND
         return (2, 8)
 
@@ -1430,7 +1430,7 @@ class Cpu:
         carry = val & 1
         val = (val >> 1) | (self.flagC << 7)
         self.flagC = carry
-        self.setIndirectY(val)  
+        self.setIndirectY(val)
         self.fn_0x71() # ADC
         return (2, 8)
 
@@ -1488,7 +1488,7 @@ class Cpu:
         val = self.getIndirectYValue()
         self.flagC = val & 1
         val = val >> 1
-        self.setIndirectY(val)  
+        self.setIndirectY(val)
         self.fn_0x51() # EOR
         return (2, 8)
 
@@ -1557,7 +1557,7 @@ class Cpu:
         self.A &= 255
         self.setFlagNZ(self.A)
         return (1, 2)
-        
+
 
     # ROL $44
     # Zero Page
@@ -1675,7 +1675,7 @@ class Cpu:
 
     def sbc(self, input):
         self.adc(255-input)
-        
+
     # sbc #$44
     # Immediate
     def fn_0xe9(self) :
@@ -1859,7 +1859,7 @@ class Cpu:
         address = self.getAbsoluteAddress()
         self.emulator.memory.write_rom(address, self.Y)
         return (3, 4)
-        
+
     # LAX $44
     # Zero Page
     def fn_0xa7(self) :
@@ -1907,28 +1907,28 @@ class Cpu:
         self.X = self.A
         self.setFlagNZ(self.A)
         return (2, 5)
-    
+
     #SAX $44
     # Zero Page
     def fn_0x87(self) :
         val = self.A & self.X
         self.setZeroPage(val)
         return (2, 3)
-    
+
     #SAX $ 44, Y
     # Zero Page, Y
     def fn_0x97(self) :
         val = self.A & self.X
         self.setZeroPageY(val)
         return (2, 4)
-    
+
     #SAX $4400
     # Absolute
     def fn_0x8f(self) :
         val = self.A & self.X
         self.setAbsolute(val)
         return (3, 4)
-    
+
     #SAX
     # Indirect, X
     def fn_0x83(self) :
@@ -1936,7 +1936,7 @@ class Cpu:
         self.setIndirectX(val)
         return (2, 6)
 
-        
+
     def print_status(self) :
         print("CPU")
         print("Registers:")
@@ -1947,21 +1947,20 @@ class Cpu:
         print("NVxBDIZC")
         print(f"{self.getP():08b}")
         print("")
-        
-    
-    
+
+
+
     def print_status_summary(self) :
         label = cpu_opcodes.opcodes[opcode][1]
         l = re.search(r'[0-9]+', label)
         if l:
             if len(l.group(0)) == 2:
                 val = self.getImmediate()
-                label = label.replace(l.group(0), f"{val:x}") 
+                label = label.replace(l.group(0), f"{val:x}")
             else:
                 val = self.getAbsoluteAddress()
                 label = label.replace(l.group(0), f"{format_hex_data(val)}")
         print(f"Counter : {self.compteur:8}, SP : 0x{self.SP:02x}, PC : {format_hex_data(self.PC)} - fn_0x{opcode:02x} - {label:14}, A = {self.A:2x}, X = {self.X:2x}, Y = {self.Y:2x}, Flags NVxBDIZC : {self.getP():08b}")
-                
-        
-        
- 
+
+
+

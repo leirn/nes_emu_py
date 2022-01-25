@@ -6,7 +6,6 @@ if __name__ == '__main__':
     print("This module cannot be executed. Please use main.py")
     sys.exit()
 
-
 # https://formats.kaitai.io/ines/
 
 class Cartridge:
@@ -22,38 +21,38 @@ class Cartridge:
     f9 = b''
     f10 = b''
     mapper = 0
-    
+
     #TRAINER
     is_trainer = False
     trainer = b''
-    
+
     #PRG_ROM
     prg_rom = b''
-    
+
     #CHR_ROM
     chr_rom = b''
-    
+
     #PLAY_CHOISE_10
     is_playchoice = False
     playchoice = b''
-    
+
     #TITLE
     header = b''
 
     def parse_rom(self, stream):
         self.header = stream.read(16)
         self.parse_header()
-        
+
         if self.is_trainer:
             self.trainer = stream.read(512)
-            
+
         self.prg_rom = bytearray(stream.read(self.prg_rom_size))
-        
+
         self.chr_rom = bytearray(stream.read(self.chr_rom_size))
         if self.is_playchoice:
             self.playchoice = stream.read(8224)
         self.title = stream.read()
-        
+
     def parse_header(self):
         h = self.header
         self.magic = h[0:4]
@@ -67,24 +66,11 @@ class Cartridge:
         self.prg_ram_size= h[8] * 8 * 1024
         self.f9= h[9]
         self.f10= h[10]
-        
+
         self.mapper = (self.f7 & 0x11110000) + ((self.f6 & 0x11110000) >> 4)
 
-    def disas(self):
-        global opcodes
-        pc = int.from_bytes(self.prg_rom[0x7ffc:0x7ffc+2], "big")
-        print("DISASSEMBLY")
-        for i in range(1000):
-            try:
-                print(f"0x{pc:x} : 0x{self.prg_rom[pc]:x} : {opcodes[self.prg_rom[pc]]}")
-                pc += opcodes[self.prg_rom[pc]][2]
-            except Exception as e:
-                print(f"Opcode not found : 0x{self.prg_rom[pc]:x}")
-                break
-            
-        
-
-    def print(self):
+    def print_status(self):
+        """Print the Cartridge status"""
         print(self.title)
         print(self.header)
         print(self.magic)

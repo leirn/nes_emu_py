@@ -9,10 +9,10 @@ if __name__ == '__main__':
 
 def format_hex_data(val):
     """Format hex data with spaces every two hexadecimal characters
-    
+
     Arguments
     val -- array of bytes to convert
-    
+
     Returns
     Formated strings
     """
