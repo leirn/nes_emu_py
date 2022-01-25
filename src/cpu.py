@@ -499,7 +499,6 @@ class Cpu:
     # BVC
     # Relative
     def fn_0x50(self) :
-        old_pc = self.PC + 2
         unsigned = self.getImmediate()
         signed = unsigned - 256 if unsigned > 127 else unsigned
         if self.flagV == 0:
@@ -583,9 +582,10 @@ class Cpu:
         self.PC = self.emulator.memory.read_rom_16(0xFFFE)
         return (0, 7)
 
-    def cmp(self, a, b) :
-        if a > b:
-            if a-b >= 0x80:
+    def cmp(self, op1, op2) :
+        '''General implementation for CMP operation'''
+        if op1 > op2:
+            if op1-op2 >= 0x80:
                 self.flagC = 1
                 self.flagN = 1
                 self.flagZ = 0
@@ -593,12 +593,12 @@ class Cpu:
                 self.flagC = 1
                 self.flagN = 0
                 self.flagZ = 0
-        elif a == b:
+        elif op1 == op2:
             self.flagC = 1
             self.flagN = 0
             self.flagZ = 1
         else:
-            if b - a >= 0x80:
+            if op2 - op1 >= 0x80:
                 self.flagC = 0
                 self.flagN = 0
                 self.flagZ = 0
@@ -1979,9 +1979,8 @@ class Cpu:
         print(f"{self.getP():08b}")
         print("")
 
-
-
     def print_status_summary(self) :
+        opcode = self.emulator.memory.read_rom(self.PC)
         label = OPCODES[opcode][1]
         l = re.search(r'[0-9]+', label)
         if l:
@@ -1992,6 +1991,3 @@ class Cpu:
                 val = self.getAbsoluteAddress()
                 label = label.replace(l.group(0), f"{format_hex_data(val)}")
         print(f"Counter : {self.compteur:8}, SP : 0x{self.SP:02x}, PC : {format_hex_data(self.PC)} - fn_0x{opcode:02x} - {label:14}, A = {self.A:2x}, X = {self.X:2x}, Y = {self.Y:2x}, Flags NVxBDIZC : {self.getP():08b}")
-
-
-
