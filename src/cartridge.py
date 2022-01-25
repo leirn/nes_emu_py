@@ -9,35 +9,36 @@ if __name__ == '__main__':
 # https://formats.kaitai.io/ines/
 
 class Cartridge:
-    # HEADER
-    title = b''
-    header = b''
-    magic = b''
-    prg_rom_size = 0
-    chr_rom_size = 0
-    prg_ram_size = 0
-    f6 = b''
-    f7 = b''
-    f9 = b''
-    f10 = b''
-    mapper = 0
+    def __init__(self):
+        # HEADER
+        self.title = b''
+        self.header = b''
+        self.magic = b''
+        self.prg_rom_size = 0
+        self.chr_rom_size = 0
+        self.prg_ram_size = 0
+        self.f6 = b''
+        self.f7 = b''
+        self.f9 = b''
+        self.f10 = b''
+        self.mapper = 0
 
-    #TRAINER
-    is_trainer = False
-    trainer = b''
+        #TRAINER
+        self.is_trainer = False
+        self.trainer = b''
 
-    #PRG_ROM
-    prg_rom = b''
+        #PRG_ROM
+        self.prg_rom = b''
 
-    #CHR_ROM
-    chr_rom = b''
+        #CHR_ROM
+        self.chr_rom = b''
 
-    #PLAY_CHOISE_10
-    is_playchoice = False
-    playchoice = b''
+        #PLAY_CHOISE_10
+        self.is_playchoice = False
+        self.playchoice = b''
 
-    #TITLE
-    header = b''
+        #TITLE
+        self.header = b''
 
     def parse_rom(self, stream):
         self.header = stream.read(16)

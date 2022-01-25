@@ -12,30 +12,31 @@ if __name__ == '__main__':
 NMI = 0b10
 FRAME_COMPLETED = 0b1
 
+PALETTE = [
+    (84,  84,  84, 255), 	(0,  30, 116, 255),	(8, 16, 144, 255),	(48, 0, 136, 255), 	(68, 0, 100, 255),  	(92, 0,  48, 255),   	(84, 4, 0, 255),   	(60, 24, 0, 255),   	(32, 42, 0, 255), 	(8, 58, 0, 255),    	(0, 64, 0, 255),    	(0, 60, 0, 255),    	(0, 50, 60, 255),    	(0,   0,   0, 255),	(0,   0,   0, 255),	(0,   0,   0, 255),
+    (152, 150, 152, 255),   (8,  76, 196, 255),   	(48, 50, 236, 255),   	(92, 30, 228, 255),  	(136, 20, 176, 255), 	(160, 20, 100, 255),  	(152, 34, 32, 255),  	(120, 60, 0, 255),   	(84, 90, 0, 255),   	(40, 114, 0, 255),    	(8, 124, 0, 255),    	(0, 118, 40, 255),    	(0, 102, 120, 255),    	(0,   0,   0, 255),	(0,   0,   0, 255),	(0,   0,   0, 255),
+    (236, 238, 236, 255),   (76, 154, 236, 255),  	(120, 124, 236, 255),  	(176, 98, 236, 255),  	(228, 84, 236, 255), 	(236, 88, 180, 255),  	(236, 106, 100, 255),  	(212, 136, 32, 255),  	(160, 170, 0, 255),  	(116, 196, 0, 255),   	(76, 208, 32, 255),   	(56, 204, 108, 255),   	(56, 180, 204, 255),   	(60,  60,  60, 255),	(0,   0,   0, 255),	(0,   0,   0, 255),
+    (236, 238, 236, 255),  	(168, 204, 236, 255),  	(188, 188, 236, 255),  	(212, 178, 236, 255),  	(236, 174, 236, 255),	(236, 174, 212, 255),  	(236, 180, 176, 255),  	(228, 196, 144, 255),  	(204, 210, 120, 255),  	(180, 222, 120, 255),  	(168, 226, 144, 255),  	(152, 226, 180, 255),  	(160, 214, 228, 255),  	(160, 162, 160, 255),	(0,   0,   0, 255),	(0,   0,   0, 255),
+]
+
 class Ppu:
-    debug = 0
-
-    emulator = ""
-    scale = 2
-    line = 0
-    col = 0
-    cycle = 0
-    frame_count = 0
-
-    cached_frame = ''
-    frameParity = 0
-
-    x_scroll = 0
-    y_scroll = 0
-
-    palette = [
-            (84,  84,  84, 255), 	(0,  30, 116, 255),	(8, 16, 144, 255),	(48, 0, 136, 255), 	(68, 0, 100, 255),  	(92, 0,  48, 255),   	(84, 4, 0, 255),   	(60, 24, 0, 255),   	(32, 42, 0, 255), 	(8, 58, 0, 255),    	(0, 64, 0, 255),    	(0, 60, 0, 255),    	(0, 50, 60, 255),    	(0,   0,   0, 255),	(0,   0,   0, 255),	(0,   0,   0, 255),
-            (152, 150, 152, 255),   (8,  76, 196, 255),   	(48, 50, 236, 255),   	(92, 30, 228, 255),  	(136, 20, 176, 255), 	(160, 20, 100, 255),  	(152, 34, 32, 255),  	(120, 60, 0, 255),   	(84, 90, 0, 255),   	(40, 114, 0, 255),    	(8, 124, 0, 255),    	(0, 118, 40, 255),    	(0, 102, 120, 255),    	(0,   0,   0, 255),	(0,   0,   0, 255),	(0,   0,   0, 255),
-            (236, 238, 236, 255),   (76, 154, 236, 255),  	(120, 124, 236, 255),  	(176, 98, 236, 255),  	(228, 84, 236, 255), 	(236, 88, 180, 255),  	(236, 106, 100, 255),  	(212, 136, 32, 255),  	(160, 170, 0, 255),  	(116, 196, 0, 255),   	(76, 208, 32, 255),   	(56, 204, 108, 255),   	(56, 180, 204, 255),   	(60,  60,  60, 255),	(0,   0,   0, 255),	(0,   0,   0, 255),
-            (236, 238, 236, 255),  	(168, 204, 236, 255),  	(188, 188, 236, 255),  	(212, 178, 236, 255),  	(236, 174, 236, 255),	(236, 174, 212, 255),  	(236, 180, 176, 255),  	(228, 196, 144, 255),  	(204, 210, 120, 255),  	(180, 222, 120, 255),  	(168, 226, 144, 255),  	(152, 226, 180, 255),  	(160, 214, 228, 255),  	(160, 162, 160, 255),	(0,   0,   0, 255),	(0,   0,   0, 255),
-        ]
+    '''PPU Component. Handles all PPU Operations'''
 
     def __init__(self, emulator):
+        self.debug = 0
+
+        self.scale = 2
+        self.col = 0
+        self.line = 0
+        self.cycle = 0
+        self.frame_count = 0
+
+        self.frame_background = ''
+        self.frame_sprite = ''
+        self.frameParity = 0
+
+        self.x_scroll = 0
+        self.y_scroll = 0
         self.emulator = emulator
 
         self.setPPUCTRL(0)
@@ -45,10 +46,6 @@ class Ppu:
         self.setPPUSCROLL(0)
         self.setPPUADDR(0)
         self.setPPUDATA(0)
-
-        self.col = 0
-        self.line = 0
-
 
     def bg_quarter(self, bank):
         backgroundPatternTableAddress = ((self.getPPUCTRL() >> 4) & 1) * 0x1000
@@ -116,7 +113,6 @@ class Ppu:
                 print("Entering display sprinte loop")
                 sprite_pattern_table_address = ((PPUCTRL >> 3) & 1) * 0x1000
                 for i in range(64):
-                    #sprite = self.emulator.memory.OAM[self.emulator.memory.OAMADDR + i * 4:self.emulator.memory.OAMADDR + i * 4 + 4]
                     sprite = self.emulator.memory.OAM[i * 4:i * 4 + 4]
                     s_y = sprite[0]
                     s_x = sprite[3]
@@ -300,14 +296,14 @@ class Ppu:
         palette = []
         palette.append((0, 0, 0, 0))
         if palette_address == -1:
-            palette.append(self.palette[0x23])
-            palette.append(self.palette[0x27])
-            palette.append(self.palette[0x30])
+            palette.append(PALETTE[0x23])
+            palette.append(PALETTE[0x27])
+            palette.append(PALETTE[0x30])
         else:
             address = 0x3f00 + (0x10 * is_sprite) + (0x4 * palette_address)
-            palette.append(self.palette[self.emulator.memory.read_ppu_memory(address + 1)])
-            palette.append(self.palette[self.emulator.memory.read_ppu_memory(address + 2)])
-            palette.append(self.palette[self.emulator.memory.read_ppu_memory(address + 3)])
+            palette.append(PALETTE[self.emulator.memory.read_ppu_memory(address + 1)])
+            palette.append(PALETTE[self.emulator.memory.read_ppu_memory(address + 2)])
+            palette.append(PALETTE[self.emulator.memory.read_ppu_memory(address + 3)])
         for i in range(8):
             for j in range(8):
                 bit1 = (array_of_byte[i] >> (7-j)) & 1

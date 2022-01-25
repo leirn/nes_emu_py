@@ -3,17 +3,17 @@
 # http://users.telenet.be/kim1-6502/6502/proman.html#92
 
 import time
+import traceback
+import re
+import pygame
+from pygame.locals import *
 import cpu
 import memory
 import apu
 import ppu
 import inputs
 import cartridge
-import pygame
-import traceback
-from pygame.locals import *
 from cpu_opcodes import OPCODES
-import re
 
 class NesEmulator:
     '''Main class handling the whole emulator execution
@@ -21,22 +21,14 @@ class NesEmulator:
     Arg:
         cartridge_stream - Cartridge stream to be read in order to load the cartridge
     '''
-    apu = 0
-    cpu = 0
-    ppu = 0
-    memory = 0
-    ctrl1 = 0
-    ctrl2 = 0
-    is_nmi = 0
-    is_irq = 0
-    cartridge  = 0
-    scale = 0
-    pause = 0
-    clock = 0
-    test_file = 0
-    test_mode = 0
 
     def __init__(self, cartridge_stream):
+        self.is_nmi = 0
+        self.is_irq = 0
+        self.pause = 0
+        self.test_file = 0
+        self.test_mode = 0
+
         pygame.init()
         self.scale = 2
 
@@ -171,7 +163,6 @@ class NesEmulator:
     def check_test(self, cpu_status):
         ''' Performs test execution against reference execution log to find descrepancies'''
         opcode = self.memory.read_rom(cpu_status["PC"])
-        opcode_info = OPCODES[opcode]
 
         opcode_arg_1 = '  '
         opcode_arg_2 = '  '

@@ -11,25 +11,25 @@ import mappers
 from utils import format_hex_data
 
 class Memory:
-    debug = 0
-
-    mapper = ""
-    mapper_name = 0
-    ROM =           bytearray(b'\0' * 0x10000)
-    PRG =           bytearray(b'\0' * 0x10000)
-    VRAM =          bytearray(b'\0' * 0x2000)
-    palette_VRAM = bytearray(b'\0' *  0x20)
-    OAM =           bytearray(b'\0' * 0x100)
-    PPUADDR = 0
-    PPUSCROLL = 0
-    OAMADDR = 0
-
-    emulator = b''
-    ctrl1_status = 0
-    ctrl2_status = 0
-
+    '''Handles all memory operations and serves as bus between components'''
 
     def __init__(self, emulator):
+        self.debug = 0
+
+        self.mapper = ""
+        self.mapper_name = 0
+        self.ROM =           bytearray(b'\0' * 0x10000)
+        self.PRG =           bytearray(b'\0' * 0x10000)
+        self.VRAM =          bytearray(b'\0' * 0x2000)
+        self.palette_VRAM = bytearray(b'\0' *  0x20)
+        self.OAM =           bytearray(b'\0' * 0x100)
+        self.PPUADDR = 0
+        self.PPUSCROLL = 0
+        self.OAMADDR = 0
+
+        self.emulator = b''
+        self.ctrl1_status = 0
+        self.ctrl2_status = 0
         self.emulator = emulator
 
         try:

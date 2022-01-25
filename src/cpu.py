@@ -20,36 +20,35 @@ import re
 from utils import format_hex_data
 
 class Cpu:
-    test_mode = 0
-    debug = 0
-    compteur = 0
-    total_cycles = 0
-    remaining_cycles = 0
-    additional_cycle = 0
-
-    emulator = ""
-    A = 0
-    X = 0
-    Y = 0
-    PC = 0
-    SP = 0
-
-    """
-    C (carry)
-    N (negative)
-    Z (zero)
-    V (overflow)
-    D (decimal)
-    """
-    flagN = 0
-    flagV = 0
-    flagB = 0
-    flagD = 0
-    flagI = 1
-    flagZ = 0
-    flagC = 0
 
     def __init__(self, emulator):
+        self.test_mode = 0
+        self.debug = 0
+        self.compteur = 0
+        self.total_cycles = 0
+        self.remaining_cycles = 0
+        self.additional_cycle = 0
+
+        self.A = 0
+        self.X = 0
+        self.Y = 0
+        self.PC = 0
+        self.SP = 0
+
+        """
+        C (carry)
+        N (negative)
+        Z (zero)
+        V (overflow)
+        D (decimal)
+        """
+        self.flagN = 0
+        self.flagV = 0
+        self.flagB = 0
+        self.flagD = 0
+        self.flagI = 1
+        self.flagZ = 0
+        self.flagC = 0
         self.emulator = emulator
 
     # initialise PC

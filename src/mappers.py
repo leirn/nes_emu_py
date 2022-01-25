@@ -7,7 +7,7 @@ if __name__ == '__main__':
     sys.exit()
 
 class Mapper0:
-    cartridge = 0
+    '''Class to handle mapper type 0'''
 
     def __init__(self, cartridge):
         self.cartridge = cartridge
@@ -19,10 +19,12 @@ class Mapper0:
             self.cartridge.chr_rom.extend(self.cartridge.chr_rom)
 
     def read_rom(self, address):
+        '''Read ROM from cartridge'''
         return self.cartridge.prg_rom[address-0X8000]
 
 
 class Mapper1:
+    '''Class to handle mapper type 1'''
     cartridge = 0
 
     def __init__(self, cartridge):
