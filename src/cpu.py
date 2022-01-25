@@ -1,3 +1,11 @@
+'''Emulator CPU Modules'''
+
+# Preventing direct execution
+if __name__ == '__main__':
+    import sys
+    print("This module cannot be executed. Please use main.py")
+    sys.exit()
+
 # Addressing modes : http://www.emulator101.com/6502-addressing-modes.html
 # Opcodes : http://www.6502.org/tutorials/6502opcodes.html
 
@@ -11,7 +19,7 @@ import cpu_opcodes
 import re
 from utils import format_hex_data
 
-class cpu:
+class Cpu:
     test_mode = 0
     debug = 0
     compteur = 0

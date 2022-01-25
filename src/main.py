@@ -24,7 +24,7 @@ parser.add_argument('-t test_file', type=argparse.FileType('r'), required = Fals
 
 args = parser.parse_args()
 '''
-emulator = nes_emulator.nes_emulator(open(args[0], 'rb'))
+emulator = nes_emulator.NesEmulator(open(args[0], 'rb'))
 
 if options.test_file:
     emulator.setTestMode(open(options.test_file, 'r'))

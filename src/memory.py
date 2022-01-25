@@ -2,14 +2,15 @@
 
 # Preventing direct execution
 if __name__ == '__main__':
+    import sys
     print("This module cannot be executed. Please use main.py")
-    exit()
+    sys.exit()
 
 
 import mappers
 from utils import format_hex_data
 
-class memory:
+class Memory:
     debug = 0
     
     mapper = ""
@@ -33,7 +34,7 @@ class memory:
         
         try:
             module = __import__("mappers")
-            class_ = getattr(module, f"mapper{self.emulator.cartridge.mapper}")
+            class_ = getattr(module, f"Mapper{self.emulator.cartridge.mapper}")
             self.mapper = class_(self.emulator.cartridge)
             self.mapper_name = self.emulator.cartridge.mapper
         except Exception as e:

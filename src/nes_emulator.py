@@ -1,3 +1,5 @@
+'''The emulator main engine'''
+
 # http://users.telenet.be/kim1-6502/6502/proman.html#92
 
 import cpu
@@ -13,7 +15,7 @@ import time
 import cpu_opcodes
 import re
 
-class nes_emulator:
+class NesEmulator:
     apu = 0
     cpu = 0
     ppu = 0
@@ -33,18 +35,18 @@ class nes_emulator:
         pygame.init()
         self.scale = 2
         
-        self.cartridge = cartridge.cartridge()
+        self.cartridge = cartridge.Cartridge()
         self.cartridge.parse_rom(cartridge_stream)
         
         self.display = pygame.display.set_mode( (int(256 * self.scale * 2), int(240 * self.scale * 2)))
         self.display.fill((0, 0, 0))
         
-        self.ctrl1 = inputs.nes_controller()
-        self.ctrl2 = inputs.nes_controller()
-        self.memory = memory.memory(self)
-        self.cpu = cpu.cpu(self)
-        self.ppu = ppu.ppu(self)
-        self.apu = apu.apu(self)
+        self.ctrl1 = inputs.NesController()
+        self.ctrl2 = inputs.NesController()
+        self.memory = memory.Memory(self)
+        self.cpu = cpu.Cpu(self)
+        self.ppu = ppu.Ppu(self)
+        self.apu = apu.Apu(self)
         
         self.clock = pygame.time.Clock()
         

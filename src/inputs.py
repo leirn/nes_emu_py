@@ -2,10 +2,11 @@
 
 # Preventing direct execution
 if __name__ == '__main__':
+    import sys
     print("This module cannot be executed. Please use main.py")
-    exit()
+    sys.exit()
 
-class nes_controller:
+class NesController:
     status = 0
     
     def __init__(self):

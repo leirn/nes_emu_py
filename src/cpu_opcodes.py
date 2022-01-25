@@ -2,8 +2,9 @@
 
 # Preventing direct execution
 if __name__ == '__main__':
+    import sys
     print("This module cannot be executed. Please use main.py")
-    exit()
+    sys.exit()
 
 opcodes = {
     #HEX, 	MODE, 			SYNTAX, 		LEN,		TIME, 	PAGE_CROSS

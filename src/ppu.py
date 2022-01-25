@@ -5,13 +5,14 @@ import pygame
 
 # Preventing direct execution
 if __name__ == '__main__':
+    import sys
     print("This module cannot be executed. Please use main.py")
-    exit()
+    sys.exit()
 
 NMI = 0b10
 FRAME_COMPLETED = 0b1
 
-class ppu:
+class Ppu:
     debug = 0
     
     emulator = ""

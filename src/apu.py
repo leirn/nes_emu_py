@@ -2,10 +2,11 @@
 
 # Preventing direct execution
 if __name__ == '__main__':
+    import sys
     print("This module cannot be executed. Please use main.py")
-    exit()
+    sys.exit()
 
-class apu:
+class Apu:
     '''The emulator APU module class
 
     Args:
@@ -14,5 +15,5 @@ class apu:
     Attributes:
         emulator (emulator): A reference to the emulator used to access memory or other components
     '''
-    def __init__(self, parent):
+    def __init__(self, emulator):
         self.emulator = emulator

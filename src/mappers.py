@@ -1,4 +1,12 @@
-class mapper0:
+'''Cartridge mappers' implementations'''
+
+# Preventing direct execution
+if __name__ == '__main__':
+    import sys
+    print("This module cannot be executed. Please use main.py")
+    sys.exit()
+
+class Mapper0:
     cartridge = 0
     
     def __init__(self, cartridge):
@@ -14,7 +22,7 @@ class mapper0:
         return self.cartridge.prg_rom[address-0X8000]
             
     
-class mapper1:
+class Mapper1:
     cartridge = 0
     
     def __init__(self, cartridge):

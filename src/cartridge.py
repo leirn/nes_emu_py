@@ -2,13 +2,14 @@
 
 # Preventing direct execution
 if __name__ == '__main__':
+    import sys
     print("This module cannot be executed. Please use main.py")
-    exit()
+    sys.exit()
 
 
 # https://formats.kaitai.io/ines/
 
-class cartridge:
+class Cartridge:
     # HEADER
     title = b''
     header = b''
