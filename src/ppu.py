@@ -33,7 +33,7 @@ class Ppu:
 
         self.frame_background = ''
         self.frame_sprite = ''
-        self.frameParity = 0
+        self.frame_parity = 0
 
         self.x_scroll = 0
         self.y_scroll = 0
@@ -48,25 +48,25 @@ class Ppu:
         self.setPPUDATA(0)
 
     def bg_quarter(self, bank):
-        backgroundPatternTableAddress = ((self.getPPUCTRL() >> 4) & 1) * 0x1000
-        map_address = backgroundPatternTableAddress + 0x2000 + 0x400 * bank
+        bg_pattern_tabl_addr = ((self.getPPUCTRL() >> 4) & 1) * 0x1000
+        map_address = bg_pattern_tabl_addr + 0x2000 + 0x400 * bank
         quarter = pygame.Surface((256, 240), pygame.SRCALPHA, 32) # Le background
         attribute_table = map_address + 0x3C0
 
         for j in range(30):
             for i in range(32):
-                tileIndex = i + (32 * j)
-                attribute_address = ((tileIndex % 64) // 4) % 8 + (tileIndex // 128) * 8
+                tile_index = i + (32 * j)
+                attribute_address = ((tile_index % 64) // 4) % 8 + (tile_index // 128) * 8
                 attribute = self.emulator.memory.read_ppu_memory(attribute_table + attribute_address)
 
                 shift = (i % 4)//2 + (((j % 4)//2 ) << 1)
                 color_palette = (attribute >> (shift * 2)) & 0b11
 
                 #read background info in VRAM
-                bgTileIndex = self.emulator.memory.read_ppu_memory(map_address  + tileIndex)
-                #if self.debug : print (f"Tile ID : {tileIndex} - Tile content : {bgTileIndex:x}")
-                tileData = self.emulator.memory.getTile(backgroundPatternTableAddress, bgTileIndex)
-                tile = self.createTile(tileData, color_palette, 0)
+                bgtile_index = self.emulator.memory.read_ppu_memory(map_address  + tile_index)
+                #if self.debug : print (f"Tile ID : {tile_index} - Tile content : {bgtile_index:x}")
+                tile_data = self.emulator.memory.getTile(bg_pattern_tabl_addr, bgtile_index)
+                tile = self.create_tile(tile_data, color_palette, 0)
                 quarter.blit(tile, (i * 8, j * 8))
 
         return quarter
@@ -122,7 +122,7 @@ class Ppu:
                     s_palette = s_param & 0b11
 
                     sprite_tile = self.emulator.memory.getTile(sprite_pattern_table_address, s_tileId)
-                    tile = self.createTile(sprite_tile, s_palette, 1)
+                    tile = self.create_tile(sprite_tile, s_palette, 1)
                     tile = pygame.transform.scale(tile, (int(8 * self.scale), int(8 * self.scale)))
 
                     tile = pygame.transform.flip(tile, (s_param >> 7) & 1, (s_param >> 6) & 1)
@@ -135,8 +135,8 @@ class Ppu:
                         pass
 
             # Update screen
-            self.setVBlank()
-            self.emulator.display.fill(self.palette[self.emulator.memory.read_ppu_memory(0x3f00)]) # Couleur de fond transparene du backgroundaddress = 0x3f00 + (0x10 * is_sprite) + (0x4 * palette_address)
+            self.set_vblank()
+            self.emulator.display.fill(PALETTE[self.emulator.memory.read_ppu_memory(0x3f00)]) # Couleur de fond transparene du backgroundaddress = 0x3f00 + (0x10 * is_sprite) + (0x4 * palette_address)
             x = self.x_scroll % 256
             y = self.y_scroll % 240
             pygame.draw.rect(self.frame_background, (255, 0, 0), pygame.Rect(x - 1, y - 1, x + 257, y + 241), 2)
@@ -156,8 +156,8 @@ class Ppu:
             if (PPUCTRL >> 7) & 1:
                 self.emulator.raise_nmi()
         elif (self.line, self.col) == (261, 3):
-            self.clearVBlank()
-            self.clearSprite0Hit()
+            self.clear_vblank()
+            self.clear_sprite0_hit()
 
         elif (self.line, self.col) == (261, 280):
             PPUCTRL = self.getPPUCTRL()
@@ -174,30 +174,30 @@ class Ppu:
             # End of frame
             if self.line == 262:
                 self.line = 0
-                self.frameParity = 1 - self.frameParity
+                self.frame_parity = 1 - self.frame_parity
                 self.frame_count += 1
                 return FRAME_COMPLETED
         return 0
 
     # TODO : Vlbank status should be cleared after reading by CPU
-    def setVBlank(self):
+    def set_vblank(self):
         val = self.getPPUSTATUS()
         val |= 0b10000000
         self.setPPUSTATUS(val)
         pass
 
-    def clearVBlank(self):
+    def clear_vblank(self):
         val = self.getPPUSTATUS()
         val &= 0b11111111
         self.setPPUSTATUS(val)
         pass
-    def setSprite0Hit(self):
+    def set_sprite0_hit(self):
         val = self.getPPUSTATUS()
         val |= 0b01000000
         self.setPPUSTATUS(val)
         pass
 
-    def clearSprite0Hit(self):
+    def clear_sprite0_hit(self):
         val = self.getPPUSTATUS()
         val &= 0b10111111
         self.setPPUSTATUS(val)
@@ -275,7 +275,7 @@ class Ppu:
         y = 2
         for c in range(len(self.emulator.cartridge.chr_rom)//16):
 
-            tile = self.createTile(self.emulator.memory.getTile(0, c))
+            tile = self.create_tile(self.emulator.memory.getTile(0, c))
             tile = pygame.transform.scale(tile, (int(8 * self.scale), int(8 * self.scale)))
             self.emulator.display.blit(tile, (x, y))
             if (x +  10 * self.scale)  > 256 * self.scale:
@@ -284,7 +284,7 @@ class Ppu:
             else :
                 x += 10 * self.scale
 
-    def createTile(self, array_of_byte, palette_address = -1, is_sprite = 0):
+    def create_tile(self, array_of_byte, palette_address = -1, is_sprite = 0):
         """ Create a tile pygame surface from tile array of bytes and palette address
 
         Arguments:

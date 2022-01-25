@@ -67,7 +67,7 @@ class NesEmulator:
                 if self.is_nmi:
                     self.is_nmi = False
                     self.cpu.nmi()
-                if not self.cpu.flagI and self.is_irq: # Interrupt flag is ON
+                if not self.cpu.interrupt and self.is_irq: # Interrupt flag is ON
                     self.cpu.irq()
                 #Check for IRQ
                 try:
@@ -139,7 +139,7 @@ class NesEmulator:
         self.cpu.print_status()
         self.ppu.print_status()
         self.memory.print_status()
-        self.cartidge.print_status()
+        self.cartridge.print_status()
 
     def toggle_pause(self):
         '''Toggle pause on the emulator execution'''
