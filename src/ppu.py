@@ -225,7 +225,7 @@ class Ppu:
             # TODO : Implement 0,0 cycle skipped on odd frame
 
         #if self.debug == 1:
-        print(f"(Line, col) = ({self.line}, {self.col}), v = {self.register_v}, t = {self.register_t}")
+        #print(f"(Line, col) = ({self.line}, {self.col}), v = {self.register_v}, t = {self.register_t}")
 
         return (self.col, self.line) == (0, 0)
 
@@ -406,12 +406,12 @@ class Ppu:
         instances.memory.read_rom(0x2001)
 
     def setPPUSTATUS(self, val):
-        """Set the PPUUSTATUS Register"""
-        instances.memory.write_rom(0x2002, val)
+        """Set the PPUSTATUS Register"""
+        instances.memory.PPUSTATUS = val
 
     def getPPUSTATUS(self):
-        """Returns the PPUUSTATUS Register"""
-        instances.memory.read_rom(0x2002)
+        """Returns the PPUSTATUS Register"""
+        return instances.memory.PPUSTATUS
 
     def setPPU_OAMADDR(self, val):
         """Set the OAMADDR Register"""

@@ -25,6 +25,7 @@ class Memory:
         self.palette_VRAM = bytearray(b'\0' *  0x20)
         self.OAM =           bytearray(b'\0' * 0x100)
         self.PPUCTRL = 0
+        self.PPUSTATUS = 0
         self.PPUADDR = 0
         self.PPUSCROLL = 0
         self.OAMADDR = 0
@@ -41,6 +42,8 @@ class Memory:
 
         if address > 0x7FFF:
             return instances.cartridge.mapper.read_rom(address)
+        elif address < 0x2000: # RAM mirroring
+                return self.ROM[address % 0x800]
         elif address >= 0x2000 and address < 0x3f00:
             address = 0x2000 + (address % 8)
             #Plug into new PPU architecture
@@ -50,19 +53,19 @@ class Memory:
                 instances.ppu.read_or_write_0x2007()
             # Endof plug
 
-            if address < 0x2000: # RAM mirroring
-                return self.ROM[address % 0x800]
-            elif address == 0x2000: # PPUCTRL
+            if address == 0x2000: # PPUCTRL
                 return self.PPUCTRL
             elif address == 0x2002: # PPUSTATUS
                 # Reset PPUADDR and PPUSCROLL
                 #self.PPUSCROLL = 0 # Scrolling doesn't work if uncommented
                 self.PPUADDR = 0
-                value = self.ROM[0x2002]
-                self.ROM[0x2002] = value & 0b1111111
+                value = self.PPUSTATUS
+                self.PPUSTATUS = value & 0b1111111
                 return value
             elif address == 0x2007:
                 return self.read_ppu_memory_at_ppuaddr()
+            else:
+                return self.ROM[address]
         elif address >= 0x3f00 and address < 0x4000:
             if address % 4 == 0:
                 address = 0
@@ -116,15 +119,18 @@ class Memory:
             #Plug into new PPU architecture
             if address == 0x2000:
                 instances.ppu.write_0x2000(value)
-            elif address == 0x2000:
+            elif address == 0x2005:
                 instances.ppu.write_0x2005(value)
             elif address == 0x2006:
                 instances.ppu.write_0x2006(value)
             elif address == 0x2007:
                 instances.ppu.read_or_write_0x2007()
             # Endof plug
-            if address == 0x2002:
+            if address == 0x2000:
                 self.PPUCTRL = value
+            elif address == 0x2002:
+                print(f"Write PPUSTATUS to val {value}")
+                self.PPUSTATUS = value
             if address == 0x2003:
                 self.OAMADDR = value
             elif address == 0x2004:
