@@ -5,7 +5,13 @@ __date__ = '2022/01/19'
 
 import sys
 import optparse
-import nes_emulator
+from nes_emulator import NesEmulator
+from ppu import Ppu
+from cpu import Cpu
+from apu import Apu
+from memory import Memory
+from cartridge import Cartridge
+import instances
 
 import cpu_opcodes
 
@@ -24,10 +30,20 @@ parser.add_argument('-t test_file', type=argparse.FileType('r'), required = Fals
 
 args = parser.parse_args()
 '''
-emulator = nes_emulator.NesEmulator(open(args[0], 'rb'))
+
+instances.init()
+instances.memory = Memory()
+instances.ppu = Ppu()
+instances.cpu = Cpu()
+instances.apu = Apu()
+instances.cartridge = Cartridge()
+instances.cartridge.parse_rom(args[0])
+instances.nes = NesEmulator()
+
+instances.ppu.dump_chr()
 
 if options.test_file:
-    emulator.set_test_mode(open(options.test_file, 'r'))
-    emulator.start(0xC000)
+    instances.nes.set_test_mode(open(options.test_file, 'r'))
+    instances.nes.start(0xC000)
 else:
-    emulator.start()
+    instances.nes.start()

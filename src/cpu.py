@@ -1,4 +1,5 @@
 '''Emulator CPU Modules'''
+from singleton_decorator import singleton
 
 # Preventing direct execution
 if __name__ == '__main__':
@@ -17,11 +18,12 @@ if __name__ == '__main__':
 import sys
 from cpu_opcodes import OPCODES
 import re
+import instances
 from utils import format_hex_data
 
 class Cpu:
 
-    def __init__(self, emulator):
+    def __init__(self):
         self.test_mode = 0
         self.debug = 0
         self.compteur = 0
@@ -49,7 +51,6 @@ class Cpu:
         self.interrupt = 1
         self.zero = 0
         self.carry = 0
-        self.emulator = emulator
 
     # initialise PC
     def start(self, entry_point = None):
@@ -64,7 +65,7 @@ class Cpu:
             self.PC = entry_point
         else:
         # Equivalent to JMP ($FFFC)
-            self.PC = self.emulator.memory.read_rom_16(0xfffc)
+            self.PC = instances.memory.read_rom_16(0xfffc)
         if self.debug : print(f"Entry point : 0x{format_hex_data(self.PC)}")
         self.total_cycles = 7 # Cout de l'init
         self.remaining_cycles = 7
@@ -92,7 +93,7 @@ class Cpu:
 
         self.interrupt = 0
 
-        self.PC = self.emulator.memory.read_rom_16(address)
+        self.PC = instances.memory.read_rom_16(address)
         self.remaining_cycles = 7 - 1 # do not count current cycle twice
         self.total_cycles += 7
 
@@ -109,7 +110,7 @@ class Cpu:
             self.remaining_cycles -= 1
             return
 
-        opcode = self.emulator.memory.read_rom(self.PC)
+        opcode = instances.memory.read_rom(self.PC)
         try:
             if self.debug > 0:
                 self.print_status_summary()
@@ -137,8 +138,8 @@ class Cpu:
         status["Y"] = self.Y
         status["P"] = self.getP()
         status["CYC"] = self.total_cycles
-        status["PPU_LINE"] = self.emulator.ppu.line
-        status["PPU_COL"] = self.emulator.ppu.col
+        status["PPU_LINE"] = instances.ppu.line
+        status["PPU_COL"] = instances.ppu.col
         return status
 
     def getP(self):
@@ -163,21 +164,21 @@ class Cpu:
 
     def push(self, val):
         '''Push value into stack'''
-        self.emulator.memory.write_rom(0x0100 | self.SP, val)
+        instances.memory.write_rom(0x0100 | self.SP, val)
         self.SP = 255 if self.SP == 0 else self.SP - 1
 
     def pop(self):
         '''Pop value from stack'''
         self.SP = 0 if self.SP == 255 else self.SP + 1
-        return self.emulator.memory.read_rom(0x0100 | self.SP)
+        return instances.memory.read_rom(0x0100 | self.SP)
 
     def getImmediate(self):
         '''Get 8 bit immediate value on PC + 1'''
-        return self.emulator.memory.read_rom(self.PC+1)
+        return instances.memory.read_rom(self.PC+1)
 
     def setZeroPage(self, val):
         '''Write val into Zero Page memory. Address is given as opcode 1-byte argument'''
-        self.emulator.memory.write_rom(self.getZeroPageAddress(), val)
+        instances.memory.write_rom(self.getZeroPageAddress(), val)
 
     def getZeroPageAddress(self):
         '''Get ZeroPage address to be used for current opcode. Alias to get_immediate'''
@@ -186,54 +187,54 @@ class Cpu:
     def getZeroPageValue(self):
         '''Get val from Zero Page memory. Address is given as opcode 1-byte argument'''
         address= self.getImmediate()
-        return self.emulator.memory.read_rom(address)
+        return instances.memory.read_rom(address)
 
     def setZeroPageX(self, val):
         '''Write val into Zero Page memory. Address is given as opcode 1-byte argument and X register'''
-        self.emulator.memory.write_rom(self.getZeroPageXAddress(), val)
+        instances.memory.write_rom(self.getZeroPageXAddress(), val)
 
     def getZeroPageXAddress(self):
         '''Get ZeroPage address to be used for current opcode and X register'''
-        return (self.emulator.memory.read_rom(self.PC+1) + self.X) & 255
+        return (instances.memory.read_rom(self.PC+1) + self.X) & 255
 
     def getZeroPageXValue(self):
         '''Get value at ZeroPage address to be used for current opcode and X register'''
         address = self.getZeroPageXAddress()
-        return self.emulator.memory.read_rom(address)
+        return instances.memory.read_rom(address)
 
     def setZeroPageY(self, val):
         '''Write val into Zero Page memory. Address is given as opcode 1-byte argument and Y register'''
-        self.emulator.memory.write_rom(self.getZeroPageYAddress(), val)
+        instances.memory.write_rom(self.getZeroPageYAddress(), val)
 
     def getZeroPageYAddress(self):
         '''Get ZeroPage address to be used for current opcode and Y register'''
-        return  (self.emulator.memory.read_rom(self.PC+1) + self.Y) & 255
+        return  (instances.memory.read_rom(self.PC+1) + self.Y) & 255
 
     def getZeroPageYValue(self):
         '''Get value at ZeroPage address to be used for current opcode and Y register'''
         address = self.getZeroPageYAddress()
-        return self.emulator.memory.read_rom(address)
+        return instances.memory.read_rom(address)
 
     def setAbsolute(self, val):
         '''Write val into memory. Address is given as opcode 2-byte argument'''
-        self.emulator.memory.write_rom(self.getAbsoluteAddress(), val)
+        instances.memory.write_rom(self.getAbsoluteAddress(), val)
 
     def getAbsoluteAddress(self):
         '''Get address given as opcode 2-byte argument'''
-        return self.emulator.memory.read_rom_16(self.PC+1)
+        return instances.memory.read_rom_16(self.PC+1)
 
     def getAbsoluteValue(self):
         '''Get val from memory. Address is given as opcode 2-byte argument'''
         address = self.getAbsoluteAddress()
-        return self.emulator.memory.read_rom(address)
+        return instances.memory.read_rom(address)
 
     def setAbsoluteX(self, val):
         '''Write val into memory. Address is given as opcode 2-byte argument and X register'''
-        self.emulator.memory.write_rom(self.getAbsoluteXAddress(), val)
+        instances.memory.write_rom(self.getAbsoluteXAddress(), val)
 
     def getAbsoluteXAddress(self):
         '''Get address given as opcode 2-byte argument and X register'''
-        address = self.emulator.memory.read_rom_16(self.PC+1)
+        address = instances.memory.read_rom_16(self.PC+1)
         target_address = (address + self.X) & 0xFFFF
         if  address & 0xFF00 != target_address & 0xFF00:
             self.additional_cycle += 1
@@ -242,15 +243,15 @@ class Cpu:
     def getAbsoluteXValue(self):
         '''Get val from memory. Address is given as opcode 2-byte argument and X register'''
         address = self.getAbsoluteXAddress()
-        return self.emulator.memory.read_rom(address)
+        return instances.memory.read_rom(address)
 
     def setAbsoluteY(self, val):
         '''Write val into memory. Address is given as opcode 2-byte argument and Y register'''
-        self.emulator.memory.write_rom(self.getAbsoluteYAddress(), val)
+        instances.memory.write_rom(self.getAbsoluteYAddress(), val)
 
     def getAbsoluteYAddress(self):
         '''Get address given as opcode 2-byte argument and Y register'''
-        address = self.emulator.memory.read_rom_16(self.PC+1)
+        address = instances.memory.read_rom_16(self.PC+1)
         target_address = (address + self.Y) & 0xFFFF
         if  address & 0xFF00 != target_address & 0xFF00:
             self.additional_cycle += 1
@@ -259,32 +260,32 @@ class Cpu:
     def getAbsoluteYValue(self):
         '''Get val from memory. Address is given as opcode 2-byte argument and Y register'''
         address = self.getAbsoluteYAddress()
-        return self.emulator.memory.read_rom(address)
+        return instances.memory.read_rom(address)
 
     def getIndirectXAddress(self):
         address = self.getZeroPageXAddress()
-        return self.emulator.memory.read_rom_16_no_crossing_page(address)
+        return instances.memory.read_rom_16_no_crossing_page(address)
 
     def getIndirectXValue(self):
         address = self.getIndirectXAddress()
-        return self.emulator.memory.read_rom(address)
+        return instances.memory.read_rom(address)
 
     def setIndirectX(self, val):
-        self.emulator.memory.write_rom(self.getIndirectXAddress(), val)
+        instances.memory.write_rom(self.getIndirectXAddress(), val)
 
     def getIndirectYAddress(self):
         address = self.getZeroPageAddress()
-        target_address = 0xFFFF & (self.emulator.memory.read_rom_16_no_crossing_page(address )+ self.Y)
+        target_address = 0xFFFF & (instances.memory.read_rom_16_no_crossing_page(address )+ self.Y)
         if  address & 0xFF00 != target_address & 0xFF00:
             self.additional_cycle += 1
         return target_address
 
     def getIndirectYValue(self):
         address = self.getIndirectYAddress()
-        return self.emulator.memory.read_rom(address)
+        return instances.memory.read_rom(address)
 
     def setIndirectY(self, val):
-        self.emulator.memory.write_rom(self.getIndirectYAddress(), val)
+        instances.memory.write_rom(self.getIndirectYAddress(), val)
 
     def set_flags_nz(self, val):
         '''Sets flags N and Z according to value'''
@@ -566,7 +567,7 @@ class Cpu:
         self.push(self.PC >> 8)
         self.push(self.PC & 255)
         self.push(self.getP())
-        self.PC = self.emulator.memory.read_rom_16(0xFFFE)
+        self.PC = instances.memory.read_rom_16(0xFFFE)
         return (0, 7)
 
     def cmp(self, op1, op2) :
@@ -961,7 +962,7 @@ class Cpu:
             address += 1
             if self.debug :  print(f"JMP address : {address:4x}")
         else:
-            address = self.emulator.memory.read_rom_16(address)
+            address = instances.memory.read_rom_16(address)
         if self.debug : print(f"JMP address : {address:4x}")
         self.PC = address
         return (0, 5)
@@ -1897,43 +1898,43 @@ class Cpu:
     def fn_0x85(self) :
         '''Function call for STA $xx. Zero Page'''
         address = self.getZeroPageAddress()
-        extra_cycles = self.emulator.memory.write_rom(address, self.A)
+        extra_cycles = instances.memory.write_rom(address, self.A)
         return (2, 3 + extra_cycles)
 
     def fn_0x95(self) :
         '''Function call for STA $xx, X. Zero Page, X'''
         address = self.getZeroPageXAddress()
-        extra_cycles = self.emulator.memory.write_rom(address, self.A)
+        extra_cycles = instances.memory.write_rom(address, self.A)
         return (2, 4 + extra_cycles)
 
     def fn_0x8d(self) :
         '''Function call for STA $xxxx. Absolute'''
         address = self.getAbsoluteAddress()
-        extra_cycles = self.emulator.memory.write_rom(address, self.A)
+        extra_cycles = instances.memory.write_rom(address, self.A)
         return (3, 4 + extra_cycles)
 
     def fn_0x9d(self) :
         '''Function call for STA $xxxx, X. Absolute, X'''
         address = self.getAbsoluteXAddress()
-        extra_cycles = self.emulator.memory.write_rom(address, self.A)
+        extra_cycles = instances.memory.write_rom(address, self.A)
         return (3, 5 + extra_cycles)
 
     def fn_0x99(self) :
         '''Function call for STA $xxxx, Y. Absolute, Y'''
         address = self.getAbsoluteYAddress()
-        extra_cycles = self.emulator.memory.write_rom(address, self.A)
+        extra_cycles = instances.memory.write_rom(address, self.A)
         return (3, 5 + extra_cycles)
 
     def fn_0x81(self) :
         '''Function call for STA ($xx, X). Indirect, X'''
         address = self.getIndirectXAddress()
-        extra_cycles = self.emulator.memory.write_rom(address, self.A)
+        extra_cycles = instances.memory.write_rom(address, self.A)
         return (2, 6 + extra_cycles)
 
     def fn_0x91(self) :
         '''Function call for STA ($xx), Y. Indirect, Y'''
         address = self.getIndirectYAddress()
-        extra_cycles = self.emulator.memory.write_rom(address, self.A)
+        extra_cycles = instances.memory.write_rom(address, self.A)
         return (2, 6 + extra_cycles)
 
     def fn_0x9a(self) :
@@ -1974,37 +1975,37 @@ class Cpu:
     def fn_0x86(self) :
         '''Function call for STX $xx. Zero Page'''
         address = self.getZeroPageAddress()
-        self.emulator.memory.write_rom(address, self.X)
+        instances.memory.write_rom(address, self.X)
         return (2, 3)
 
     def fn_0x96(self) :
         '''Function call for STX $xx, Y. Zero Page, Y'''
         address = self.getZeroPageYAddress()
-        self.emulator.memory.write_rom(address, self.X)
+        instances.memory.write_rom(address, self.X)
         return (2, 4)
 
     def fn_0x8e(self) :
         '''Function call for STX $xxxx. Absolute'''
         address = self.getAbsoluteAddress()
-        self.emulator.memory.write_rom(address, self.X)
+        instances.memory.write_rom(address, self.X)
         return (3, 4)
 
     def fn_0x84(self) :
         '''Function call for STY $xx. Zero Page'''
         address = self.getZeroPageAddress()
-        self.emulator.memory.write_rom(address, self.Y)
+        instances.memory.write_rom(address, self.Y)
         return (2, 3)
 
     def fn_0x94(self) :
         '''Function call for STY $xx, X. Zero Page, X'''
         address = self.getZeroPageXAddress()
-        self.emulator.memory.write_rom(address, self.Y)
+        instances.memory.write_rom(address, self.Y)
         return (2, 4)
 
     def fn_0x8c(self) :
         '''Function call for STY $xxxx. Absolute'''
         address = self.getAbsoluteAddress()
-        self.emulator.memory.write_rom(address, self.Y)
+        instances.memory.write_rom(address, self.Y)
         return (3, 4)
 
     def fn_0xa7(self) :
@@ -2088,7 +2089,7 @@ class Cpu:
 
     def print_status_summary(self) :
         '''Debug print of status'''
-        opcode = self.emulator.memory.read_rom(self.PC)
+        opcode = instances.memory.read_rom(self.PC)
         label = OPCODES[opcode][1]
         l = re.search(r'[0-9]+', label)
         if l:

@@ -1,4 +1,5 @@
 '''Cartridge module'''
+import instances
 
 # Preventing direct execution
 if __name__ == '__main__':
@@ -7,6 +8,7 @@ if __name__ == '__main__':
     sys.exit()
 
 # https://formats.kaitai.io/ines/
+
 
 class Cartridge:
     def __init__(self):
@@ -22,6 +24,7 @@ class Cartridge:
         self.f9 = b''
         self.f10 = b''
         self.mapper = 0
+        self.mapper_id = 0
 
         #TRAINER
         self.is_trainer = False
@@ -40,7 +43,9 @@ class Cartridge:
         #TITLE
         self.header = b''
 
-    def parse_rom(self, stream):
+    def parse_rom(self, cartridge_filename):
+        stream = open(cartridge_filename, 'rb')
+
         self.header = stream.read(16)
         self.parse_header()
 
@@ -53,6 +58,15 @@ class Cartridge:
         if self.is_playchoice:
             self.playchoice = stream.read(8224)
         self.title = stream.read()
+
+        try:
+            module = __import__("mappers")
+            class_ = getattr(module, f"Mapper{self.mapper_id}")
+            self.mapper = class_()
+        except Exception as e:
+            raise Exception(f"Unreconized mapper {self.mapper_id}")
+
+        stream.close()
 
     def parse_header(self):
         h = self.header
@@ -68,7 +82,7 @@ class Cartridge:
         self.f9= h[9]
         self.f10= h[10]
 
-        self.mapper = (self.f7 & 0x11110000) + ((self.f6 & 0x11110000) >> 4)
+        self.mapper_id = (self.f7 & 0x11110000) + ((self.f6 & 0x11110000) >> 4)
 
     def print_status(self):
         """Print the Cartridge status"""

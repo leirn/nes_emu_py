@@ -5,14 +5,11 @@
 import time
 import traceback
 import re
+import instances
 import pygame
 from pygame.locals import *
-import cpu
-import memory
-import apu
 import ppu
 import inputs
-import cartridge
 from cpu_opcodes import OPCODES
 
 class NesEmulator:
@@ -22,7 +19,7 @@ class NesEmulator:
         cartridge_stream - Cartridge stream to be read in order to load the cartridge
     '''
 
-    def __init__(self, cartridge_stream):
+    def __init__(self):
         self.is_nmi = 0
         self.is_irq = 0
         self.pause = 0
@@ -32,32 +29,24 @@ class NesEmulator:
         pygame.init()
         self.scale = 2
 
-        self.cartridge = cartridge.Cartridge()
-        self.cartridge.parse_rom(cartridge_stream)
-
         self.display = pygame.display.set_mode( (int(256 * self.scale * 2), int(240 * self.scale * 2)))
         self.display.fill((0, 0, 0))
 
         self.ctrl1 = inputs.NesController()
         self.ctrl2 = inputs.NesController()
-        self.memory = memory.Memory(self)
-        self.cpu = cpu.Cpu(self)
-        self.ppu = ppu.Ppu(self)
-        self.apu = apu.Apu(self)
 
         self.clock = pygame.time.Clock()
 
-        self.ppu.dump_chr()
         pygame.display.update()
         pygame.display.flip()
 
 
     def start(self, entry_point = None):
         '''Starts the Emulator execution'''
-        self.cpu.start(entry_point)
-        self.ppu.next()
-        self.ppu.next()
-        self.ppu.next()
+        instances.cpu.start(entry_point)
+        instances.ppu.next()
+        instances.ppu.next()
+        instances.ppu.next()
         continuer = 1
         frame_count = 0
 
@@ -66,25 +55,25 @@ class NesEmulator:
                 #Check for NMI
                 if self.is_nmi:
                     self.is_nmi = False
-                    self.cpu.nmi()
-                if not self.cpu.interrupt and self.is_irq: # Interrupt flag is ON
-                    self.cpu.irq()
+                    instances.cpu.nmi()
+                if not instances.cpu.interrupt and self.is_irq: # Interrupt flag is ON
+                    instances.cpu.irq()
                 #Check for IRQ
                 try:
                     #Execute next CPU instruction
-                    self.cpu.next()
+                    instances.cpu.next()
                     # 3 PPU dots per CPU cycles
                     is_frame = 0
-                    is_frame |= self.ppu.next()
-                    is_frame |= self.ppu.next()
-                    is_frame |= self.ppu.next()
+                    is_frame |= instances.ppu.next()
+                    is_frame |= instances.ppu.next()
+                    is_frame |= instances.ppu.next()
                 except Exception as e:
                     print(e)
                     self.print_status()
                     print(traceback.format_exc())
                     exit()
 
-                if self.test_mode == 1 and self.cpu.remaining_cycles == 0: self.check_test(self.cpu.get_cpu_status())
+                if self.test_mode == 1 and instances.cpu.remaining_cycles == 0: self.check_test(instances.cpu.get_cpu_status())
 
                 if is_frame & ppu.FRAME_COMPLETED > 0:
                     frame_count += 1
@@ -136,10 +125,10 @@ class NesEmulator:
 
     def print_status(self):
         '''Display Emulator status'''
-        self.cpu.print_status()
-        self.ppu.print_status()
-        self.memory.print_status()
-        self.cartridge.print_status()
+        instances.cpu.print_status()
+        instances.ppu.print_status()
+        instances.memory.print_status()
+        cartridge_instances.print_status()
 
     def toggle_pause(self):
         '''Toggle pause on the emulator execution'''
@@ -156,20 +145,20 @@ class NesEmulator:
     def set_test_mode(self, file_name):
         '''Activate test mode and set the execution reference file'''
         self.test_mode = 1
-        self.cpu.test_mode = 1
+        instances.cpu.test_mode = 1
         self.test_file = file_name
 
 
     def check_test(self, cpu_status):
         ''' Performs test execution against reference execution log to find descrepancies'''
-        opcode = self.memory.read_rom(cpu_status["PC"])
+        opcode = instances.memory.read_rom(cpu_status["PC"])
 
         opcode_arg_1 = '  '
         opcode_arg_2 = '  '
         if OPCODES[opcode][2] > 1:
-            opcode_arg_1 = f"{self.memory.read_rom(cpu_status['PC']+1):02x}"
+            opcode_arg_1 = f"{instances.memory.read_rom(cpu_status['PC']+1):02x}"
         if OPCODES[opcode][2] > 2:
-            opcode_arg_2 = f"{self.memory.read_rom(cpu_status['PC']+2):02x}"
+            opcode_arg_2 = f"{instances.memory.read_rom(cpu_status['PC']+2):02x}"
 
         print(f"{cpu_status['PC']:x}  {opcode:02x} {opcode_arg_1} {opcode_arg_2}  {OPCODES[opcode][1]:30}  A:{cpu_status['A']:02x} X:{cpu_status['X']:02x} Y:{cpu_status['Y']:02x} P:{cpu_status['P']:02x} SP:{cpu_status['SP']:02x} PPU:{self.ppu.line}, {self.ppu.col} CYC:{cpu_status['CYC']}".upper())
 
@@ -180,8 +169,8 @@ class NesEmulator:
             exit()
 
         print(reference)
-        self.memory.print_memory_page(self.memory.ROM, 0x0)
-        self.memory.print_memory_page(self.memory.ROM, 0x6)
+        instances.memory.print_memory_page(instances.memory.ROM, 0x0)
+        instances.memory.print_memory_page(instances.memory.ROM, 0x6)
 
         ref_status = dict()
         ref_status['PC'] = int(reference[0:4], 16)

@@ -1,4 +1,5 @@
 '''Memory manager and routing module'''
+import instances
 
 # Preventing direct execution
 if __name__ == '__main__':
@@ -6,61 +7,62 @@ if __name__ == '__main__':
     print("This module cannot be executed. Please use main.py")
     sys.exit()
 
-
+from cartridge import Cartridge
+from ppu import Ppu
 import mappers
 from utils import format_hex_data
+
 
 class Memory:
     '''Handles all memory operations and serves as bus between components'''
 
-    def __init__(self, emulator):
+    def __init__(self):
         self.debug = 0
 
-        self.mapper = ""
-        self.mapper_name = 0
         self.ROM =           bytearray(b'\0' * 0x10000)
         self.PRG =           bytearray(b'\0' * 0x10000)
         self.VRAM =          bytearray(b'\0' * 0x2000)
         self.palette_VRAM = bytearray(b'\0' *  0x20)
         self.OAM =           bytearray(b'\0' * 0x100)
+        self.PPUCTRL = 0
         self.PPUADDR = 0
         self.PPUSCROLL = 0
         self.OAMADDR = 0
 
-        self.emulator = b''
         self.ctrl1_status = 0
         self.ctrl2_status = 0
-        self.emulator = emulator
 
-        try:
-            module = __import__("mappers")
-            class_ = getattr(module, f"Mapper{self.emulator.cartridge.mapper}")
-            self.mapper = class_(self.emulator.cartridge)
-            self.mapper_name = self.emulator.cartridge.mapper
-        except Exception as e:
-            print(f"Unreconized mapper {self.emulator.cartridge.mapper}")
-            print(e)
-            exit()
-
-    def getTile(self, bank, tile):
-        if self.debug : print(f"{len(self.cartridge.chr_rom):x} - {tile} - {bank + 16 * tile:x}:{bank + 16 * tile + 16:x}")
-        tile =  self.emulator.cartridge.chr_rom[bank + 16 * tile:bank + 16 * tile + 16]
+    def get_tile(self, bank, tile):
+        if self.debug : print(f"{len(instances.cartridge.chr_rom):x} - {tile} - {bank + 16 * tile:x}:{bank + 16 * tile + 16:x}")
+        tile =  instances.cartridge.chr_rom[bank + 16 * tile:bank + 16 * tile + 16]
         return tile
 
     def read_rom(self, address):
+
         if address > 0x7FFF:
-            return self.mapper.read_rom(address)
-        elif address < 0x2000: # RAM mirroring
-            return self.ROM[address % 0x800]
-        elif address == 0x2002: # PPUSTATUS
-            # Reset PPUADDR and PPUSCROLL
-            #self.PPUSCROLL = 0 # Scrolling doesn't work if uncommented
-            self.PPUADDR = 0
-            value = self.ROM[0x2002]
-            self.ROM[0x2002] = value & 0b1111111
-            return value
-        elif address == 0x2007:
-            return self.read_ppu_memory_at_ppuaddr()
+            return instances.cartridge.mapper.read_rom(address)
+        elif address >= 0x2000 and address < 0x3f00:
+            address = 0x2000 + (address % 8)
+            #Plug into new PPU architecture
+            if address == 0x2002:
+                instances.ppu.read_0x2002()
+            elif address == 0x2007:
+                instances.ppu.read_or_write_0x2007()
+            # Endof plug
+
+            if address < 0x2000: # RAM mirroring
+                return self.ROM[address % 0x800]
+            elif address == 0x2000: # PPUCTRL
+                return self.PPUCTRL
+            elif address == 0x2002: # PPUSTATUS
+                # Reset PPUADDR and PPUSCROLL
+                #self.PPUSCROLL = 0 # Scrolling doesn't work if uncommented
+                self.PPUADDR = 0
+                value = self.ROM[0x2002]
+                self.ROM[0x2002] = value & 0b1111111
+                return value
+            elif address == 0x2007:
+                return self.read_ppu_memory_at_ppuaddr()
         elif address >= 0x3f00 and address < 0x4000:
             if address % 4 == 0:
                 address = 0
@@ -87,8 +89,8 @@ class Memory:
         high_address = (address & 0xFF00) +((address + 1) & 0xFF)
         if self.debug : print(f"High address : {high_address:04x}, Low address : {address:04x}")
         if address > 0x7FFF:
-            low = self.mapper.read_rom(address)
-            high = self.mapper.read_rom(high_address) # So that reading never cross pages
+            low = instances.cartridge.mapper.read_rom(address)
+            high = instances.cartridge.mapper.read_rom(high_address) # So that reading never cross pages
             return low + (high <<8)
         else:
             low = self.ROM[address]
@@ -97,8 +99,8 @@ class Memory:
 
     def read_rom_16(self, address):
         if address > 0x7FFF:
-            low = self.mapper.read_rom(address)
-            high = self.mapper.read_rom(address + 1) # So that reading never cross pages
+            low = instances.cartridge.mapper.read_rom(address)
+            high = instances.cartridge.mapper.read_rom(address + 1) # So that reading never cross pages
             return low + (high <<8)
         else:
             low = self.ROM[address]
@@ -111,6 +113,18 @@ class Memory:
             if self.debug : print(f"Illegal write to address 0x{format_hex_data(address)}")
         elif address >= 0x2000 and address < 0x3f00:
             address = 0x2000 + (address % 8)
+            #Plug into new PPU architecture
+            if address == 0x2000:
+                instances.ppu.write_0x2000(value)
+            elif address == 0x2000:
+                instances.ppu.write_0x2005(value)
+            elif address == 0x2006:
+                instances.ppu.write_0x2006(value)
+            elif address == 0x2007:
+                instances.ppu.read_or_write_0x2007()
+            # Endof plug
+            if address == 0x2002:
+                self.PPUCTRL = value
             if address == 0x2003:
                 self.OAMADDR = value
             elif address == 0x2004:
@@ -140,10 +154,10 @@ class Memory:
         elif address == 0x4016: # Handling joystick
             if self.debug : print(f"Joystick write {value:b}")
             if value & 1 == 0:
-                if self.debug : print(f"Saved {self.emulator.ctrl1.status:b}")
+                if self.debug : print(f"Saved {instances.nes.ctrl1.status:b}")
                 # store joypad value
-                self.ctrl1_status = self.emulator.ctrl1.status
-                self.ctrl2_status = self.emulator.ctrl2.status
+                self.ctrl1_status = instances.nes.ctrl1.status
+                self.ctrl2_status = instances.nes.ctrl2.status
 
         elif address < 0x2000:
             self.ROM[address % 0x800] = value
@@ -157,11 +171,11 @@ class Memory:
             return self.PRG[self.PPUADDR] # CHR_ROM ADDRESS
         elif self.PPUADDR < 0x3000: # VRAM
             val =  self.VRAM[self.PPUADDR - 0x2000]
-            self.PPUADDR += 1 if (self.PPUADDR >> 2) & 1 == 0 else 0x20
+            self.PPUADDR += 1 if (self.PPUCTRL >> 2) & 1 == 0 else 0x20
             return val
         elif self.PPUADDR < 0x3F00: # VRAM mirror
             val =  self.VRAM[self.PPUADDR - 0X3000]
-            self.PPUADDR += 1 if (self.PPUADDR >> 2) & 1 == 0 else 0x20
+            self.PPUADDR += 1 if (self.PPUCTRL >> 2) & 1 == 0 else 0x20
             return val
         elif self.PPUADDR < 0x4000 : # palette
             if self.PPUADDR % 4 == 0:
