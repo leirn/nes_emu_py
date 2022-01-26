@@ -23,6 +23,7 @@ class Ppu:
     '''PPU Component. Handles all PPU Operations'''
 
     def __init__(self, emulator):
+        self.pixel_generator = self.PixelGenerator(self)
         self.debug = 0
 
         self.scale = 2
@@ -30,6 +31,8 @@ class Ppu:
         self.line = 0
         self.cycle = 0
         self.frame_count = 0
+
+        self.current_tile = 0
 
         self.frame_background = ''
         self.frame_sprite = ''
@@ -50,8 +53,8 @@ class Ppu:
     def bg_quarter(self, bank):
         bg_pattern_tabl_addr = ((self.getPPUCTRL() >> 4) & 1) * 0x1000
         map_address = bg_pattern_tabl_addr + 0x2000 + 0x400 * bank
-        quarter = pygame.Surface((256, 240), pygame.SRCALPHA, 32) # Le background
         attribute_table = map_address + 0x3C0
+        quarter = pygame.Surface((256, 240), pygame.SRCALPHA, 32) # Le background
 
         for j in range(30):
             for i in range(32):
@@ -71,17 +74,69 @@ class Ppu:
 
         return quarter
 
+    def next(self):
+        '''Next function that implement the almost exact PPU rendering workflow'''
+
+        #TODO : prepare for sprite fetching
+        if self.line < 240: # Normal line
+            if self.col > 0 and self.col < 257:
+                pixel_color = self.pixel_generator.compute_next_pixel()
+                self.emulator.display.fill(pixel_color, (((self.col - 1) * self.scale, self.line * self.scale), (self.scale,self.scale)))
+                self.load_tile_data()
+
+        if self.line < 240 or self.line == 261: # Normal line or prerender liner
+            if self.col > 320: # Preload data for two first tiles of next scanlines
+                self.load_tile_data()
+
+        if (self.col, self.line) == (241, 1):
+            pygame.display.flip()
+            self.set_vblank()
+
+        if (self.col, self.line) == (261, 1):
+            self.clear_vblank()
+
+        #Increment position
+        self.col  = (self.col + 1) % 341
+        if self.col == 0:
+            # End of scan line
+            self.line = (self.line + 1) % 262
+            # TODO : Implement 0,0 cycle skipped on odd frame
+
+        return (self.col, self.line) == (0, 0)
+
+    def load_tile_data(self):
+        '''8 cycle operation to load next tile data'''
+
+        # TODO : Fetch the actual data
+        match self.col % 8:
+            case 1: #read NT Byte for N+2 tile
+                nt_byte = 0
+                self.pixel_generator.set_nt_byte(nt_byte)
+            case 3: #read AT Byte for N+2 tile
+                at_byte = 0
+                self.pixel_generator.set_at_byte(at_byte)
+            case 5: #read low BG Tile Byte for N+2 tile
+                low_bg_tile_byte = 0
+                self.pixel_generator.set_low_bg_tile_byte(low_bg_tile_byte)
+            case 7: #read high BG Tile Byte for N+2 tile
+                high_bg_tile_byte = 0
+                self.pixel_generator.set_high_bg_tile_byte(high_bg_tile_byte)
+            case 8: #increment tile number and shift pixel generator registers
+                self.pixel_generator.shift_registers()
+                self.current_tile = (self.current_tile + 1) % 960
+                pass
+
     # https://wiki.nesdev.org/w/index.php?title=PPU_registers
     # https://bugzmanov.github.io/nes_ebook/chapter_6_4.html
-    def next(self):
-        '''Execute the next PPU Cycle'''
+    def old_next(self):
+        '''Execute the next PPU Cycle in a non precise manner'''
 
         PPUCTRL = self.getPPUCTRL()
         PPUMASK = self.getPPUMASK()
         if self.line == 0 and self.col == 0:
             self.frame_sprite = []
             self.frame_background = pygame.Surface((256 * 2, 240 * 2), pygame.SRCALPHA, 32) # Le background
-            self.frame_sprite.append(pygame.Surface(((256, 240)), pygame.SRCALPHA, 32)) # Les sprites derri�re le bg
+            self.frame_sprite.append(pygame.Surface(((256, 240)), pygame.SRCALPHA, 32)) # Les sprites derrire le bg
             self.frame_sprite.append(pygame.Surface(((256, 240)), pygame.SRCALPHA, 32)) # Les sprites devant le bg
 
             if (PPUMASK >>3) & 1 and self.col == 0 and self.line == 0 :	# Update pixel
@@ -319,3 +374,47 @@ class Ppu:
         print("PPUCTRL  | PPUMASK  | PPUSTAT")
         print(f"{self.getPPUCTRL():08b} | {self.getPPUMASK():08b} | {self.getPPUSTATUS():08b}")
         print("")
+
+    class PixelGenerator:
+        '''This class implement the PPU pixel path, which generate the current pixel'''
+        def __init__(self, ppu):
+            self.ppu = ppu
+            self.bg_palette_register = 0
+            self.current_pattern_table_register = 0
+            self.next_pattern_table_register = 0
+
+        def compute_next_pixel(self):
+            '''Compute the pixel to be displayed in current coordinates'''
+            return (0, 255, 0, 255)
+
+        def multiplexer_decision(self, bg_pixel, sprite_pixel, priority):
+            '''Implement PPU Priority Multiplexer decision table'''
+            if bg_pixel == 0 and sprite_pixel == 0:
+                return bg_transparent_color
+            if bg_pixel == 0 and sprite_pixel > 0:
+                return sprite_color
+            if sprite_pixel == 0:
+                return bg_color
+            if priority == 0:
+                return sprite_color
+            return bg_color
+
+        def shift_registers(self):
+            '''Shift registers every 8 cycles'''
+            pass
+
+        def set_nt_byte(self, nt_byte):
+            '''Set nt_byte into registers'''
+            pass
+
+        def set_at_byte(self, at_byte):
+            '''Set at_byte into registers'''
+            pass
+
+        def set_low_bg_tile_byte(self, low_bg_tile_byte):
+            '''Set low_bg_tile_byte into registers'''
+            pass
+
+        def set_high_bg_tile_byte(self, high_bg_tile_byte):
+            '''Set high_bg_tile_byte into registers'''
+            pass
