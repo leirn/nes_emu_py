@@ -157,19 +157,21 @@ class Ppu:
 
     def read_0x2007(self):
         '''Read PPU internal register at 0x2007 memory address'''
-        self.read_or_write_0x2007()
         return self.read_ppu_memory(self.ppuaddr)
+        self.read_or_write_0x2007()
 
     def write_0x2007(self, value):
         '''Write PPU internal register at 0x2007 memory address'''
-        self.read_or_write_0x2007()
         print(f"PPUADDR : {self.ppuaddr:x}")
         self.write_ppu_memory(self.ppuaddr, value)
+        self.read_or_write_0x2007()
 
     def read_or_write_0x2007(self):
         '''Update PPU internal register when CPU read or write 0x2007 memory address'''
         if not self.is_rendering_enabled:
+            # TODO : checker en quoi c'est redondant. Pas sur
             self.register_v += 1 if (self.ppuctrl >> 2) & 1 == 0 else 0x20
+            self.ppudata += 1 if (self.ppuctrl >> 2) & 1 == 0 else 0x20
         else:
             self.inc_vert_v()
             self.inc_hor_v()
@@ -274,25 +276,28 @@ class Ppu:
         # TODO : Fetch the actual data
         match self.col % 8:
             case 1: #read NT Byte for N+2 tile
-                print(f"rr{self.register_v:x}")
+                print(f"V register when reading NT Bytes : {self.register_v:x}")
                 tile_address = 0x2000 | (self.register_v & 0xfff) # Is it NT or tile address ?
-                print(f"aa{tile_address:x}")
+                print(f"Tile address : {tile_address:x}")
                 nt_byte = self.read_ppu_memory(tile_address)
                 print(f"NT Byte : {nt_byte:x}")
                 self.pixel_generator.set_nt_byte(nt_byte)
             case 3: #read AT Byte for N+2 tile
                 attribute_address = 0x23c0 | (self.register_v & 0xC00) | ((self.register_v >> 4) & 0x38) | ((self.register_v >> 2) & 0x07)
                 at_byte = self.read_ppu_memory(attribute_address)
+                print(f"AT address : {attribute_address:x}")
                 print(f"AT Byte : {at_byte:x}")
+                #if at_byte > 0 : time.sleep(3)
                 self.pixel_generator.set_at_byte(at_byte)
             case 5: #read low BG Tile Byte for N+2 tile
                 bg_pattern_tabl_addr = ((self.ppuctrl >> 4) & 1) * 0x1000
                 tile_address = self.pixel_generator.bg_nt_table_register[-1]
-                print(f"aa{bg_pattern_tabl_addr:x}")
-                print(f"aa{tile_address:x}")
-                print(f"aa{bg_pattern_tabl_addr + 16 * tile_address:x}")
+                print(f"BG Pattern table addr : {bg_pattern_tabl_addr:x}")
+                print(f"Tile short : {tile_address:x}")
+                print(f"Tile full addr : {bg_pattern_tabl_addr + 16 * tile_address:x}")
                 low_bg_tile_byte = self.read_ppu_memory(bg_pattern_tabl_addr + 16 * tile_address)
                 print(f"lb{low_bg_tile_byte:x}")
+                #if self.pixel_generator.bg_nt_table_register[-1] > 0 : time.sleep(3)
                 self.pixel_generator.set_low_bg_tile_byte(low_bg_tile_byte)
             case 7: #read high BG Tile Byte for N+2 tile
                 bg_pattern_tabl_addr = ((self.ppuctrl >> 4) & 1) * 0x1000
@@ -381,11 +386,14 @@ class Ppu:
         """Print the PPU status"""
         print("PPU")
         print("PPUCTRL  | PPUMASK  | PPUSTAT  | PPUADDR  | OAMADDR")
-        print(f"{self.ppuctrl:08b} | {self.ppumask:08b} | {self.ppustatus:08b} | {self.ppuaddr:08b} | {self.oamaddr:08b}")
+        print(f"{self.ppuctrl:08b} | {self.ppumask:08b} | {self.ppustatus:08b} | {self.ppuaddr:04x}     | {self.oamaddr:02x}")
         print("OAM")
         utils.print_memory_page(self.primary_oam, 0)
         print("Palette")
         utils.print_memory_page(self.palette_vram)
+        for i in range(6):
+            print(f"VRAM Page {i}")
+            utils.print_memory_page(self.vram, i, 0x2000)
         print("")
 
     class PixelGenerator:

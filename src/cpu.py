@@ -110,7 +110,6 @@ class Cpu:
             self.remaining_cycles -= 1
             return
 
-        print(f"PC : {self.PC:x}")
         opcode = instances.memory.read_rom(self.PC)
         try:
             if instances.debug > 0:

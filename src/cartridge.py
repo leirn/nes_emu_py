@@ -44,27 +44,29 @@ class Cartridge:
         self.header = b''
 
     def read_prg_rom(self, address):
-        '''Read ROM from cartridge. Task will be delegate to mapper'''
+        '''Read ROM from cartridge. Task will be delegated to mapper'''
         return self.mapper.read_prg_rom(address)
 
     def read_chr_rom(self, address):
-        '''Read ROM from cartridge. Task will be delegate to mapper'''
+        '''Read ROM from cartridge. Task will be delegated to mapper'''
         return self.mapper.read_chr_rom(address)
 
     def read_ram(self, address):
-        '''Read ROM from cartridge. Task will be delegate to mapper'''
+        '''Read ROM from cartridge. Task will be delegated to mapper'''
         return self.mapper.read_ram(address)
 
     def write_ram(self, address, value):
-        '''Read ROM from cartridge. Task will be delegate to mapper'''
+        '''Read ROM from cartridge. Task will be delegated to mapper'''
         self.mapper.write_ram(address, value)
 
     def get_tile(self, bank, tile):
+        '''Get Tile data from CHR Rom'''
         if instances.debug : print(f"{len(self.chr_rom):x} - {tile} - {bank + 16 * tile:x}:{bank + 16 * tile + 16:x}")
         tile =  self.chr_rom[bank + 16 * tile:bank + 16 * tile + 16]
         return tile
 
     def parse_rom(self, cartridge_filename):
+        '''Parse rom file and load into memory'''
         stream = open(cartridge_filename, 'rb')
 
         self.header = stream.read(16)
@@ -80,16 +82,17 @@ class Cartridge:
             self.playchoice = stream.read(8224)
         self.title = stream.read()
 
+        stream.close()
+
         try:
             module = __import__("mappers")
             class_ = getattr(module, f"Mapper{self.mapper_id}")
             self.mapper = class_()
-        except Exception as e:
-            raise Exception(f"Unreconized mapper {self.mapper_id}")
-
-        stream.close()
+        except Exception as exception:
+            raise Exception(f"Unreconized mapper {self.mapper_id}") from exception
 
     def parse_header(self):
+        '''Parse the rom header'''
         h = self.header
         self.magic = h[0:4]
         print(h[5])
