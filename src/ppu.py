@@ -3,6 +3,7 @@
 import time
 import instances
 import pygame
+import utils
 
 # Preventing direct execution
 if __name__ == '__main__':
@@ -31,6 +32,8 @@ class Ppu:
         self.register_t = 0 #  Temporary VRAM address, 15 bits. Can be thought of as address of top left onscreen tile
         self.register_x = 0 #  File X Scroll, 3 bits
         self.register_w = 0 #  First or second write toggle, 1 bit
+
+        self.primary_oam = bytearray(b'\0' * 0x100)
 
         self.scale = 2
         self.col = 0
@@ -196,8 +199,9 @@ class Ppu:
         #TODO : prepare for sprite fetching
         if self.line < 240: # Normal line
             if self.col > 0 and self.col < 257:
-                pixel_color = self.pixel_generator.compute_next_pixel()
-                instances.nes.display.fill(pixel_color, (((self.col - 1) * self.scale, self.line * self.scale), (self.scale,self.scale)))
+                if self.is_bg_rendering_enabled():
+                    pixel_color = self.pixel_generator.compute_next_pixel()
+                    instances.nes.display.fill(pixel_color, (((self.col - 1) * self.scale, self.line * self.scale), (self.scale,self.scale)))
                 self.load_tile_data()
 
         if self.line < 240 or self.line == 261: # Normal line or prerender liner
@@ -225,7 +229,7 @@ class Ppu:
             # TODO : Implement 0,0 cycle skipped on odd frame
 
         #if self.debug == 1:
-        #print(f"(Line, col) = ({self.line}, {self.col}), v = {self.register_v}, t = {self.register_t}")
+        #print(f"(Line, col) = ({self.line}, {self.col}), v = {self.register_v:x}, t = {self.register_t:x}")
 
         return (self.col, self.line) == (0, 0)
 
@@ -235,18 +239,31 @@ class Ppu:
         # TODO : Fetch the actual data
         match self.col % 8:
             case 1: #read NT Byte for N+2 tile
+                print(f"rr{self.register_v:x}")
                 tile_address = 0x2000 | (self.register_v & 0xfff) # Is it NT or tile address ?
+                print(f"aa{tile_address:x}")
                 nt_byte = instances.memory.read_ppu_memory(tile_address)
+                print(f"NT Byte : {nt_byte:x}")
                 self.pixel_generator.set_nt_byte(nt_byte)
             case 3: #read AT Byte for N+2 tile
                 attribute_address = 0x23c0 | (self.register_v & 0xC00) | ((self.register_v >> 4) & 0x38) | ((self.register_v >> 2) & 0x07)
                 at_byte = instances.memory.read_ppu_memory(attribute_address)
+                print(f"AT Byte : {at_byte:x}")
                 self.pixel_generator.set_at_byte(at_byte)
             case 5: #read low BG Tile Byte for N+2 tile
-                low_bg_tile_byte = 0
+                bg_pattern_tabl_addr = ((self.getPPUCTRL() >> 4) & 1) * 0x1000
+                tile_address = self.pixel_generator.bg_nt_table_register[-1]
+                print(f"aa{bg_pattern_tabl_addr:x}")
+                print(f"aa{tile_address:x}")
+                print(f"aa{bg_pattern_tabl_addr + 16 * tile_address:x}")
+                low_bg_tile_byte = instances.memory.read_ppu_memory(bg_pattern_tabl_addr + 16 * tile_address)
+                print(f"lb{low_bg_tile_byte:x}")
                 self.pixel_generator.set_low_bg_tile_byte(low_bg_tile_byte)
             case 7: #read high BG Tile Byte for N+2 tile
-                high_bg_tile_byte = 0
+                bg_pattern_tabl_addr = ((self.getPPUCTRL() >> 4) & 1) * 0x1000
+                tile_address = self.pixel_generator.bg_nt_table_register[-1]
+                high_bg_tile_byte = instances.memory.read_ppu_memory(bg_pattern_tabl_addr + 16 * tile_address + 8)
+                print(f"hb{high_bg_tile_byte:x}")
                 self.pixel_generator.set_high_bg_tile_byte(high_bg_tile_byte)
             case 0: #increment tile number and shift pixel generator registers
                 self.pixel_generator.shift_registers()
@@ -255,7 +272,6 @@ class Ppu:
                     self.inc_vert_v()
                 else:
                     self.inc_hor_v()
-                pass
 
     # https://wiki.nesdev.org/w/index.php?title=PPU_registers
     # https://bugzmanov.github.io/nes_ebook/chapter_6_4.html
@@ -302,7 +318,7 @@ class Ppu:
                 print("Entering display sprinte loop")
                 sprite_pattern_table_address = ((PPUCTRL >> 3) & 1) * 0x1000
                 for i in range(64):
-                    sprite = instances.memory.OAM[i * 4:i * 4 + 4]
+                    sprite = self.primary_oam[i * 4:i * 4 + 4]
                     s_y = sprite[0]
                     s_x = sprite[3]
                     s_tileId = sprite[1]
@@ -403,7 +419,7 @@ class Ppu:
 
     def getPPUMASK(self):
         """Returns the PPUMASK Register"""
-        instances.memory.read_rom(0x2001)
+        return instances.memory.read_rom(0x2001)
 
     def setPPUSTATUS(self, val):
         """Set the PPUSTATUS Register"""
@@ -419,7 +435,7 @@ class Ppu:
 
     def getPPU_OAMADDR(self):
         """Returns the OAMADDR Register"""
-        instances.memory.read_rom(0x2003)
+        return instances.memory.read_rom(0x2003)
 
     def setPPU_OAMDATA(self, val):
         """Set the OAMDATA Register"""
@@ -427,7 +443,7 @@ class Ppu:
 
     def getPPU_OAMDATA(self):
         """Returns the OAMDATA Register"""
-        instances.memory.read_rom(0x2004)
+        return instances.memory.read_rom(0x2004)
 
     def setPPUSCROLL(self, val):
         """Set the SCROLL Register"""
@@ -508,6 +524,8 @@ class Ppu:
         print("PPU")
         print("PPUCTRL  | PPUMASK  | PPUSTAT")
         print(f"{self.getPPUCTRL():08b} | {self.getPPUMASK():08b} | {self.getPPUSTATUS():08b}")
+        print("OAM")
+        #utils.print_memory_page(self.primary_oam, 0)
         print("")
 
     class PixelGenerator:
@@ -515,12 +533,28 @@ class Ppu:
         def __init__(self, ppu):
             self.ppu = ppu
             self.bg_palette_register = []
-            self.bg_pattern_table_register = []
+            self.bg_low_byte_table_register = []
+            self.bg_high_byte_table_register = []
             self.bg_attribute_table_register = []
+            self.bg_nt_table_register = []
 
         def compute_next_pixel(self):
             '''Compute the pixel to be displayed in current coordinates'''
-            return (0, 255, 0, 255)
+            fine_x = instances.ppu.col % 8
+
+            palette = []
+            palette.append((0, 0, 0, 0))
+            palette.append(PALETTE[0x23])
+            palette.append(PALETTE[0x27])
+            palette.append(PALETTE[0x30])
+
+            bit1 = (self.bg_low_byte_table_register[0] >> (7-fine_x)) & 1
+            bit2 = (self.bg_high_byte_table_register[0] >> (7-fine_x)) & 1
+            color_code = bit1 | (bit2 << 1)
+
+            print(f"Low byte : {self.bg_low_byte_table_register[0]:x}, high byte : {self.bg_high_byte_table_register[0]:x}")
+
+            return palette[color_code]
 
         def multiplexer_decision(self, bg_pixel, sprite_pixel, priority):
             '''Implement PPU Priority Multiplexer decision table'''
@@ -538,25 +572,25 @@ class Ppu:
             '''Shift registers every 8 cycles'''
             try:
                 self.bg_palette_register.pop(0)
-                self.bg_pattern_table_register.pop(0)
+                self.bg_low_byte_table_register.pop(0)
+                self.bg_high_byte_table_register.pop(0)
                 self.bg_attribute_table_register.pop(0)
+                self.bg_nt_table_register.pop(0)
             except:
                 pass
 
         def set_nt_byte(self, nt_byte):
             '''Set nt_byte into registers'''
-            self.bg_attribute_table_register.append(nt_byte)
-            pass
+            self.bg_nt_table_register.append(nt_byte)
 
         def set_at_byte(self, at_byte):
             '''Set at_byte into registers'''
             self.bg_attribute_table_register.append(at_byte)
-            pass
 
         def set_low_bg_tile_byte(self, low_bg_tile_byte):
             '''Set low_bg_tile_byte into registers'''
-            pass
+            self.bg_low_byte_table_register.append(low_bg_tile_byte)
 
         def set_high_bg_tile_byte(self, high_bg_tile_byte):
             '''Set high_bg_tile_byte into registers'''
-            pass
+            self.bg_high_byte_table_register.append(high_bg_tile_byte)

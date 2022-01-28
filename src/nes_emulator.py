@@ -87,27 +87,29 @@ class NesEmulator:
                 if event.type == QUIT:
                     continuer = 0
                 elif event.type == KEYDOWN:
-                    if event.key == K_UP: 		self.ctrl1.set_up()
-                    elif event.key == K_DOWN: 	self.ctrl1.set_down()
-                    elif event.key == K_LEFT: 	self.ctrl1.set_left()
-                    elif event.key == K_RIGHT: 	self.ctrl1.set_right()
-                    elif event.key == K_RETURN: self.ctrl1.set_start()
-                    elif event.key == K_ESCAPE: self.ctrl1.set_select()
-                    elif event.key == K_LCTRL: 	self.ctrl1.set_a()
-                    elif event.key == K_LALT: 	self.ctrl1.set_b()
-                    elif event.key == K_q: 		continuer = 0
-                    elif event.key == K_p: 		self.toggle_pause()
-                    elif event.key == K_s:      self.print_status()
+                    match event.key:
+                        case pygame.locals.K_UP: 		self.ctrl1.set_up()
+                        case pygame.locals.K_DOWN: 	    self.ctrl1.set_down()
+                        case pygame.locals.K_LEFT: 	    self.ctrl1.set_left()
+                        case pygame.locals.K_RIGHT: 	self.ctrl1.set_right()
+                        case pygame.locals.K_RETURN:    self.ctrl1.set_start()
+                        case pygame.locals.K_ESCAPE:    self.ctrl1.set_select()
+                        case pygame.locals.K_LCTRL: 	self.ctrl1.set_a()
+                        case pygame.locals.K_LALT: 	    self.ctrl1.set_b()
+                        case pygame.locals.K_q: 		continuer = 0
+                        case pygame.locals.K_p: 		self.toggle_pause()
+                        case pygame.locals.K_s:         self.print_status()
 
                 elif event.type == KEYUP:
-                    if event.key == K_UP: 		self.ctrl1.clear_up()
-                    elif event.key == K_DOWN: 	self.ctrl1.clear_down()
-                    elif event.key == K_LEFT:	self.ctrl1.clear_left()
-                    elif event.key == K_RIGHT: 	self.ctrl1.clear_right()
-                    elif event.key == K_RETURN: self.ctrl1.clear_start()
-                    elif event.key == K_ESCAPE: self.ctrl1.clear_select()
-                    elif event.key == K_LCTRL: 	self.ctrl1.clear_a()
-                    elif event.key == K_LALT: 	self.ctrl1.clear_b()
+                    match event.key:
+                        case pygame.locals.K_UP: 		self.ctrl1.clear_up()
+                        case pygame.locals.K_DOWN: 	    self.ctrl1.clear_down()
+                        case pygame.locals.K_LEFT:	    self.ctrl1.clear_left()
+                        case pygame.locals.K_RIGHT: 	self.ctrl1.clear_right()
+                        case pygame.locals.K_RETURN:    self.ctrl1.clear_start()
+                        case pygame.locals.K_ESCAPE:    self.ctrl1.clear_select()
+                        case pygame.locals.K_LCTRL: 	self.ctrl1.clear_a()
+                        case pygame.locals.K_LALT: 	    self.ctrl1.clear_b()
 
     def reset(self):
         '''Reset the emulator

@@ -22,7 +22,7 @@ import instances
 from utils import format_hex_data
 
 class Cpu:
-
+    '''CPU component'''
     def __init__(self):
         self.test_mode = 0
         self.debug = 0

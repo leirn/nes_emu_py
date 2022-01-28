@@ -10,7 +10,7 @@ if __name__ == '__main__':
 from cartridge import Cartridge
 from ppu import Ppu
 import mappers
-from utils import format_hex_data
+import utils
 
 
 class Memory:
@@ -22,8 +22,7 @@ class Memory:
         self.ROM =           bytearray(b'\0' * 0x10000)
         self.PRG =           bytearray(b'\0' * 0x10000)
         self.VRAM =          bytearray(b'\0' * 0x2000)
-        self.palette_VRAM = bytearray(b'\0' *  0x20)
-        self.OAM =           bytearray(b'\0' * 0x100)
+        self.palette_VRAM =  bytearray(b'\0' *  0x20)
         self.PPUCTRL = 0
         self.PPUSTATUS = 0
         self.PPUADDR = 0
@@ -131,10 +130,10 @@ class Memory:
             elif address == 0x2002:
                 print(f"Write PPUSTATUS to val {value}")
                 self.PPUSTATUS = value
-            if address == 0x2003:
+            elif address == 0x2003:
                 self.OAMADDR = value
             elif address == 0x2004:
-                self.OAM[self.OAMADDR] = value
+                instances.ppu.primary_oam[self.OAMADDR] = value
             elif address == 0x2005:
                 self.PPUSCROLL = ((self.PPUSCROLL << 8 ) + value ) & 0xffff
             elif address == 0x2006:
@@ -153,8 +152,8 @@ class Memory:
             return 0
         elif address == 0x4014 : # OAMDMA
             value = value << 8
-            self.OAM[self.OAMADDR:] = bytearray(self.ROM[value:value + 0x100])
-            if len(self.OAM) < 256:
+            instances.ppu.primary_oam[self.OAMADDR:] = bytearray(self.ROM[value:value + 0x100])
+            if len(instances.ppu.primary_oam) < 256:
                 raise Exception("OAM trop court")
             return 514
         elif address == 0x4016: # Handling joystick
@@ -236,19 +235,12 @@ class Memory:
         print(f"{self.OAMADDR:04x}\t| {self.PPUADDR:04x}")
         print("")
         print("Zero Page")
-        self.print_memory_page(self.ROM, 0x0)
+        utils.print_memory_page(self.ROM, 0x0)
         print("Stack")
-        self.print_memory_page(self.ROM, 0x1)
+        utils.print_memory_page(self.ROM, 0x1)
         print("Page 2")
-        self.print_memory_page(self.ROM, 0x2)
+        utils.print_memory_page(self.ROM, 0x2)
         print("Page 3")
-        self.print_memory_page(self.ROM, 0x3)
+        utils.print_memory_page(self.ROM, 0x3)
         print("Palette")
-        self.print_memory_page(self.palette_VRAM)
-        print("OAM")
-        self.print_memory_page(self.OAM, 0)
-
-    def print_memory_page(self, page, high = 0) :
-        for i in range(0, min(256, len(page)), 32):
-            print(f"{(high << 8) + i:04x}:{(high << 8) + i + 31 :04x}    {' '.join([f'{i:02x}' for i in page[(high << 8) + i:(high << 8) + i + 32]])}")
-        pass
+        utils.print_memory_page(self.palette_VRAM)
