@@ -37,8 +37,8 @@ instances.ppu = Ppu()
 instances.cpu = Cpu()
 instances.apu = Apu()
 instances.cartridge = Cartridge()
-instances.cartridge.parse_rom(args[0])
 instances.nes = NesEmulator()
+instances.cartridge.parse_rom(args[0])
 
 instances.ppu.dump_chr()
 

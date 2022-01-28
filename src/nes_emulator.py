@@ -5,9 +5,9 @@ import sys
 import time
 import traceback
 import re
-import instances
 import pygame
-import pygame.locals
+from pygame.locals import *
+import instances
 import ppu
 import inputs
 from cpu_opcodes import OPCODES
@@ -84,32 +84,32 @@ class NesEmulator:
 
             # http://www.pygame.org/docs/ref/key.html
             for event in pygame.event.get():
-                if event.type == pygame.locals.QUIT:
+                if event.type == pygame.QUIT:
                     continuer = 0
-                elif event.type == pygame.locals.KEYDOWN:
+                elif event.type == pygame.KEYDOWN:
                     match event.key:
-                        case pygame.locals.K_UP: 		self.ctrl1.set_up()
-                        case pygame.locals.K_DOWN: 	    self.ctrl1.set_down()
-                        case pygame.locals.K_LEFT: 	    self.ctrl1.set_left()
-                        case pygame.locals.K_RIGHT: 	self.ctrl1.set_right()
-                        case pygame.locals.K_RETURN:    self.ctrl1.set_start()
-                        case pygame.locals.K_ESCAPE:    self.ctrl1.set_select()
-                        case pygame.locals.K_LCTRL: 	self.ctrl1.set_a()
-                        case pygame.locals.K_LALT: 	    self.ctrl1.set_b()
-                        case pygame.locals.K_q: 		continuer = 0
-                        case pygame.locals.K_p: 		self.toggle_pause()
-                        case pygame.locals.K_s:         self.print_status()
+                        case pygame.K_UP: 		self.ctrl1.set_up()
+                        case pygame.K_DOWN: 	self.ctrl1.set_down()
+                        case pygame.K_LEFT: 	self.ctrl1.set_left()
+                        case pygame.K_RIGHT: 	self.ctrl1.set_right()
+                        case pygame.K_RETURN:   self.ctrl1.set_start()
+                        case pygame.K_ESCAPE:   self.ctrl1.set_select()
+                        case pygame.K_LCTRL: 	self.ctrl1.set_a()
+                        case pygame.K_LALT: 	self.ctrl1.set_b()
+                        case pygame.K_q: 		continuer = 0
+                        case pygame.K_p: 		self.toggle_pause()
+                        case pygame.K_s:        self.print_status()
 
-                elif event.type == pygame.locals.KEYUP:
+                elif event.type == pygame.KEYUP:
                     match event.key:
-                        case pygame.locals.K_UP: 		self.ctrl1.clear_up()
-                        case pygame.locals.K_DOWN: 	    self.ctrl1.clear_down()
-                        case pygame.locals.K_LEFT:	    self.ctrl1.clear_left()
-                        case pygame.locals.K_RIGHT: 	self.ctrl1.clear_right()
-                        case pygame.locals.K_RETURN:    self.ctrl1.clear_start()
-                        case pygame.locals.K_ESCAPE:    self.ctrl1.clear_select()
-                        case pygame.locals.K_LCTRL: 	self.ctrl1.clear_a()
-                        case pygame.locals.K_LALT: 	    self.ctrl1.clear_b()
+                        case pygame.K_UP: 		self.ctrl1.clear_up()
+                        case pygame.K_DOWN: 	self.ctrl1.clear_down()
+                        case pygame.K_LEFT:	    self.ctrl1.clear_left()
+                        case pygame.K_RIGHT: 	self.ctrl1.clear_right()
+                        case pygame.K_RETURN:   self.ctrl1.clear_start()
+                        case pygame.K_ESCAPE:   self.ctrl1.clear_select()
+                        case pygame.K_LCTRL: 	self.ctrl1.clear_a()
+                        case pygame.K_LALT: 	self.ctrl1.clear_b()
 
     def reset(self):
         '''Reset the emulator
