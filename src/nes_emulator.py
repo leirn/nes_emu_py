@@ -130,7 +130,7 @@ class NesEmulator:
         instances.cpu.print_status()
         instances.ppu.print_status()
         instances.memory.print_status()
-        cartridge_instances.print_status()
+        instances.cartridge.print_status()
 
     def toggle_pause(self):
         '''Toggle pause on the emulator execution'''
