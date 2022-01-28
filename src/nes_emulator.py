@@ -7,7 +7,7 @@ import traceback
 import re
 import instances
 import pygame
-from pygame.locals import *
+import pygame.locals
 import ppu
 import inputs
 from cpu_opcodes import OPCODES
@@ -84,9 +84,9 @@ class NesEmulator:
 
             # http://www.pygame.org/docs/ref/key.html
             for event in pygame.event.get():
-                if event.type == case pygame.locals.QUIT:
+                if event.type == pygame.locals.QUIT:
                     continuer = 0
-                elif event.type == case pygame.locals.KEYDOWN:
+                elif event.type == pygame.locals.KEYDOWN:
                     match event.key:
                         case pygame.locals.K_UP: 		self.ctrl1.set_up()
                         case pygame.locals.K_DOWN: 	    self.ctrl1.set_down()
@@ -100,7 +100,7 @@ class NesEmulator:
                         case pygame.locals.K_p: 		self.toggle_pause()
                         case pygame.locals.K_s:         self.print_status()
 
-                elif event.type == case pygame.locals.KEYUP:
+                elif event.type == pygame.locals.KEYUP:
                     match event.key:
                         case pygame.locals.K_UP: 		self.ctrl1.clear_up()
                         case pygame.locals.K_DOWN: 	    self.ctrl1.clear_down()

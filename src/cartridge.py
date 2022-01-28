@@ -43,6 +43,27 @@ class Cartridge:
         #TITLE
         self.header = b''
 
+    def read_prg_rom(self, address):
+        '''Read ROM from cartridge. Task will be delegate to mapper'''
+        return self.mapper.read_prg_rom(address)
+
+    def read_chr_rom(self, address):
+        '''Read ROM from cartridge. Task will be delegate to mapper'''
+        return self.mapper.read_chr_rom(address)
+
+    def read_ram(self, address):
+        '''Read ROM from cartridge. Task will be delegate to mapper'''
+        return self.mapper.read_ram(address)
+
+    def write_ram(self, address, value):
+        '''Read ROM from cartridge. Task will be delegate to mapper'''
+        self.mapper.write_ram(address, value)
+
+    def get_tile(self, bank, tile):
+        if instances.debug : print(f"{len(self.chr_rom):x} - {tile} - {bank + 16 * tile:x}:{bank + 16 * tile + 16:x}")
+        tile =  self.chr_rom[bank + 16 * tile:bank + 16 * tile + 16]
+        return tile
+
     def parse_rom(self, cartridge_filename):
         stream = open(cartridge_filename, 'rb')
 

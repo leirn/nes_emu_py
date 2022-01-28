@@ -19,9 +19,22 @@ class Mapper0:
         if instances.cartridge.prg_rom_size == 0x1000:
             instances.cartridge.chr_rom.extend(instances.cartridge.chr_rom)
 
-    def read_rom(self, address):
-        '''Read ROM from cartridge'''
-        return instances.cartridge.prg_rom[address-0X8000]
+    def read_prg_rom(self, address):
+        '''Read PRG ROM from cartridge'''
+        print(f"{address:x} : {instances.cartridge.prg_rom[address]:x}")
+        return instances.cartridge.prg_rom[address]
+
+    def read_chr_rom(self, address):
+        '''Read ROM from cartridge. Task will be delegate to mapper'''
+        return instances.cartridge.chr_rom[address]
+
+    def read_ram(self, address):
+        '''Read ROM from cartridge. Task will be delegate to mapper'''
+        return instances.cartridge.chr_rom[address]
+
+    def write_ram(self, address, value):
+        '''Read ROM from cartridge. Task will be delegate to mapper'''
+        instances.cartridge.chr_rom[address] = value
 
 
 class Mapper1:

@@ -26,7 +26,7 @@ class Ppu:
 
     def __init__(self):
         self.pixel_generator = self.PixelGenerator(self)
-        self.debug = 0
+        instances.debug = 0
 
         self.register_v = 0 #  Current VRAM address, 15 bits
         self.register_t = 0 #  Temporary VRAM address, 15 bits. Can be thought of as address of top left onscreen tile
@@ -50,49 +50,137 @@ class Ppu:
         self.x_scroll = 0
         self.y_scroll = 0
 
-        self.set_ppuctrl(0)
-        self.set_ppumask(0)
-        self.set_ppustatus(0b10100000)
-        self.set_ppu_oamaddr(0)
-        self.set_ppuscroll(0)
-        self.set_ppuaddr(0)
+        self.ppuctrl = 0
+        self.ppumask = 0
+        self.ppustatus = 0b10100000
+        self.oamaddr = 0
+        self.ppuscroll = 0
+        self.ppuaddr = 0
+        self.vram = bytearray(b'\0' * 0x2000)
+        self.palette_vram =  bytearray(b'\0' *  0x20)
         #self.set_ppudata(0)
 
-    def write_0x2000(self, val):
+    def read_ppu_memory(self, address):
+        '''lecture des addresses PPU Memory map
+
+        0x0000 to 0x2000 - 1 : Pattern table
+        0x2000 to 0x3000 - 1 : Nametable
+        0x3000 to 0x3eff :  Nametable Mirror
+        0x3f00 to 0x3f20 - 1 : Palette ram index
+        0x3f20 to 0x3fff = Palette ram mirror
+        '''
+        if address < 0x2000:
+            return instances.cartridge.read_chr_rom(address) # CHR_ROM ADDRESS
+        elif address < 0x3000: # VRAM
+            return self.vram[address - 0x2000]
+        elif address < 0x3F00: # VRAM mirror
+            return self.vram[address - 0X3000]
+        elif address < 0x4000 : # palette
+            if address % 4 == 0:
+                palette_address = 0
+            else:
+                palette_address = address % 0x20
+            return self.palette_vram[palette_address]
+        else:
+            raise Exception("Out of PPU memory range")
+
+    def write_ppu_memory(self, address, value):
+        '''ecriture des addresses PPU Memory map
+
+        0x0000 to 0x2000 - 1 : Pattern table
+        0x2000 to 0x3000 - 1 : Nametable
+        0x3000 to 0x3eff :  Nametable Mirror
+        0x3f00 to 0x3f20 - 1 : Palette ram index
+        0x3f20 to 0x3fff = Palette ram mirror
+        '''
+        if address < 0x2000:
+            instances.cartridge.write_chr_rom(address, value) # CHR_ROM ADDRESS
+        elif address < 0x3000: # VRAM
+            self.vram[address - 0x2000] = value
+        elif address < 0x3F00: # VRAM mirror
+            self.vram[address - 0X3000] = value
+        elif address < 0x4000 : # palette
+            if address % 4 == 0:
+                palette_address = 0
+            else:
+                palette_address = address % 0x20
+            self.palette_vram[palette_address] = value
+        else:
+            raise Exception("Out of PPU memory range")
+
+    def write_0x2000(self, value):
         '''Update PPU internal register when CPU write 0x2000 memory address'''
-        self.register_t = (self.register_t & 0b111001111111111) | ((val & 0b11) << 10)
+        self.ppuctrl = value
+        self.register_t = (self.register_t & 0b111001111111111) | ((value & 0b11) << 10)
+
+    def write_0x2001(self, value):
+        '''Update PPU internal register when CPU write 0x2001 memory address - ppumask'''
+        self.ppumask = value
 
     def read_0x2002(self):
         '''Update PPU internal register when CPU read 0x2002 memory address'''
         self.register_w = 0
+        self.ppuaddr = 0
+        value = self.ppustatus
+        self.ppustatus = value & 0b1111111
+        return value
 
-    def write_0x2005(self, val):
+    def write_0x2003(self, value):
+        '''Update PPU internal register when CPU write 0x2003 memory address - oamaddr'''
+        self.oamaddr = value
+
+    def read_0x2004(self):
+        '''Update PPU internal register when CPU write 0x2004 memory address - read OAM at oamaddr'''
+        return self.primary_oam[self.oamaddr]
+
+    def write_0x2004(self, value):
+        '''Update PPU internal register when CPU write 0x2004 memory address - read OAM at oamaddr'''
+        self.primary_oam[self.oamaddr] = value
+
+    def write_0x2005(self, value):
         '''Update PPU internal register when CPU write 0x2005 memory address'''
+        self.ppuscroll = ((self.ppuscroll << 8 ) + value ) & 0xffff
         if self.register_w == 0:
-            self.register_t = (self.register_t & 0b111111111100000) | ((val) >> 5)
-            self.register_x = val & 0b111
+            self.register_t = (self.register_t & 0b111111111100000) | ((value) >> 5)
+            self.register_x = value & 0b111
             self.register_w = 1
         else:
-            self.register_t = (self.register_t & 0b000110000011111) | ((val & 0b11111000) << 2) | ((val & 0b111) << 12)
+            self.register_t = (self.register_t & 0b000110000011111) | ((value & 0b11111000) << 2) | ((value & 0b111) << 12)
             self.register_w = 0
 
-    def write_0x2006(self, val):
+    def write_0x2006(self, value):
+        self.ppuaddr = ((self.ppuaddr << 8 ) + value ) & 0xffff
         '''Update PPU internal register when CPU write 0x2006 memory address'''
         if self.register_w == 0:
-            self.register_t = (self.register_t & 0b000000011111111) | ((val & 0b00111111) << 8)
+            self.register_t = (self.register_t & 0b000000011111111) | ((value & 0b00111111) << 8)
             self.register_w = 1
         else:
-            self.register_t = (self.register_t & 0b111111100000000) | val
+            self.register_t = (self.register_t & 0b111111100000000) | value
             self.register_v = self.register_t
             self.register_w = 0
+
+    def read_0x2007(self):
+        '''Read PPU internal register at 0x2007 memory address'''
+        self.read_or_write_0x2007()
+        return self.read_ppu_memory(self.ppuaddr)
+
+    def write_0x2007(self, value):
+        '''Write PPU internal register at 0x2007 memory address'''
+        self.read_or_write_0x2007()
+        print(f"PPUADDR : {self.ppuaddr:x}")
+        self.write_ppu_memory(self.ppuaddr, value)
 
     def read_or_write_0x2007(self):
         '''Update PPU internal register when CPU read or write 0x2007 memory address'''
         if not self.is_rendering_enabled:
-            self.register_v += 1 if (self.get_ppuctrl() >> 2) & 1 == 0 else 0x20
+            self.register_v += 1 if (self.ppuctrl >> 2) & 1 == 0 else 0x20
         else:
             self.inc_vert_v()
             self.inc_hor_v()
+
+    def write_oamdma(self, value):
+        '''Write OAM with memory from main vram passed in value'''
+        self.primary_oam[self.oamaddr:] = value
 
     def inc_hor_v(self):
         '''Increment Horizontal part of v register
@@ -155,22 +243,22 @@ class Ppu:
 
     def is_rendering_enabled(self):
         '''Return 1 is rendering is enabled, 0 otherwise'''
-        return (self.get_ppumask() >> 3) & 1 # TODO : This is not the right implementation
+        return (self.ppumask >> 3) & 1 # TODO : This is not the right implementation
 
     def is_bg_rendering_enabled(self):
         '''Return 1 is rendering is enabled, 0 otherwise'''
-        return (self.get_ppumask() >> 3) & 1
+        return (self.ppumask >> 3) & 1
 
     def is_sprite_rendering_enabled(self):
         '''Return 1 is rendering is enabled, 0 otherwise'''
-        return (self.get_ppumask() >> 4) & 1
+        return (self.ppumask >> 4) & 1
 
     def bg_quarter(self, bank):
         '''Generate background for full bg bank
 
         Used by old PPU Architecture. DEPRECATED
         '''
-        bg_pattern_tabl_addr = ((self.get_ppuctrl() >> 4) & 1) * 0x1000
+        bg_pattern_tabl_addr = ((self.ppuctrl >> 4) & 1) * 0x1000
         map_address = bg_pattern_tabl_addr + 0x2000 + 0x400 * bank
         attribute_table = map_address + 0x3C0
         quarter = pygame.Surface((256, 240), pygame.SRCALPHA, 32) # Le background
@@ -179,14 +267,14 @@ class Ppu:
             for i in range(32):
                 tile_index = i + (32 * j)
                 attribute_address = ((tile_index % 64) // 4) % 8 + (tile_index // 128) * 8
-                attribute = instances.memory.read_ppu_memory(attribute_table + attribute_address)
+                attribute = self.read_ppu_memory(attribute_table + attribute_address)
 
                 shift = (i % 4)//2 + (((j % 4)//2 ) << 1)
                 color_palette = (attribute >> (shift * 2)) & 0b11
 
                 #read background info in VRAM
-                bgtile_index = instances.memory.read_ppu_memory(map_address  + tile_index)
-                #if self.debug : print (f"Tile ID : {tile_index} - Tile content : {bgtile_index:x}")
+                bgtile_index = self.read_ppu_memory(map_address  + tile_index)
+                #if instances.debug : print (f"Tile ID : {tile_index} - Tile content : {bgtile_index:x}")
                 tile_data = instances.memory.get_tile(bg_pattern_tabl_addr, bgtile_index)
                 tile = self.create_tile(tile_data, color_palette, 0)
                 quarter.blit(tile, (i * 8, j * 8))
@@ -213,7 +301,7 @@ class Ppu:
         if (self.col, self.line) == (1, 241):
             pygame.display.flip()
             self.set_vblank()
-            if (self.get_ppuctrl() >> 7) & 1:
+            if (self.ppuctrl >> 7) & 1:
                 instances.nes.raise_nmi()
 
         if (self.col, self.line) == (1, 261):
@@ -228,7 +316,7 @@ class Ppu:
             self.line = (self.line + 1) % 262
             # TODO : Implement 0,0 cycle skipped on odd frame
 
-        #if self.debug == 1:
+        #if instances.debug == 1:
         #print(f"(Line, col) = ({self.line}, {self.col}), v = {self.register_v:x}, t = {self.register_t:x}")
 
         return (self.col, self.line) == (0, 0)
@@ -242,27 +330,27 @@ class Ppu:
                 print(f"rr{self.register_v:x}")
                 tile_address = 0x2000 | (self.register_v & 0xfff) # Is it NT or tile address ?
                 print(f"aa{tile_address:x}")
-                nt_byte = instances.memory.read_ppu_memory(tile_address)
+                nt_byte = self.read_ppu_memory(tile_address)
                 print(f"NT Byte : {nt_byte:x}")
                 self.pixel_generator.set_nt_byte(nt_byte)
             case 3: #read AT Byte for N+2 tile
                 attribute_address = 0x23c0 | (self.register_v & 0xC00) | ((self.register_v >> 4) & 0x38) | ((self.register_v >> 2) & 0x07)
-                at_byte = instances.memory.read_ppu_memory(attribute_address)
+                at_byte = self.read_ppu_memory(attribute_address)
                 print(f"AT Byte : {at_byte:x}")
                 self.pixel_generator.set_at_byte(at_byte)
             case 5: #read low BG Tile Byte for N+2 tile
-                bg_pattern_tabl_addr = ((self.get_ppuctrl() >> 4) & 1) * 0x1000
+                bg_pattern_tabl_addr = ((self.ppuctrl >> 4) & 1) * 0x1000
                 tile_address = self.pixel_generator.bg_nt_table_register[-1]
                 print(f"aa{bg_pattern_tabl_addr:x}")
                 print(f"aa{tile_address:x}")
                 print(f"aa{bg_pattern_tabl_addr + 16 * tile_address:x}")
-                low_bg_tile_byte = instances.memory.read_ppu_memory(bg_pattern_tabl_addr + 16 * tile_address)
+                low_bg_tile_byte = self.read_ppu_memory(bg_pattern_tabl_addr + 16 * tile_address)
                 print(f"lb{low_bg_tile_byte:x}")
                 self.pixel_generator.set_low_bg_tile_byte(low_bg_tile_byte)
             case 7: #read high BG Tile Byte for N+2 tile
-                bg_pattern_tabl_addr = ((self.get_ppuctrl() >> 4) & 1) * 0x1000
+                bg_pattern_tabl_addr = ((self.ppuctrl >> 4) & 1) * 0x1000
                 tile_address = self.pixel_generator.bg_nt_table_register[-1]
-                high_bg_tile_byte = instances.memory.read_ppu_memory(bg_pattern_tabl_addr + 16 * tile_address + 8)
+                high_bg_tile_byte = self.read_ppu_memory(bg_pattern_tabl_addr + 16 * tile_address + 8)
                 print(f"hb{high_bg_tile_byte:x}")
                 self.pixel_generator.set_high_bg_tile_byte(high_bg_tile_byte)
             case 0: #increment tile number and shift pixel generator registers
@@ -281,15 +369,14 @@ class Ppu:
         Will soon be DEPRECATED
         '''
 
-        PPUCTRL = self.get_ppuctrl()
-        PPUMASK = self.get_ppumask()
+        PPUCTRL = self.ppuctrl
         if self.line == 0 and self.col == 0:
             self.frame_sprite = []
             self.frame_background = pygame.Surface((256 * 2, 240 * 2), pygame.SRCALPHA, 32) # Le background
             self.frame_sprite.append(pygame.Surface(((256, 240)), pygame.SRCALPHA, 32)) # Les sprites derrire le bg
             self.frame_sprite.append(pygame.Surface(((256, 240)), pygame.SRCALPHA, 32)) # Les sprites devant le bg
 
-            if (PPUMASK >>3) & 1 and self.col == 0 and self.line == 0 :	# Update pixel
+            if (self.ppumask >>3) & 1 and self.col == 0 and self.line == 0 :	# Update pixel
                 flipping = PPUCTRL & 0b11
                 mirrors = {
                     0: (0, 1, 2, 3),
@@ -313,7 +400,7 @@ class Ppu:
             if (PPUCTRL >> 5) & 1:
                 raise Exception("8x16 tiles are not supported yet")
 
-            if (PPUMASK >>4) & 1  :  # Doit on afficher les sprites
+            if (self.ppumask >>4) & 1  :  # Doit on afficher les sprites
                 # Display sprites
                 print("Entering display sprinte loop")
                 sprite_pattern_table_address = ((PPUCTRL >> 3) & 1) * 0x1000
@@ -332,7 +419,7 @@ class Ppu:
 
                     tile = pygame.transform.flip(tile, (s_param >> 7) & 1, (s_param >> 6) & 1)
 
-                    if self.debug : print(f"Tile {i} : {s_tileId} - {s_x} - {s_y}")
+                    if instances.debug : print(f"Tile {i} : {s_tileId} - {s_x} - {s_y}")
                     self.frame_sprite[s_is_foreground].blit(tile, (s_x * self.scale, (s_y - 1) * self.scale))
 
                     if i == 0: #chek for Sprint 0 Hit
@@ -341,7 +428,7 @@ class Ppu:
 
             # Update screen
             self.set_vblank()
-            instances.nes.display.fill(PALETTE[instances.memory.read_ppu_memory(0x3f00)]) # Couleur de fond transparene du backgroundaddress = 0x3f00 + (0x10 * is_sprite) + (0x4 * palette_address)
+            instances.nes.display.fill(PALETTE[self.read_ppu_memory(0x3f00)]) # Couleur de fond transparene du backgroundaddress = 0x3f00 + (0x10 * is_sprite) + (0x4 * palette_address)
             x = self.x_scroll % 256
             y = self.y_scroll % 240
             pygame.draw.rect(self.frame_background, (255, 0, 0), pygame.Rect(x - 1, y - 1, x + 257, y + 241), 2)
@@ -365,7 +452,7 @@ class Ppu:
             self.clear_sprite0_hit()
 
         elif (self.line, self.col) == (261, 280):
-            PPUCTRL = self.get_ppuctrl()
+            PPUCTRL = self.ppuctrl
 
             self.x_scroll = self.get_ppuscroll() >> 8 + (256 * (PPUCTRL & 0b1))
             self.y_scroll = (self.get_ppuscroll() & 0xff) + (240 * ((PPUCTRL >> 1 ) & 0b1))
@@ -386,88 +473,16 @@ class Ppu:
 
     # TODO : Vlbank status should be cleared after reading by CPU
     def set_vblank(self):
-        val = self.get_ppustatus()
-        val |= 0b10000000
-        self.set_ppustatus(val)
+        self.ppustatus |= 0b10000000
 
     def clear_vblank(self):
-        val = self.get_ppustatus()
-        val &= 0b11111111
-        self.set_ppustatus(val)
+        self.ppustatus &= 0b11111111
 
     def set_sprite0_hit(self):
-        val = self.get_ppustatus()
-        val |= 0b01000000
-        self.set_ppustatus(val)
+        self.ppustatus |= 0b01000000
 
     def clear_sprite0_hit(self):
-        val = self.get_ppustatus()
-        val &= 0b10111111
-        self.set_ppustatus(val)
-
-    def set_ppuctrl(self, val):
-        """Set the PPUCTRL Register"""
-        instances.memory.PPUCTRL = val
-
-    def get_ppuctrl(self):
-        """Returns the PPUCTRL Register"""
-        return instances.memory.PPUCTRL
-
-    def set_ppumask(self, val):
-        """Set the PPUMASK Register"""
-        instances.memory.write_rom(0x2001, val)
-
-    def get_ppumask(self):
-        """Returns the PPUMASK Register"""
-        return instances.memory.read_rom(0x2001)
-
-    def set_ppustatus(self, val):
-        """Set the PPUSTATUS Register"""
-        instances.memory.PPUSTATUS = val
-
-    def get_ppustatus(self):
-        """Returns the PPUSTATUS Register"""
-        return instances.memory.PPUSTATUS
-
-    def set_ppu_oamaddr(self, val):
-        """Set the OAMADDR Register"""
-        instances.memory.write_rom(0x2003, val)
-
-    def get_ppu_oamaddr(self):
-        """Returns the OAMADDR Register"""
-        return instances.memory.read_rom(0x2003)
-
-    def set_ppu_oamdata(self, val):
-        """Set the OAMDATA Register"""
-        instances.memory.write_rom(0x2004, val)
-
-    def get_ppu_oamdata(self):
-        """Returns the OAMDATA Register"""
-        return instances.memory.read_rom(0x2004)
-
-    def set_ppuscroll(self, val):
-        """Set the SCROLL Register"""
-        instances.memory.PPUSCROLL = val
-
-    def get_ppuscroll(self):
-        """Returns the SCROLL Register"""
-        return instances.memory.PPUSCROLL
-
-    def set_ppuaddr(self, val):
-        """Set the PPUADDR Register"""
-        instances.memory.PPUADDR = val
-
-    def get_ppuaddr(self):
-        """Returns the PPUADDR Register"""
-        return instances.memory.PPUADDR
-
-    def set_ppudata(self, val):
-        """Set the PPUDATA Register"""
-        instances.memory.write_rom(0x2007, val)
-
-    def get_ppudata(self):
-        """Returns the PPUDATA Register"""
-        return instances.memory.read_rom(0x2007)
+        self.ppustatus &= 0b10111111
 
     def dump_chr(self):
         """ Display the tiles in CHR Memory. Useful for debugging."""
@@ -477,7 +492,7 @@ class Ppu:
         y = 2
         for c in range(len(instances.cartridge.chr_rom)//16):
 
-            tile = self.create_tile(instances.memory.get_tile(0, c))
+            tile = self.create_tile(instances.cartridge.get_tile(0, c))
             tile = pygame.transform.scale(tile, (int(8 * self.scale), int(8 * self.scale)))
             instances.nes.display.blit(tile, (x, y))
             if (x +  10 * self.scale)  > 256 * self.scale:
@@ -507,9 +522,9 @@ class Ppu:
             palette.append(PALETTE[0x30])
         else:
             address = 0x3f00 + (0x10 * is_sprite) + (0x4 * palette_address)
-            palette.append(PALETTE[instances.memory.read_ppu_memory(address + 1)])
-            palette.append(PALETTE[instances.memory.read_ppu_memory(address + 2)])
-            palette.append(PALETTE[instances.memory.read_ppu_memory(address + 3)])
+            palette.append(PALETTE[self.read_ppu_memory(address + 1)])
+            palette.append(PALETTE[self.read_ppu_memory(address + 2)])
+            palette.append(PALETTE[self.read_ppu_memory(address + 3)])
         for i in range(8):
             for j in range(8):
                 bit1 = (array_of_byte[i] >> (7-j)) & 1
@@ -522,10 +537,12 @@ class Ppu:
     def print_status(self):
         """Print the PPU status"""
         print("PPU")
-        print("PPUCTRL  | PPUMASK  | PPUSTAT")
-        print(f"{self.get_ppuctrl():08b} | {self.get_ppumask():08b} | {self.get_ppustatus():08b}")
+        print("PPUCTRL  | PPUMASK  | PPUSTAT  | PPUADDR  | OAMADDR")
+        print(f"{self.ppuctrl:08b} | {self.ppumask:08b} | {self.ppustatus:08b} | {self.ppuaddr:08b} | {self.oamaddr:08b}")
         print("OAM")
-        #utils.print_memory_page(self.primary_oam, 0)
+        utils.print_memory_page(self.primary_oam, 0)
+        print("Palette")
+        utils.print_memory_page(self.palette_vram)
         print("")
 
     class PixelGenerator:

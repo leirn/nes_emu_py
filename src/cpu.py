@@ -25,7 +25,7 @@ class Cpu:
     '''CPU component'''
     def __init__(self):
         self.test_mode = 0
-        self.debug = 0
+        instances.debug = 0
         self.compteur = 0
         self.total_cycles = 0
         self.remaining_cycles = 0
@@ -66,7 +66,7 @@ class Cpu:
         else:
         # Equivalent to JMP ($FFFC)
             self.PC = instances.memory.read_rom_16(0xfffc)
-        if self.debug : print(f"Entry point : 0x{format_hex_data(self.PC)}")
+        if instances.debug : print(f"Entry point : 0x{format_hex_data(self.PC)}")
         self.total_cycles = 7 # Cout de l'init
         self.remaining_cycles = 7
 
@@ -74,12 +74,12 @@ class Cpu:
 
     def nmi(self):
         ''' Raises an NMI interruption'''
-        if self.debug : print("NMI interruption detected")
+        if instances.debug : print("NMI interruption detected")
         self.general_interrupt(0xFFFA)
 
     def irq(self):
         ''' Raises an IRQ interruption'''
-        if self.debug : print("IRQ interruption detected")
+        if instances.debug : print("IRQ interruption detected")
         self.general_interrupt(0xFFFE)
 
     def general_interrupt(self, address):
@@ -110,9 +110,10 @@ class Cpu:
             self.remaining_cycles -= 1
             return
 
+        print(f"PC : {self.PC:x}")
         opcode = instances.memory.read_rom(self.PC)
         try:
-            if self.debug > 0:
+            if instances.debug > 0:
                 self.print_status_summary()
 
             fn = getattr(self, f"fn_0x{opcode:02x}")
@@ -960,10 +961,10 @@ class Cpu:
         address = self.get_absolute_address()
         if address & 0xFF == 0xFF: # Strange behaviour in nestest.nes where direct jump to re-aligned address where address at end of page
             address += 1
-            if self.debug :  print(f"JMP address : {address:4x}")
+            if instances.debug :  print(f"JMP address : {address:4x}")
         else:
             address = instances.memory.read_rom_16(address)
-        if self.debug : print(f"JMP address : {address:4x}")
+        if instances.debug : print(f"JMP address : {address:4x}")
         self.PC = address
         return (0, 5)
 
