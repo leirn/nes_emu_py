@@ -79,7 +79,7 @@ class Memory:
             self.ctrl1_status = self.ctrl1_status >> 1
             return value
         elif address == 0x4017: # Handling joystick
-            if self.debug : print(f"Joystick 1 read {self.ctrl1_status:b}")
+            if self.debug : print(f"Joystick 2 read {self.ctrl2_status:b}")
             value = self.ctrl2_status & 1
             self.ctrl2_status = self.ctrl2_status >> 1
             return value
