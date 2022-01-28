@@ -487,19 +487,18 @@ class Ppu:
     def dump_chr(self):
         """ Display the tiles in CHR Memory. Useful for debugging."""
         print(len(instances.cartridge.chr_rom)/16)
-        c = 0
-        x = 2
-        y = 2
-        for c in range(len(instances.cartridge.chr_rom)//16):
+        x_pos = 2
+        y_pos = 2
+        for counter in range(len(instances.cartridge.chr_rom)//16):
 
-            tile = self.create_tile(instances.cartridge.get_tile(0, c))
+            tile = self.create_tile(instances.cartridge.get_tile(0, counter))
             tile = pygame.transform.scale(tile, (int(8 * self.scale), int(8 * self.scale)))
-            instances.nes.display.blit(tile, (x, y))
-            if (x +  10 * self.scale)  > 256 * self.scale:
-                x = 2
-                y += 10 * self.scale
+            instances.nes.display.blit(tile, (x_pos, y_pos))
+            if (x_pos +  10 * self.scale)  > 256 * self.scale:
+                x_pos = 2
+                y_pos += 10 * self.scale
             else :
-                x += 10 * self.scale
+                x_pos += 10 * self.scale
 
         pygame.display.update()
         pygame.display.flip()
@@ -576,6 +575,7 @@ class Ppu:
         def multiplexer_decision(self, bg_pixel, sprite_pixel, priority):
             '''Implement PPU Priority Multiplexer decision table'''
             bg_transparent_color = 0
+            bg_color = 0
             sprite_color = 0
             if bg_pixel == 0 and sprite_pixel == 0:
                 return bg_transparent_color
