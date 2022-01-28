@@ -10,6 +10,7 @@ from pygame.locals import *
 import instances
 import ppu
 import inputs
+import utils
 from cpu_opcodes import OPCODES
 
 class NesEmulator:
@@ -29,7 +30,7 @@ class NesEmulator:
         pygame.init()
         self.scale = 2
 
-        self.display = pygame.display.set_mode( (int(256 * self.scale * 2), int(240 * self.scale * 2)))
+        self.display = pygame.display.set_mode( (int(256 * self.scale), int(240 * self.scale)))
         self.display.fill((0, 0, 0))
 
         self.ctrl1 = inputs.NesController()

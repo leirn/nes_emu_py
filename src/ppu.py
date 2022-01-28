@@ -212,11 +212,11 @@ class Ppu:
 
     def copy_hor_t_to_hor_v(self):
         '''Copy hor part of t to v'''
-        self.register_v = (self.register_v & 0b111101111100000) | (self.register_t & 0b00001000011111)
+        self.register_v = (self.register_v & 0b111101111100000) | (self.register_t & 0b000010000011111)
 
     def copy_vert_t_to_vert_v(self):
         '''Copy hor part of t to v'''
-        self.register_v = (self.register_v & 0b00001000011111) | (self.register_t & 0b111101111100000)
+        self.register_v = (self.register_v & 0b000010000011111) | (self.register_t & 0b111101111100000)
 
     def is_rendering_enabled(self):
         '''Return 1 is rendering is enabled, 0 otherwise'''
@@ -243,7 +243,7 @@ class Ppu:
 
         if self.line < 240 or self.line == 261: # Normal line or prerender liner
             if self.col == 257:
-                self.register_v = self.register_t
+                self.copy_hor_t_to_hor_v()
             if self.col > 320: # Preload data for two first tiles of next scanlines
                 self.load_tile_data()
 
@@ -266,7 +266,7 @@ class Ppu:
             # TODO : Implement 0,0 cycle skipped on odd frame
 
         #if instances.debug == 1:
-        #print(f"(Line, col) = ({self.line}, {self.col}), v = {self.register_v:x}, t = {self.register_t:x}")
+        print(f"(Line, col) = ({self.line}, {self.col}), v = {self.register_v:x}, t = {self.register_t:x}")
 
         return (self.col, self.line) == (0, 0)
 
@@ -276,34 +276,24 @@ class Ppu:
         # TODO : Fetch the actual data
         match self.col % 8:
             case 1: #read NT Byte for N+2 tile
-                print(f"V register when reading NT Bytes : {self.register_v:x}")
                 tile_address = 0x2000 | (self.register_v & 0xfff) # Is it NT or tile address ?
-                print(f"Tile address : {tile_address:x}")
                 nt_byte = self.read_ppu_memory(tile_address)
-                print(f"NT Byte : {nt_byte:x}")
                 self.pixel_generator.set_nt_byte(nt_byte)
             case 3: #read AT Byte for N+2 tile
                 attribute_address = 0x23c0 | (self.register_v & 0xC00) | ((self.register_v >> 4) & 0x38) | ((self.register_v >> 2) & 0x07)
                 at_byte = self.read_ppu_memory(attribute_address)
-                print(f"AT address : {attribute_address:x}")
-                print(f"AT Byte : {at_byte:x}")
                 #if at_byte > 0 : time.sleep(3)
                 self.pixel_generator.set_at_byte(at_byte)
             case 5: #read low BG Tile Byte for N+2 tile
                 bg_pattern_tabl_addr = ((self.ppuctrl >> 4) & 1) * 0x1000
                 tile_address = self.pixel_generator.bg_nt_table_register[-1]
-                print(f"BG Pattern table addr : {bg_pattern_tabl_addr:x}")
-                print(f"Tile short : {tile_address:x}")
-                print(f"Tile full addr : {bg_pattern_tabl_addr + 16 * tile_address:x}")
                 low_bg_tile_byte = self.read_ppu_memory(bg_pattern_tabl_addr + 16 * tile_address)
-                print(f"lb{low_bg_tile_byte:x}")
                 #if self.pixel_generator.bg_nt_table_register[-1] > 0 : time.sleep(3)
                 self.pixel_generator.set_low_bg_tile_byte(low_bg_tile_byte)
             case 7: #read high BG Tile Byte for N+2 tile
                 bg_pattern_tabl_addr = ((self.ppuctrl >> 4) & 1) * 0x1000
                 tile_address = self.pixel_generator.bg_nt_table_register[-1]
                 high_bg_tile_byte = self.read_ppu_memory(bg_pattern_tabl_addr + 16 * tile_address + 8)
-                print(f"hb{high_bg_tile_byte:x}")
                 self.pixel_generator.set_high_bg_tile_byte(high_bg_tile_byte)
             case 0: #increment tile number and shift pixel generator registers
                 self.pixel_generator.shift_registers()
@@ -385,6 +375,7 @@ class Ppu:
     def print_status(self):
         """Print the PPU status"""
         print("PPU")
+        print(f"Line, col : {self.line}, {self.col}")
         print("PPUCTRL  | PPUMASK  | PPUSTAT  | PPUADDR  | OAMADDR")
         print(f"{self.ppuctrl:08b} | {self.ppumask:08b} | {self.ppustatus:08b} | {self.ppuaddr:04x}     | {self.oamaddr:02x}")
         print("OAM")
@@ -400,11 +391,11 @@ class Ppu:
         '''This class implement the PPU pixel path, which generate the current pixel'''
         def __init__(self, ppu):
             self.ppu = ppu
-            self.bg_palette_register = []
-            self.bg_low_byte_table_register = []
-            self.bg_high_byte_table_register = []
-            self.bg_attribute_table_register = []
-            self.bg_nt_table_register = []
+            self.bg_palette_register = [0]
+            self.bg_low_byte_table_register = [0]
+            self.bg_high_byte_table_register = [0]
+            self.bg_attribute_table_register = [0]
+            self.bg_nt_table_register = [0]
 
         def compute_next_pixel(self):
             '''Compute the pixel to be displayed in current coordinates'''
@@ -420,7 +411,12 @@ class Ppu:
             bit2 = (self.bg_high_byte_table_register[0] >> (7-fine_x)) & 1
             color_code = bit1 | (bit2 << 1)
 
-            print(f"Low byte : {self.bg_low_byte_table_register[0]:x}, high byte : {self.bg_high_byte_table_register[0]:x}")
+            print(f"Low byte : {self.bg_low_byte_table_register[0]:x}, high byte : {self.bg_high_byte_table_register[0]:x}, color code : {color_code:x}")
+
+
+            print(len(self.bg_high_byte_table_register))
+
+            #if self.bg_low_byte_table_register[0] != 0 or self.bg_high_byte_table_register[0] != 0: time.sleep(5)
 
             return palette[color_code]
 
@@ -441,14 +437,15 @@ class Ppu:
 
         def shift_registers(self):
             '''Shift registers every 8 cycles'''
-            try:
-                self.bg_palette_register.pop(0)
-                self.bg_low_byte_table_register.pop(0)
-                self.bg_high_byte_table_register.pop(0)
-                self.bg_attribute_table_register.pop(0)
-                self.bg_nt_table_register.pop(0)
-            except:
-                pass
+            #time.sleep(5)
+            #try:
+            #self.bg_palette_register.pop(0)
+            self.bg_low_byte_table_register.pop(0)
+            self.bg_high_byte_table_register.pop(0)
+            self.bg_attribute_table_register.pop(0)
+            self.bg_nt_table_register.pop(0)
+            #except:
+            #    pass
 
         def set_nt_byte(self, nt_byte):
             '''Set nt_byte into registers'''

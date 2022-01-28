@@ -1,5 +1,4 @@
 '''Emulator CPU Modules'''
-from singleton_decorator import singleton
 
 # Preventing direct execution
 if __name__ == '__main__':
@@ -16,10 +15,10 @@ if __name__ == '__main__':
 
 # https://www.gladir.com/CODER/ASM6502/referenceopcode.htm
 import sys
-from cpu_opcodes import OPCODES
 import re
 import instances
 from utils import format_hex_data
+from cpu_opcodes import OPCODES
 
 class Cpu:
     '''CPU component'''
