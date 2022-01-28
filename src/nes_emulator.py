@@ -1,7 +1,7 @@
 '''The emulator main engine'''
 
 # http://users.telenet.be/kim1-6502/6502/proman.html#92
-
+import sys
 import time
 import traceback
 import re
@@ -71,7 +71,7 @@ class NesEmulator:
                     print(e)
                     self.print_status()
                     print(traceback.format_exc())
-                    exit()
+                    sys.exit()
 
                 if self.test_mode == 1 and instances.cpu.remaining_cycles == 0: self.check_test(instances.cpu.get_cpu_status())
 
@@ -84,9 +84,9 @@ class NesEmulator:
 
             # http://www.pygame.org/docs/ref/key.html
             for event in pygame.event.get():
-                if event.type == QUIT:
+                if event.type == case pygame.locals.QUIT:
                     continuer = 0
-                elif event.type == KEYDOWN:
+                elif event.type == case pygame.locals.KEYDOWN:
                     match event.key:
                         case pygame.locals.K_UP: 		self.ctrl1.set_up()
                         case pygame.locals.K_DOWN: 	    self.ctrl1.set_down()
@@ -100,7 +100,7 @@ class NesEmulator:
                         case pygame.locals.K_p: 		self.toggle_pause()
                         case pygame.locals.K_s:         self.print_status()
 
-                elif event.type == KEYUP:
+                elif event.type == case pygame.locals.KEYUP:
                     match event.key:
                         case pygame.locals.K_UP: 		self.ctrl1.clear_up()
                         case pygame.locals.K_DOWN: 	    self.ctrl1.clear_down()
@@ -116,14 +116,12 @@ class NesEmulator:
 
         TODO : Implement the functionnality
         '''
-        pass
 
     def resize(self):
         '''Resize the diplay
 
         TODO : Implement the functionnality
         '''
-        pass
 
     def print_status(self):
         '''Display Emulator status'''
@@ -162,17 +160,17 @@ class NesEmulator:
         if OPCODES[opcode][2] > 2:
             opcode_arg_2 = f"{instances.memory.read_rom(cpu_status['PC']+2):02x}"
 
-        print(f"{cpu_status['PC']:x}  {opcode:02x} {opcode_arg_1} {opcode_arg_2}  {OPCODES[opcode][1]:30}  A:{cpu_status['A']:02x} X:{cpu_status['X']:02x} Y:{cpu_status['Y']:02x} P:{cpu_status['P']:02x} SP:{cpu_status['SP']:02x} PPU:{self.ppu.line}, {self.ppu.col} CYC:{cpu_status['CYC']}".upper())
+        print(f"{cpu_status['PC']:x}  {opcode:02x} {opcode_arg_1} {opcode_arg_2}  {OPCODES[opcode][1]:30}  A:{cpu_status['A']:02x} X:{cpu_status['X']:02x} Y:{cpu_status['Y']:02x} P:{cpu_status['P']:02x} SP:{cpu_status['SP']:02x} PPU:{instances.ppu.line}, {instances.ppu.col} CYC:{cpu_status['CYC']}".upper())
 
         reference = self.test_file.readline()
 
         if reference == "":
             print("Test file completed")
-            exit()
+            sys.exit()
 
         print(reference)
-        instances.memory.print_memory_page(instances.memory.ROM, 0x0)
-        instances.memory.print_memory_page(instances.memory.ROM, 0x6)
+        utils.print_memory_page(instances.memory.ROM, 0x0)
+        utils.print_memory_page(instances.memory.ROM, 0x6)
 
         ref_status = dict()
         ref_status['PC'] = int(reference[0:4], 16)

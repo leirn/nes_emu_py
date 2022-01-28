@@ -50,13 +50,13 @@ class Ppu:
         self.x_scroll = 0
         self.y_scroll = 0
 
-        self.setPPUCTRL(0)
-        self.setPPUMASK(0)
-        self.setPPUSTATUS(0b10100000)
-        self.setPPU_OAMADDR(0)
-        self.setPPUSCROLL(0)
-        self.setPPUADDR(0)
-        #self.setPPUDATA(0)
+        self.set_ppuctrl(0)
+        self.set_ppumask(0)
+        self.set_ppustatus(0b10100000)
+        self.set_ppu_oamaddr(0)
+        self.set_ppuscroll(0)
+        self.set_ppuaddr(0)
+        #self.set_ppudata(0)
 
     def write_0x2000(self, val):
         '''Update PPU internal register when CPU write 0x2000 memory address'''
@@ -89,7 +89,7 @@ class Ppu:
     def read_or_write_0x2007(self):
         '''Update PPU internal register when CPU read or write 0x2007 memory address'''
         if not self.is_rendering_enabled:
-            self.register_v += 1 if (self.getPPUCTRL() >> 2) & 1 == 0 else 0x20
+            self.register_v += 1 if (self.get_ppuctrl() >> 2) & 1 == 0 else 0x20
         else:
             self.inc_vert_v()
             self.inc_hor_v()
@@ -155,22 +155,22 @@ class Ppu:
 
     def is_rendering_enabled(self):
         '''Return 1 is rendering is enabled, 0 otherwise'''
-        return (self.getPPUMASK() >> 3) & 1 # TODO : This is not the right implementation
+        return (self.get_ppumask() >> 3) & 1 # TODO : This is not the right implementation
 
     def is_bg_rendering_enabled(self):
         '''Return 1 is rendering is enabled, 0 otherwise'''
-        return (self.getPPUMASK() >> 3) & 1
+        return (self.get_ppumask() >> 3) & 1
 
     def is_sprite_rendering_enabled(self):
         '''Return 1 is rendering is enabled, 0 otherwise'''
-        return (self.getPPUMASK() >> 4) & 1
+        return (self.get_ppumask() >> 4) & 1
 
     def bg_quarter(self, bank):
         '''Generate background for full bg bank
 
         Used by old PPU Architecture. DEPRECATED
         '''
-        bg_pattern_tabl_addr = ((self.getPPUCTRL() >> 4) & 1) * 0x1000
+        bg_pattern_tabl_addr = ((self.get_ppuctrl() >> 4) & 1) * 0x1000
         map_address = bg_pattern_tabl_addr + 0x2000 + 0x400 * bank
         attribute_table = map_address + 0x3C0
         quarter = pygame.Surface((256, 240), pygame.SRCALPHA, 32) # Le background
@@ -213,7 +213,7 @@ class Ppu:
         if (self.col, self.line) == (1, 241):
             pygame.display.flip()
             self.set_vblank()
-            if (self.getPPUCTRL() >> 7) & 1:
+            if (self.get_ppuctrl() >> 7) & 1:
                 instances.nes.raise_nmi()
 
         if (self.col, self.line) == (1, 261):
@@ -251,7 +251,7 @@ class Ppu:
                 print(f"AT Byte : {at_byte:x}")
                 self.pixel_generator.set_at_byte(at_byte)
             case 5: #read low BG Tile Byte for N+2 tile
-                bg_pattern_tabl_addr = ((self.getPPUCTRL() >> 4) & 1) * 0x1000
+                bg_pattern_tabl_addr = ((self.get_ppuctrl() >> 4) & 1) * 0x1000
                 tile_address = self.pixel_generator.bg_nt_table_register[-1]
                 print(f"aa{bg_pattern_tabl_addr:x}")
                 print(f"aa{tile_address:x}")
@@ -260,7 +260,7 @@ class Ppu:
                 print(f"lb{low_bg_tile_byte:x}")
                 self.pixel_generator.set_low_bg_tile_byte(low_bg_tile_byte)
             case 7: #read high BG Tile Byte for N+2 tile
-                bg_pattern_tabl_addr = ((self.getPPUCTRL() >> 4) & 1) * 0x1000
+                bg_pattern_tabl_addr = ((self.get_ppuctrl() >> 4) & 1) * 0x1000
                 tile_address = self.pixel_generator.bg_nt_table_register[-1]
                 high_bg_tile_byte = instances.memory.read_ppu_memory(bg_pattern_tabl_addr + 16 * tile_address + 8)
                 print(f"hb{high_bg_tile_byte:x}")
@@ -281,8 +281,8 @@ class Ppu:
         Will soon be DEPRECATED
         '''
 
-        PPUCTRL = self.getPPUCTRL()
-        PPUMASK = self.getPPUMASK()
+        PPUCTRL = self.get_ppuctrl()
+        PPUMASK = self.get_ppumask()
         if self.line == 0 and self.col == 0:
             self.frame_sprite = []
             self.frame_background = pygame.Surface((256 * 2, 240 * 2), pygame.SRCALPHA, 32) # Le background
@@ -365,10 +365,10 @@ class Ppu:
             self.clear_sprite0_hit()
 
         elif (self.line, self.col) == (261, 280):
-            PPUCTRL = self.getPPUCTRL()
+            PPUCTRL = self.get_ppuctrl()
 
-            self.x_scroll = self.getPPUSCROLL() >> 8 + (256 * (PPUCTRL & 0b1))
-            self.y_scroll = (self.getPPUSCROLL() & 0xff) + (240 * ((PPUCTRL >> 1 ) & 0b1))
+            self.x_scroll = self.get_ppuscroll() >> 8 + (256 * (PPUCTRL & 0b1))
+            self.y_scroll = (self.get_ppuscroll() & 0xff) + (240 * ((PPUCTRL >> 1 ) & 0b1))
 
 
         if self.col == 0:
@@ -386,86 +386,86 @@ class Ppu:
 
     # TODO : Vlbank status should be cleared after reading by CPU
     def set_vblank(self):
-        val = self.getPPUSTATUS()
+        val = self.get_ppustatus()
         val |= 0b10000000
-        self.setPPUSTATUS(val)
+        self.set_ppustatus(val)
 
     def clear_vblank(self):
-        val = self.getPPUSTATUS()
+        val = self.get_ppustatus()
         val &= 0b11111111
-        self.setPPUSTATUS(val)
+        self.set_ppustatus(val)
 
     def set_sprite0_hit(self):
-        val = self.getPPUSTATUS()
+        val = self.get_ppustatus()
         val |= 0b01000000
-        self.setPPUSTATUS(val)
+        self.set_ppustatus(val)
 
     def clear_sprite0_hit(self):
-        val = self.getPPUSTATUS()
+        val = self.get_ppustatus()
         val &= 0b10111111
-        self.setPPUSTATUS(val)
+        self.set_ppustatus(val)
 
-    def setPPUCTRL(self, val):
+    def set_ppuctrl(self, val):
         """Set the PPUCTRL Register"""
         instances.memory.PPUCTRL = val
 
-    def getPPUCTRL(self):
+    def get_ppuctrl(self):
         """Returns the PPUCTRL Register"""
         return instances.memory.PPUCTRL
 
-    def setPPUMASK(self, val):
+    def set_ppumask(self, val):
         """Set the PPUMASK Register"""
         instances.memory.write_rom(0x2001, val)
 
-    def getPPUMASK(self):
+    def get_ppumask(self):
         """Returns the PPUMASK Register"""
         return instances.memory.read_rom(0x2001)
 
-    def setPPUSTATUS(self, val):
+    def set_ppustatus(self, val):
         """Set the PPUSTATUS Register"""
         instances.memory.PPUSTATUS = val
 
-    def getPPUSTATUS(self):
+    def get_ppustatus(self):
         """Returns the PPUSTATUS Register"""
         return instances.memory.PPUSTATUS
 
-    def setPPU_OAMADDR(self, val):
+    def set_ppu_oamaddr(self, val):
         """Set the OAMADDR Register"""
         instances.memory.write_rom(0x2003, val)
 
-    def getPPU_OAMADDR(self):
+    def get_ppu_oamaddr(self):
         """Returns the OAMADDR Register"""
         return instances.memory.read_rom(0x2003)
 
-    def setPPU_OAMDATA(self, val):
+    def set_ppu_oamdata(self, val):
         """Set the OAMDATA Register"""
         instances.memory.write_rom(0x2004, val)
 
-    def getPPU_OAMDATA(self):
+    def get_ppu_oamdata(self):
         """Returns the OAMDATA Register"""
         return instances.memory.read_rom(0x2004)
 
-    def setPPUSCROLL(self, val):
+    def set_ppuscroll(self, val):
         """Set the SCROLL Register"""
         instances.memory.PPUSCROLL = val
 
-    def getPPUSCROLL(self):
+    def get_ppuscroll(self):
         """Returns the SCROLL Register"""
         return instances.memory.PPUSCROLL
 
-    def setPPUADDR(self, val):
+    def set_ppuaddr(self, val):
         """Set the PPUADDR Register"""
         instances.memory.PPUADDR = val
 
-    def getPPUADDR(self):
+    def get_ppuaddr(self):
         """Returns the PPUADDR Register"""
         return instances.memory.PPUADDR
 
-    def setPPUDATA(self, val):
+    def set_ppudata(self, val):
         """Set the PPUDATA Register"""
         instances.memory.write_rom(0x2007, val)
 
-    def getPPUDATA(self):
+    def get_ppudata(self):
         """Returns the PPUDATA Register"""
         return instances.memory.read_rom(0x2007)
 
@@ -523,7 +523,7 @@ class Ppu:
         """Print the PPU status"""
         print("PPU")
         print("PPUCTRL  | PPUMASK  | PPUSTAT")
-        print(f"{self.getPPUCTRL():08b} | {self.getPPUMASK():08b} | {self.getPPUSTATUS():08b}")
+        print(f"{self.get_ppuctrl():08b} | {self.get_ppumask():08b} | {self.get_ppustatus():08b}")
         print("OAM")
         #utils.print_memory_page(self.primary_oam, 0)
         print("")
@@ -558,6 +558,8 @@ class Ppu:
 
         def multiplexer_decision(self, bg_pixel, sprite_pixel, priority):
             '''Implement PPU Priority Multiplexer decision table'''
+            bg_transparent_color = 0
+            sprite_color = 0
             if bg_pixel == 0 and sprite_pixel == 0:
                 return bg_transparent_color
             if bg_pixel == 0 and sprite_pixel > 0:
