@@ -75,7 +75,7 @@ class NesEmulator:
 
                 if self.test_mode == 1 and instances.cpu.remaining_cycles == 0: self.check_test(instances.cpu.get_cpu_status())
 
-                if is_frame & ppu.FRAME_COMPLETED > 0:
+                if is_frame :
                     frame_count += 1
                     self.clock.tick(60)
                     print(f"FPS = {self.clock.get_fps()}")
