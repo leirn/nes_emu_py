@@ -1,10 +1,9 @@
 '''Cartridge mappers' implementations'''
-
+import sys
 import instances
 
 # Preventing direct execution
 if __name__ == '__main__':
-    import sys
     print("This module cannot be executed. Please use main.py")
     sys.exit()
 

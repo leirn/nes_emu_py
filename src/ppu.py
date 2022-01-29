@@ -1,13 +1,12 @@
 '''The emulator PPU module'''
-
+import sys
 import time
-import instances
 import pygame
+import instances
 import utils
 
 # Preventing direct execution
 if __name__ == '__main__':
-    import sys
     print("This module cannot be executed. Please use main.py")
     sys.exit()
 

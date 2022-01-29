@@ -1,8 +1,12 @@
 '''Emulator CPU Modules'''
+import sys
+import re
+import instances
+from utils import format_hex_data
+from cpu_opcodes import OPCODES
 
 # Preventing direct execution
 if __name__ == '__main__':
-    import sys
     print("This module cannot be executed. Please use main.py")
     sys.exit()
 
@@ -14,11 +18,6 @@ if __name__ == '__main__':
 # https://www.masswerk.at/6502/6502_instruction_set.html
 
 # https://www.gladir.com/CODER/ASM6502/referenceopcode.htm
-import sys
-import re
-import instances
-from utils import format_hex_data
-from cpu_opcodes import OPCODES
 
 class Cpu:
     '''CPU component'''
@@ -30,11 +29,11 @@ class Cpu:
         self.remaining_cycles = 0
         self.additional_cycle = 0
 
-        self.A = 0
-        self.X = 0
-        self.Y = 0
-        self.PC = 0
-        self.SP = 0
+        self.accumulator = 0
+        self.x_register = 0
+        self.y_register = 0
+        self.program_counter = 0
+        self.stack_pointer = 0
 
         """
         C (carry)
@@ -45,7 +44,7 @@ class Cpu:
         """
         self.negative = 0
         self.overflow = 0
-        self.flagB = 0
+        self.break_flag = 0
         self.decimal = 0
         self.interrupt = 1
         self.zero = 0
@@ -61,11 +60,11 @@ class Cpu:
         self.push(0)
 
         if entry_point:
-            self.PC = entry_point
+            self.program_counter = entry_point
         else:
         # Equivalent to JMP ($FFFC)
-            self.PC = instances.memory.read_rom_16(0xfffc)
-        if instances.debug : print(f"Entry point : 0x{format_hex_data(self.PC)}")
+            self.program_counter = instances.memory.read_rom_16(0xfffc)
+        if instances.debug : print(f"Entry point : 0x{format_hex_data(self.program_counter)}")
         self.total_cycles = 7 # Cout de l'init
         self.remaining_cycles = 7
 
@@ -86,13 +85,13 @@ class Cpu:
 
         Interruptions last for 7 CPU cycles
         '''
-        self.push(self.PC >> 8)
-        self.push(self.PC & 255)
+        self.push(self.program_counter >> 8)
+        self.push(self.program_counter & 255)
         self.push(self.getP())
 
         self.interrupt = 0
 
-        self.PC = instances.memory.read_rom_16(address)
+        self.program_counter = instances.memory.read_rom_16(address)
         self.remaining_cycles = 7 - 1 # do not count current cycle twice
         self.total_cycles += 7
 
@@ -109,7 +108,7 @@ class Cpu:
             self.remaining_cycles -= 1
             return
 
-        opcode = instances.memory.read_rom(self.PC)
+        opcode = instances.memory.read_rom(self.program_counter)
         try:
             if instances.debug > 0:
                 self.print_status_summary()
@@ -120,21 +119,21 @@ class Cpu:
             self.total_cycles += self.remaining_cycles
             self.remaining_cycles -= 1 # Do not count current cycle twice
             self.additional_cycle = 0
-            self.PC += step
+            self.program_counter += step
             self.compteur += 1
             return
         except KeyError as e:
-            print(f"Unknow opcode 0x{opcode:02x} at {' '.join(a+b for a,b in zip(f'{self.PC:x}'[::2], f'{self.PC:x}'[1::2]))}")
+            print(f"Unknow opcode 0x{opcode:02x} at {' '.join(a+b for a,b in zip(f'{self.program_counter:x}'[::2], f'{self.program_counter:x}'[1::2]))}")
             raise e
 
     def get_cpu_status(self):
         ''' Return a dictionnary containing the current CPU Status. Usefull for debugging'''
         status = dict()
-        status["PC"] = self.PC
-        status["SP"] = self.SP
-        status["A"] = self.A
-        status["X"] = self.X
-        status["Y"] = self.Y
+        status["PC"] = self.program_counter
+        status["SP"] = self.stack_pointer
+        status["A"] = self.accumulator
+        status["X"] = self.x_register
+        status["Y"] = self.y_register
         status["P"] = self.getP()
         status["CYC"] = self.total_cycles
         status["PPU_LINE"] = instances.ppu.line
@@ -146,7 +145,7 @@ class Cpu:
 
         Bit 5 is always set to 1
         '''
-        return (self.negative << 7) | (self.overflow << 6) | (1 << 5) | (self.flagB << 4) | (self.decimal << 3) | (self.interrupt << 2) | (self.zero << 1) | self.carry
+        return (self.negative << 7) | (self.overflow << 6) | (1 << 5) | (self.break_flag << 4) | (self.decimal << 3) | (self.interrupt << 2) | (self.zero << 1) | self.carry
 
     def setP(self, p):
         '''Set the P register which contains the flag status.
@@ -163,17 +162,17 @@ class Cpu:
 
     def push(self, val):
         '''Push value into stack'''
-        instances.memory.write_rom(0x0100 | self.SP, val)
-        self.SP = 255 if self.SP == 0 else self.SP - 1
+        instances.memory.write_rom(0x0100 | self.stack_pointer, val)
+        self.stack_pointer = 255 if self.stack_pointer == 0 else self.stack_pointer - 1
 
     def pop(self):
         '''Pop value from stack'''
-        self.SP = 0 if self.SP == 255 else self.SP + 1
-        return instances.memory.read_rom(0x0100 | self.SP)
+        self.stack_pointer = 0 if self.stack_pointer == 255 else self.stack_pointer + 1
+        return instances.memory.read_rom(0x0100 | self.stack_pointer)
 
     def get_immediate(self):
         '''Get 8 bit immediate value on PC + 1'''
-        return instances.memory.read_rom(self.PC+1)
+        return instances.memory.read_rom(self.program_counter+1)
 
     def set_zero_page(self, val):
         '''Write val into Zero Page memory. Address is given as opcode 1-byte argument'''
@@ -194,7 +193,7 @@ class Cpu:
 
     def get_zero_page_x_address(self):
         '''Get ZeroPage address to be used for current opcode and X register'''
-        return (instances.memory.read_rom(self.PC+1) + self.X) & 255
+        return (instances.memory.read_rom(self.program_counter+1) + self.x_register) & 255
 
     def get_zero_page_x_value(self):
         '''Get value at ZeroPage address to be used for current opcode and X register'''
@@ -207,7 +206,7 @@ class Cpu:
 
     def get_zero_page_y_address(self):
         '''Get ZeroPage address to be used for current opcode and Y register'''
-        return  (instances.memory.read_rom(self.PC+1) + self.Y) & 255
+        return  (instances.memory.read_rom(self.program_counter+1) + self.y_register) & 255
 
     def get_zero_page_y_value(self):
         '''Get value at ZeroPage address to be used for current opcode and Y register'''
@@ -220,7 +219,7 @@ class Cpu:
 
     def get_absolute_address(self):
         '''Get address given as opcode 2-byte argument'''
-        return instances.memory.read_rom_16(self.PC+1)
+        return instances.memory.read_rom_16(self.program_counter+1)
 
     def get_absolute_value(self):
         '''Get val from memory. Address is given as opcode 2-byte argument'''
@@ -233,8 +232,8 @@ class Cpu:
 
     def get_absolute_x_address(self):
         '''Get address given as opcode 2-byte argument and X register'''
-        address = instances.memory.read_rom_16(self.PC+1)
-        target_address = (address + self.X) & 0xFFFF
+        address = instances.memory.read_rom_16(self.program_counter+1)
+        target_address = (address + self.x_register) & 0xFFFF
         if  address & 0xFF00 != target_address & 0xFF00:
             self.additional_cycle += 1
         return target_address
@@ -250,8 +249,8 @@ class Cpu:
 
     def get_absolute_y_address(self):
         '''Get address given as opcode 2-byte argument and Y register'''
-        address = instances.memory.read_rom_16(self.PC+1)
-        target_address = (address + self.Y) & 0xFFFF
+        address = instances.memory.read_rom_16(self.program_counter+1)
+        target_address = (address + self.y_register) & 0xFFFF
         if  address & 0xFF00 != target_address & 0xFF00:
             self.additional_cycle += 1
         return target_address
@@ -274,7 +273,7 @@ class Cpu:
 
     def get_indirect_y_address(self):
         address = self.get_zero_page_address()
-        target_address = 0xFFFF & (instances.memory.read_rom_16_no_crossing_page(address )+ self.Y)
+        target_address = 0xFFFF & (instances.memory.read_rom_16_no_crossing_page(address )+ self.y_register)
         if  address & 0xFF00 != target_address & 0xFF00:
             self.additional_cycle += 1
         return target_address
@@ -304,15 +303,15 @@ class Cpu:
 
     def adc(self, val):
         '''Perform ADC operation for val'''
-        adc = val + self.A + self.carry
+        adc = val + self.accumulator + self.carry
         self.carry = adc >> 8
         result = 255 & adc
 
-        self.overflow = not not ((self.A ^ result) & (val ^ result) & 0x80)
+        self.overflow = not not ((self.accumulator ^ result) & (val ^ result) & 0x80)
 
-        self.A = result
+        self.accumulator = result
 
-        self.set_flags_nz(self.A)
+        self.set_flags_nz(self.accumulator)
 
     def fn_0x69(self) :
         '''Function call for ADC #$xx. Immediate'''
@@ -356,57 +355,57 @@ class Cpu:
 
     def fn_0x29(self) :
         '''Function call for AND #$xx. Immediate'''
-        self.A &= self.get_immediate()
-        self.set_flags_nz(self.A)
+        self.accumulator &= self.get_immediate()
+        self.set_flags_nz(self.accumulator)
         return (2, 2)
 
     def fn_0x25(self) :
         '''Function call for AND $xx. Zero Page'''
-        self.A &= self.get_zero_page_value()
-        self.set_flags_nz(self.A)
+        self.accumulator &= self.get_zero_page_value()
+        self.set_flags_nz(self.accumulator)
         return (2, 3)
 
     def fn_0x35(self) :
         '''Function call for AND $xx, X. Zero Page, X'''
-        self.A &= self.get_zero_page_x_value()
-        self.set_flags_nz(self.A)
+        self.accumulator &= self.get_zero_page_x_value()
+        self.set_flags_nz(self.accumulator)
         return (2, 4)
 
     def fn_0x2d(self) :
         '''Function call for AND $xxxx. Absolute'''
-        self.A &= self.get_absolute_value()
-        self.set_flags_nz(self.A)
+        self.accumulator &= self.get_absolute_value()
+        self.set_flags_nz(self.accumulator)
         return (3, 4)
 
     def fn_0x3d(self) :
         '''Function call for AND $xxxx, X. Absolute, X'''
-        self.A &= self.get_absolute_x_value()
-        self.set_flags_nz(self.A)
+        self.accumulator &= self.get_absolute_x_value()
+        self.set_flags_nz(self.accumulator)
         return (3, 4)
 
     def fn_0x39(self) :
         '''Function call for AND $xxxx, Y. Absolute, Y'''
-        self.A &= self.get_absolute_y_value()
-        self.set_flags_nz(self.A)
+        self.accumulator &= self.get_absolute_y_value()
+        self.set_flags_nz(self.accumulator)
         return (3, 4)
 
     def fn_0x21(self) :
         '''Function call for AND ($xx, X). Indirect, X'''
-        self.A &= self.get_indirect_x_value()
-        self.set_flags_nz(self.A)
+        self.accumulator &= self.get_indirect_x_value()
+        self.set_flags_nz(self.accumulator)
         return (2, 6)
 
     def fn_0x31(self) :
         '''Function call for AND ($xx), Y. Indirect, Y'''
-        self.A &= self.get_indirect_y_value()
-        self.set_flags_nz(self.A)
+        self.accumulator &= self.get_indirect_y_value()
+        self.set_flags_nz(self.accumulator)
         return (2, 5)
 
     def fn_0x0a(self) :
         '''Function call for ASL. Accumulator'''
-        self.carry = self.A >> 7
-        self.A = (self.A << 1) & 0b11111111
-        self.set_flags_nz(self.A)
+        self.carry = self.accumulator >> 7
+        self.accumulator = (self.accumulator << 1) & 0b11111111
+        self.set_flags_nz(self.accumulator)
         return (1, 2)
 
     def fn_0x06(self) :
@@ -448,7 +447,7 @@ class Cpu:
     def fn_0x24(self) :
         '''Function call for BIT $xx. Zero Page'''
         tocomp = self.get_zero_page_value()
-        value = tocomp & self.A
+        value = tocomp & self.accumulator
         self.set_zero(value)
         self.negative = (tocomp >> 7) & 1
         self.overflow = (tocomp >> 6) & 1
@@ -457,7 +456,7 @@ class Cpu:
     def fn_0x2c(self) :
         '''Function call for BIT $xxxx. Absolute'''
         tocomp = self.get_absolute_value()
-        value = tocomp & self.A
+        value = tocomp & self.accumulator
         self.set_zero(value)
         self.negative = (tocomp >> 7) & 1
         self.overflow = (tocomp >> 6) & 1
@@ -465,25 +464,25 @@ class Cpu:
 
     def fn_0x10(self) :
         '''Function call for BPL #$xx. Relative'''
-        old_pc = self.PC + 2
+        old_pc = self.program_counter + 2
         unsigned = self.get_immediate()
         signed = unsigned - 256 if unsigned > 127 else unsigned
         if self.negative == 0:
-            self.PC += signed
+            self.program_counter += signed
             self.additional_cycle += 1
-            if self.PC & 0xFF00 != old_pc & 0xFF00:
+            if self.program_counter & 0xFF00 != old_pc & 0xFF00:
                 self.additional_cycle += 1
         return (2, 2)
 
     def fn_0x30(self) :
         '''Function call for BMI #$xx. Relative'''
-        old_pc = self.PC + 2
+        old_pc = self.program_counter + 2
         unsigned = self.get_immediate()
         signed = unsigned - 256 if unsigned > 127 else unsigned
         if self.negative == 1:
-            self.PC += signed
+            self.program_counter += signed
             self.additional_cycle += 1
-            if self.PC & 0xFF00 != old_pc & 0xFF00:
+            if self.program_counter & 0xFF00 != old_pc & 0xFF00:
                 self.additional_cycle = 1
         return (2, 2)
 
@@ -494,67 +493,67 @@ class Cpu:
         unsigned = self.get_immediate()
         signed = unsigned - 256 if unsigned > 127 else unsigned
         if self.overflow == 0:
-            self.PC += signed
+            self.program_counter += signed
             self.additional_cycle += 1
         return (2, 2)
 
     def fn_0x70(self) :
         '''Function call for BVS #$xx. Relative'''
-        old_pc = self.PC + 2
+        old_pc = self.program_counter + 2
         unsigned = self.get_immediate()
         signed = unsigned - 256 if unsigned > 127 else unsigned
         if self.overflow == 1:
-            self.PC += signed
+            self.program_counter += signed
             self.additional_cycle += 1
-            if self.PC & 0xFF00 != old_pc & 0xFF00:
+            if self.program_counter & 0xFF00 != old_pc & 0xFF00:
                 self.additional_cycle = 1
         return (2, 2)
 
     def fn_0x90(self) :
         '''Function call for BCC #$xx. Relative'''
-        old_pc = self.PC + 2
+        old_pc = self.program_counter + 2
         unsigned = self.get_immediate()
         signed = unsigned - 256 if unsigned > 127 else unsigned
         if self.carry == 0:
-            self.PC += signed
+            self.program_counter += signed
             self.additional_cycle += 1
-            if self.PC & 0xFF00 != old_pc & 0xFF00:
+            if self.program_counter & 0xFF00 != old_pc & 0xFF00:
                 self.additional_cycle = 1
         return (2, 2)
 
     def fn_0xb0(self) :
         '''Function call for BCS #$xx. Relative'''
-        old_pc = self.PC + 2
+        old_pc = self.program_counter + 2
         unsigned = self.get_immediate()
         signed = unsigned - 256 if unsigned > 127 else unsigned
         if self.carry == 1:
-            self.PC += signed
+            self.program_counter += signed
             self.additional_cycle += 1
-            if self.PC & 0xFF00 != old_pc & 0xFF00:
+            if self.program_counter & 0xFF00 != old_pc & 0xFF00:
                 self.additional_cycle = 1
         return (2, 2)
 
         '''Function call for BNE #$xx. Relative'''
     def fn_0xd0(self) :
-        old_pc = self.PC + 2
+        old_pc = self.program_counter + 2
         unsigned = self.get_immediate()
         signed = unsigned - 256 if unsigned > 127 else unsigned
         if self.zero == 0:
-            self.PC += signed
+            self.program_counter += signed
             self.additional_cycle += 1
-            if self.PC & 0xFF00 != old_pc & 0xFF00:
+            if self.program_counter & 0xFF00 != old_pc & 0xFF00:
                 self.additional_cycle = 1
         return (2, 2)
 
     def fn_0xf0(self) :
         '''Function call for BEQ #$xx. Relative'''
-        old_pc = self.PC + 2
+        old_pc = self.program_counter + 2
         unsigned = self.get_immediate()
         signed = unsigned - 256 if unsigned > 127 else unsigned
         if self.zero == 1:
-            self.PC += signed
+            self.program_counter += signed
             self.additional_cycle += 1
-            if self.PC & 0xFF00 != old_pc & 0xFF00:
+            if self.program_counter & 0xFF00 != old_pc & 0xFF00:
                 self.additional_cycle = 1
         return (2, 2)
 
@@ -562,11 +561,11 @@ class Cpu:
         '''Function call for BRK. Implied
         TODO ! Should set Break flag to 1
         '''
-        self.PC += 1
-        self.push(self.PC >> 8)
-        self.push(self.PC & 255)
+        self.program_counter += 1
+        self.push(self.program_counter >> 8)
+        self.push(self.program_counter & 255)
         self.push(self.getP())
-        self.PC = instances.memory.read_rom_16(0xFFFE)
+        self.program_counter = instances.memory.read_rom_16(0xFFFE)
         return (0, 7)
 
     def cmp(self, op1, op2) :
@@ -601,72 +600,72 @@ class Cpu:
 
     def fn_0xc9(self) :
         '''Function call for CMP #$xx. Immediate'''
-        self.cmp(self.A, self.get_immediate())
+        self.cmp(self.accumulator, self.get_immediate())
         return (2, 2)
 
     def fn_0xc5(self) :
         '''Function call for CMP $xx. Zero Page'''
-        self.cmp(self.A, self.get_zero_page_value())
+        self.cmp(self.accumulator, self.get_zero_page_value())
         return (2, 3)
 
     def fn_0xd5(self) :
         '''Function call for CMP $xx, X. Zero Page, X'''
-        self.cmp(self.A, self.get_zero_page_x_value())
+        self.cmp(self.accumulator, self.get_zero_page_x_value())
         return (2, 4)
 
     def fn_0xcd(self) :
         '''Function call for CMP $xxxx. Absolute'''
-        self.cmp(self.A, self.get_absolute_value())
+        self.cmp(self.accumulator, self.get_absolute_value())
         return (3, 4)
 
     def fn_0xdd(self) :
         '''Function call for CMP $xxxx, X. Absolute, X'''
-        self.cmp(self.A, self.get_absolute_x_value())
+        self.cmp(self.accumulator, self.get_absolute_x_value())
         return (3, 4)
 
     def fn_0xd9(self) :
         '''Function call for CMP $xxxx, Y. Absolute, Y'''
-        self.cmp(self.A, self.get_absolute_y_value())
+        self.cmp(self.accumulator, self.get_absolute_y_value())
         return (3, 4)
 
     def fn_0xc1(self) :
         '''Function call for CMP ($xx, X). Indirect, X'''
-        self.cmp(self.A, self.get_indirect_x_value())
+        self.cmp(self.accumulator, self.get_indirect_x_value())
         return (2, 6)
 
     def fn_0xd1(self) :
         '''Function call for CMP ($xx), Y. Indirect, Y'''
-        self.cmp(self.A, self.get_indirect_y_value())
+        self.cmp(self.accumulator, self.get_indirect_y_value())
         return (2, 5)
 
     def fn_0xe0(self) :
         '''Function call for CPX #$xx. Immediate'''
-        self.cmp(self.X, self.get_immediate())
+        self.cmp(self.x_register, self.get_immediate())
         return (2, 2)
 
     def fn_0xe4(self) :
         '''Function call for CPX $xx. Zero Page'''
-        self.cmp(self.X, self.get_zero_page_value())
+        self.cmp(self.x_register, self.get_zero_page_value())
         return (2, 3)
 
     def fn_0xec(self) :
         '''Function call for CPX $xxxx. Absolute'''
-        self.cmp(self.X, self.get_absolute_value())
+        self.cmp(self.x_register, self.get_absolute_value())
         return (3, 4)
 
     def fn_0xc0(self) :
         '''Function call for CPY #$xx. Immediate'''
-        self.cmp(self.Y, self.get_immediate())
+        self.cmp(self.y_register, self.get_immediate())
         return (2, 2)
 
     def fn_0xc4(self) :
         '''Function call for CPY $xx. Zero Page'''
-        self.cmp(self.Y, self.get_zero_page_value())
+        self.cmp(self.y_register, self.get_zero_page_value())
         return (2, 3)
 
     def fn_0xcc(self) :
         '''Function call for CPY $xxxx. Absolute'''
-        self.cmp(self.Y, self.get_absolute_value())
+        self.cmp(self.y_register, self.get_absolute_value())
         return (3, 4)
 
     def fn_0xc6(self) :
@@ -706,7 +705,7 @@ class Cpu:
         value = self.get_zero_page_value()
         value = 255 if value == 0 else value - 1
         self.set_zero_page(value)
-        self.cmp(self.A, value)
+        self.cmp(self.accumulator, value)
         return (2, 5)
 
     def fn_0xd7(self):
@@ -714,7 +713,7 @@ class Cpu:
         value = self.get_zero_page_x_value()
         value = 255 if value == 0 else value - 1
         self.set_zero_page_X(value)
-        self.cmp(self.A, value)
+        self.cmp(self.accumulator, value)
         return (2, 6)
 
     def fn_0xcf(self):
@@ -722,7 +721,7 @@ class Cpu:
         value = self.get_absolute_value()
         value = 255 if value == 0 else value - 1
         self.set_absolute(value)
-        self.cmp(self.A, value)
+        self.cmp(self.accumulator, value)
         return (3, 6)
 
     def fn_0xdf(self):
@@ -730,7 +729,7 @@ class Cpu:
         value = self.get_absolute_x_value()
         value = 255 if value == 0 else value - 1
         self.set_absolute_x(value)
-        self.cmp(self.A, value)
+        self.cmp(self.accumulator, value)
         return (3, 7)
 
     def fn_0xdb(self):
@@ -738,7 +737,7 @@ class Cpu:
         value = self.get_absolute_y_value()
         value = 255 if value == 0 else value - 1
         self.set_absolute_y(value)
-        self.cmp(self.A, value)
+        self.cmp(self.accumulator, value)
         return (3, 7)
 
     def fn_0xc3(self):
@@ -746,7 +745,7 @@ class Cpu:
         value = self.get_indirect_x_value()
         value = 255 if value == 0 else value - 1
         self.set_indirect_x(value)
-        self.cmp(self.A, value)
+        self.cmp(self.accumulator, value)
         return (2, 8)
 
     def fn_0xd3(self):
@@ -754,7 +753,7 @@ class Cpu:
         value = self.get_indirect_y_value()
         value = 255 if value == 0 else value - 1
         self.set_indirect_y(value)
-        self.cmp(self.A, value)
+        self.cmp(self.accumulator, value)
         return (2, 8)
 
     def fn_0xe7(self):
@@ -815,50 +814,50 @@ class Cpu:
 
     def fn_0x49(self) :
         '''Function call for EOR #$xx. Immediate'''
-        self.A ^= self.get_immediate()
-        self.set_flags_nz(self.A)
+        self.accumulator ^= self.get_immediate()
+        self.set_flags_nz(self.accumulator)
         return (2, 2)
 
     def fn_0x45(self) :
         '''Function call for EOR $xx. Zero Page'''
-        self.A ^= self.get_zero_page_value()
-        self.set_flags_nz(self.A)
+        self.accumulator ^= self.get_zero_page_value()
+        self.set_flags_nz(self.accumulator)
         return (2, 3)
 
     def fn_0x55(self) :
         '''Function call for EOR $xx, X. Zero Page, X'''
-        self.A ^= self.get_zero_page_x_value()
-        self.set_flags_nz(self.A)
+        self.accumulator ^= self.get_zero_page_x_value()
+        self.set_flags_nz(self.accumulator)
         return (2, 4)
 
     def fn_0x4d(self) :
         '''Function call for EOR $xxxx. Absolute'''
-        self.A ^= self.get_absolute_value()
-        self.set_flags_nz(self.A)
+        self.accumulator ^= self.get_absolute_value()
+        self.set_flags_nz(self.accumulator)
         return (3, 4)
 
     def fn_0x5d(self) :
         '''Function call for EOR $xxxx, X. Absolute, X'''
-        self.A ^= self.get_absolute_x_value()
-        self.set_flags_nz(self.A)
+        self.accumulator ^= self.get_absolute_x_value()
+        self.set_flags_nz(self.accumulator)
         return (3, 4)
 
     def fn_0x59(self) :
         '''Function call for EOR $xxxx, Y. Absolute, Y'''
-        self.A ^= self.get_absolute_y_value()
-        self.set_flags_nz(self.A)
+        self.accumulator ^= self.get_absolute_y_value()
+        self.set_flags_nz(self.accumulator)
         return (3, 4)
 
     def fn_0x41(self) :
         '''Function call for EOR ($xx, X). Indirect, X'''
-        self.A ^= self.get_indirect_x_value()
-        self.set_flags_nz(self.A)
+        self.accumulator ^= self.get_indirect_x_value()
+        self.set_flags_nz(self.accumulator)
         return (2, 6)
 
     def fn_0x51(self) :
         '''Function call for EOR ($xx), Y. Indirect, Y'''
-        self.A ^= self.get_indirect_y_value()
-        self.set_flags_nz(self.A)
+        self.accumulator ^= self.get_indirect_y_value()
+        self.set_flags_nz(self.accumulator)
         return (2, 5)
 
     def fn_0x18(self) :
@@ -951,7 +950,7 @@ class Cpu:
 
     def fn_0x4c(self) :
         '''Function call for JMP $xxxx. Absolute'''
-        self.PC = self.get_absolute_address()
+        self.program_counter = self.get_absolute_address()
         return (0, 3)
 
     def fn_0x6c(self) :
@@ -963,132 +962,132 @@ class Cpu:
         else:
             address = instances.memory.read_rom_16(address)
         if instances.debug : print(f"JMP address : {address:4x}")
-        self.PC = address
+        self.program_counter = address
         return (0, 5)
 
     def fn_0x20(self) :
         '''Function call for JSR $xxxx. Absolute'''
-        pc = self.PC + 2
+        pc = self.program_counter + 2
         high = pc >> 8
         low =  pc & 255
         self.push(high) # little endian
         self.push(low)
-        self.PC = self.get_absolute_address()
+        self.program_counter = self.get_absolute_address()
         return (0, 6)
 
     def fn_0xa9(self) :
         '''Function call for LDA #$xx. Immediate'''
-        self.A = self.get_immediate()
-        self.set_flags_nz(self.A)
+        self.accumulator = self.get_immediate()
+        self.set_flags_nz(self.accumulator)
         return (2, 2)
 
     def fn_0xa5(self) :
         '''Function call for LDA $xx. Zero Page'''
-        self.A =self.get_zero_page_value()
-        self.set_flags_nz(self.A)
+        self.accumulator =self.get_zero_page_value()
+        self.set_flags_nz(self.accumulator)
         return (2, 3)
 
     def fn_0xb5(self) :
         '''Function call for LDA $xx, X. Zero Page, X'''
-        self.A = self.get_zero_page_x_value()
-        self.set_flags_nz(self.A)
+        self.accumulator = self.get_zero_page_x_value()
+        self.set_flags_nz(self.accumulator)
         return (2, 4)
 
     def fn_0xad(self) :
         '''Function call for LDA $xxxx. Absolute'''
-        self.A = self.get_absolute_value()
-        self.set_flags_nz(self.A)
+        self.accumulator = self.get_absolute_value()
+        self.set_flags_nz(self.accumulator)
         return (3, 4)
 
     def fn_0xbd(self) :
         '''Function call for LDA $xxxx, X. Absolute, X'''
-        self.A = self.get_absolute_x_value()
-        self.set_flags_nz(self.A)
+        self.accumulator = self.get_absolute_x_value()
+        self.set_flags_nz(self.accumulator)
         return (3, 4)
 
     def fn_0xb9(self) :
         '''Function call for LDA $xxxx, Y. Absolute, Y'''
-        self.A = self.get_absolute_y_value()
-        self.set_flags_nz(self.A)
+        self.accumulator = self.get_absolute_y_value()
+        self.set_flags_nz(self.accumulator)
         return (3, 4)
 
     def fn_0xa1(self) :
         '''Function call for LDA ($xx, X). Indirect, X'''
-        self.A = self.get_indirect_x_value()
-        self.set_flags_nz(self.A)
+        self.accumulator = self.get_indirect_x_value()
+        self.set_flags_nz(self.accumulator)
         return (2, 6)
 
     def fn_0xb1(self) :
         '''Function call for EOR ($xx), Y. Indirect, Y'''
-        self.A = self.get_indirect_y_value()
-        self.set_flags_nz(self.A)
+        self.accumulator = self.get_indirect_y_value()
+        self.set_flags_nz(self.accumulator)
         return (2, 5)
 
     def fn_0xa2(self) :
         '''Function call for LDX #$xx. Immediate'''
-        self.X = self.get_immediate()
-        self.set_flags_nz(self.X)
+        self.x_register = self.get_immediate()
+        self.set_flags_nz(self.x_register)
         return (2, 2)
 
     def fn_0xa6(self) :
         '''Function call for LDX $xx. Zero Page'''
-        self.X = self.get_zero_page_value()
-        self.set_flags_nz(self.X)
+        self.x_register = self.get_zero_page_value()
+        self.set_flags_nz(self.x_register)
         return (2, 3)
 
     def fn_0xb6(self) :
         '''Function call for LDX $xx, Y. Zero Page, Y'''
-        self.X = self.get_zero_page_y_value()
-        self.set_flags_nz(self.X)
+        self.x_register = self.get_zero_page_y_value()
+        self.set_flags_nz(self.x_register)
         return (2, 4)
 
     def fn_0xae(self) :
         '''Function call for LDX $xxxx. Absolute'''
-        self.X = self.get_absolute_value()
-        self.set_flags_nz(self.X)
+        self.x_register = self.get_absolute_value()
+        self.set_flags_nz(self.x_register)
         return (3, 4)
 
     def fn_0xbe(self) :
         '''Function call for LDX $xxxx, Y. Absolute, Y'''
-        self.X = self.get_absolute_y_value()
-        self.set_flags_nz(self.X)
+        self.x_register = self.get_absolute_y_value()
+        self.set_flags_nz(self.x_register)
         return (3, 4)
 
     def fn_0xa0(self) :
         '''Function call for LDY #$xx. Immediate'''
-        self.Y = self.get_immediate()
-        self.set_flags_nz(self.Y)
+        self.y_register = self.get_immediate()
+        self.set_flags_nz(self.y_register)
         return (2, 2)
 
     def fn_0xa4(self) :
         '''Function call for LDY $xx. Zero Page'''
-        self.Y = self.get_zero_page_value()
-        self.set_flags_nz(self.X)
+        self.y_register = self.get_zero_page_value()
+        self.set_flags_nz(self.x_register)
         return (2, 3)
 
     def fn_0xb4(self) :
         '''Function call for LDY $xx, X. Zero Page, X'''
-        self.Y = self.get_zero_page_x_value()
-        self.set_flags_nz(self.Y)
+        self.y_register = self.get_zero_page_x_value()
+        self.set_flags_nz(self.y_register)
         return (2, 4)
 
     def fn_0xac(self) :
         '''Function call for LDY $xxxx. Absolute'''
-        self.Y =self.get_absolute_value()
-        self.set_flags_nz(self.Y)
+        self.y_register =self.get_absolute_value()
+        self.set_flags_nz(self.y_register)
         return (3, 4)
 
     def fn_0xbc(self) :
         '''Function call for LDY $xxxx, X. Absolute, X'''
-        self.Y = self.get_absolute_x_value()
-        self.set_flags_nz(self.Y)
+        self.y_register = self.get_absolute_x_value()
+        self.set_flags_nz(self.y_register)
         return (3, 4)
 
     def fn_0x4a(self) :
         '''Function call for LSR. Accumulator'''
-        self.carry = self.A & 1
-        self.A = self.A >> 1
-        self.set_flags_nz(self.A)
+        self.carry = self.accumulator & 1
+        self.accumulator = self.accumulator >> 1
+        self.set_flags_nz(self.accumulator)
         return (1, 2)
 
     def fn_0x46(self) :
@@ -1283,50 +1282,50 @@ class Cpu:
 
     def fn_0x09(self) :
         '''Function call for ORA #$xx. Immediate'''
-        self.A |= self.get_immediate()
-        self.set_flags_nz(self.A)
+        self.accumulator |= self.get_immediate()
+        self.set_flags_nz(self.accumulator)
         return (2, 2)
 
     def fn_0x05(self) :
         '''Function call for ORA $xx. Zero Page'''
-        self.A |= self.get_zero_page_value()
-        self.set_flags_nz(self.A)
+        self.accumulator |= self.get_zero_page_value()
+        self.set_flags_nz(self.accumulator)
         return (2, 3)
 
     def fn_0x15(self) :
         '''Function call for ORA $xx, X. Zero Page, X'''
-        self.A |= self.get_zero_page_x_value()
-        self.set_flags_nz(self.A)
+        self.accumulator |= self.get_zero_page_x_value()
+        self.set_flags_nz(self.accumulator)
         return (2, 4)
 
     def fn_0x0d(self) :
         '''Function call for ORA $xxxx. Absolute'''
-        self.A |= self.get_absolute_value()
-        self.set_flags_nz(self.A)
+        self.accumulator |= self.get_absolute_value()
+        self.set_flags_nz(self.accumulator)
         return (3, 4)
 
     def fn_0x1d(self) :
         '''Function call for ORA $xxxx, X. Absolute, X'''
-        self.A |= self.get_absolute_x_value()
-        self.set_flags_nz(self.A)
+        self.accumulator |= self.get_absolute_x_value()
+        self.set_flags_nz(self.accumulator)
         return (3, 4)
 
     def fn_0x19(self) :
         '''Function call for ORA $xxxx, Y. Absolute, Y'''
-        self.A |= self.get_absolute_y_value()
-        self.set_flags_nz(self.A)
+        self.accumulator |= self.get_absolute_y_value()
+        self.set_flags_nz(self.accumulator)
         return (3, 4)
 
     def fn_0x01(self) :
         '''Function call for ORA ($xx, X). Indirect, X'''
-        self.A |= self.get_indirect_x_value()
-        self.set_flags_nz(self.A)
+        self.accumulator |= self.get_indirect_x_value()
+        self.set_flags_nz(self.accumulator)
         return (2, 6)
 
     def fn_0x11(self) :
         '''Function call for ORA ($xx), Y. Indirect, Y'''
-        self.A |= self.get_indirect_y_value()
-        self.set_flags_nz(self.A)
+        self.accumulator |= self.get_indirect_y_value()
+        self.set_flags_nz(self.accumulator)
         return (2, 5)
 
     def fn_0x07(self):
@@ -1683,58 +1682,58 @@ class Cpu:
 
     def fn_0xaa(self) :
         '''Function call for TAX. Implied'''
-        self.X = self.A
-        self.set_flags_nz(self.X)
+        self.x_register = self.accumulator
+        self.set_flags_nz(self.x_register)
         return (1, 2)
 
     def fn_0x8a(self) :
         '''Function call for TXA. Implied'''
-        self.A = self.X
-        self.set_flags_nz(self.A)
+        self.accumulator = self.x_register
+        self.set_flags_nz(self.accumulator)
         return (1, 2)
 
     def fn_0xca(self) :
         '''Function call for DEX. Implied'''
-        self.X = self.X - 1 if self.X > 0 else 255
-        self.set_flags_nz(self.X)
+        self.x_register = self.x_register - 1 if self.x_register > 0 else 255
+        self.set_flags_nz(self.x_register)
         return (1, 2)
 
     def fn_0xe8(self) :
         '''Function call for INX. Implied'''
-        self.X = self.X + 1 if self.X < 255 else 0
-        self.set_flags_nz(self.X)
+        self.x_register = self.x_register + 1 if self.x_register < 255 else 0
+        self.set_flags_nz(self.x_register)
         return (1, 2)
 
     def fn_0xa8(self) :
         '''Function call for TAY. Implied'''
-        self.Y = self.A
-        self.set_flags_nz(self.Y)
+        self.y_register = self.accumulator
+        self.set_flags_nz(self.y_register)
         return (1, 2)
 
     def fn_0x98(self) :
         '''Function call for TYA. Implied'''
-        self.A = self.Y
-        self.set_flags_nz(self.A)
+        self.accumulator = self.y_register
+        self.set_flags_nz(self.accumulator)
         return (1, 2)
 
     def fn_0x88(self) :
         '''Function call for DEY. Implied'''
-        self.Y = self.Y - 1 if self.Y > 0 else 255
-        self.set_flags_nz(self.Y)
+        self.y_register = self.y_register - 1 if self.y_register > 0 else 255
+        self.set_flags_nz(self.y_register)
         return (1, 2)
 
     def fn_0xc8(self) :
         '''Function call for INY. Implied'''
-        self.Y = self.Y + 1 if self.Y < 255 else 0
-        self.set_flags_nz(self.Y)
+        self.y_register = self.y_register + 1 if self.y_register < 255 else 0
+        self.set_flags_nz(self.y_register)
         return (1, 2)
 
     def fn_0x2a(self) :
         '''Function call for ROL A. Accumulator'''
-        self.A = (self.A << 1) | (self.carry)
-        self.carry = self.A >> 8
-        self.A &= 255
-        self.set_flags_nz(self.A)
+        self.accumulator = (self.accumulator << 1) | (self.carry)
+        self.carry = self.accumulator >> 8
+        self.accumulator &= 255
+        self.set_flags_nz(self.accumulator)
         return (1, 2)
 
     def fn_0x26(self) :
@@ -1779,10 +1778,10 @@ class Cpu:
 
     def fn_0x6a(self) :
         '''Function call for ROR A. Accumulator'''
-        carry = self.A & 1
-        self.A = (self.A >> 1) | (self.carry << 7)
+        carry = self.accumulator & 1
+        self.accumulator = (self.accumulator >> 1) | (self.carry << 7)
         self.carry = carry
-        self.set_flags_nz(self.A)
+        self.set_flags_nz(self.accumulator)
         return (1, 2)
 
     def fn_0x66(self) :
@@ -1830,14 +1829,14 @@ class Cpu:
         self.setP(self.pop())
         low = self.pop()
         high = self.pop()
-        self.PC = (high << 8) + low
+        self.program_counter = (high << 8) + low
         return (0, 6)
 
     def fn_0x60(self) :
         '''Function call for RTS. Implied'''
         low = self.pop()
         high = self.pop()
-        self.PC = (high << 8) + low + 1 # JSR increment only by two, and RTS add the third
+        self.program_counter = (high << 8) + low + 1 # JSR increment only by two, and RTS add the third
         return (0, 6)
 
     def sbc(self, val):
@@ -1897,65 +1896,65 @@ class Cpu:
     def fn_0x85(self) :
         '''Function call for STA $xx. Zero Page'''
         address = self.get_zero_page_address()
-        extra_cycles = instances.memory.write_rom(address, self.A)
+        extra_cycles = instances.memory.write_rom(address, self.accumulator)
         return (2, 3 + extra_cycles)
 
     def fn_0x95(self) :
         '''Function call for STA $xx, X. Zero Page, X'''
         address = self.get_zero_page_x_address()
-        extra_cycles = instances.memory.write_rom(address, self.A)
+        extra_cycles = instances.memory.write_rom(address, self.accumulator)
         return (2, 4 + extra_cycles)
 
     def fn_0x8d(self) :
         '''Function call for STA $xxxx. Absolute'''
         address = self.get_absolute_address()
-        extra_cycles = instances.memory.write_rom(address, self.A)
+        extra_cycles = instances.memory.write_rom(address, self.accumulator)
         return (3, 4 + extra_cycles)
 
     def fn_0x9d(self) :
         '''Function call for STA $xxxx, X. Absolute, X'''
         address = self.get_absolute_x_address()
-        extra_cycles = instances.memory.write_rom(address, self.A)
+        extra_cycles = instances.memory.write_rom(address, self.accumulator)
         return (3, 5 + extra_cycles)
 
     def fn_0x99(self) :
         '''Function call for STA $xxxx, Y. Absolute, Y'''
         address = self.get_absolute_y_address()
-        extra_cycles = instances.memory.write_rom(address, self.A)
+        extra_cycles = instances.memory.write_rom(address, self.accumulator)
         return (3, 5 + extra_cycles)
 
     def fn_0x81(self) :
         '''Function call for STA ($xx, X). Indirect, X'''
         address = self.get_indirect_x_address()
-        extra_cycles = instances.memory.write_rom(address, self.A)
+        extra_cycles = instances.memory.write_rom(address, self.accumulator)
         return (2, 6 + extra_cycles)
 
     def fn_0x91(self) :
         '''Function call for STA ($xx), Y. Indirect, Y'''
         address = self.get_indirect_y_address()
-        extra_cycles = instances.memory.write_rom(address, self.A)
+        extra_cycles = instances.memory.write_rom(address, self.accumulator)
         return (2, 6 + extra_cycles)
 
     def fn_0x9a(self) :
         '''Function call for TXS. Implied'''
-        self.SP = self.X
+        self.stack_pointer = self.x_register
         return (1, 2)
 
     def fn_0xba(self) :
         '''Function call for TSX. Implied'''
-        self.X = self.SP
-        self.set_flags_nz(self.X)
+        self.x_register = self.stack_pointer
+        self.set_flags_nz(self.x_register)
         return (1, 2)
 
     def fn_0x48(self) :
         '''Function call for RHA. Implied'''
-        self.push(self.A)
+        self.push(self.accumulator)
         return (1, 3)
 
     def fn_0x68(self) :
         '''Function call for PLA. Implied'''
-        self.A = self.pop()
-        self.set_flags_nz(self.A)
+        self.accumulator = self.pop()
+        self.set_flags_nz(self.accumulator)
         return (1, 4)
 
     def fn_0x08(self) :
@@ -1974,102 +1973,102 @@ class Cpu:
     def fn_0x86(self) :
         '''Function call for STX $xx. Zero Page'''
         address = self.get_zero_page_address()
-        instances.memory.write_rom(address, self.X)
+        instances.memory.write_rom(address, self.x_register)
         return (2, 3)
 
     def fn_0x96(self) :
         '''Function call for STX $xx, Y. Zero Page, Y'''
         address = self.get_zero_page_y_address()
-        instances.memory.write_rom(address, self.X)
+        instances.memory.write_rom(address, self.x_register)
         return (2, 4)
 
     def fn_0x8e(self) :
         '''Function call for STX $xxxx. Absolute'''
         address = self.get_absolute_address()
-        instances.memory.write_rom(address, self.X)
+        instances.memory.write_rom(address, self.x_register)
         return (3, 4)
 
     def fn_0x84(self) :
         '''Function call for STY $xx. Zero Page'''
         address = self.get_zero_page_address()
-        instances.memory.write_rom(address, self.Y)
+        instances.memory.write_rom(address, self.y_register)
         return (2, 3)
 
     def fn_0x94(self) :
         '''Function call for STY $xx, X. Zero Page, X'''
         address = self.get_zero_page_x_address()
-        instances.memory.write_rom(address, self.Y)
+        instances.memory.write_rom(address, self.y_register)
         return (2, 4)
 
     def fn_0x8c(self) :
         '''Function call for STY $xxxx. Absolute'''
         address = self.get_absolute_address()
-        instances.memory.write_rom(address, self.Y)
+        instances.memory.write_rom(address, self.y_register)
         return (3, 4)
 
     def fn_0xa7(self) :
         '''Function call for LAX $xx. Zero Page'''
-        self.A = self.get_zero_page_value()
-        self.X = self.A
-        self.set_flags_nz(self.A)
+        self.accumulator = self.get_zero_page_value()
+        self.x_register = self.accumulator
+        self.set_flags_nz(self.accumulator)
         return (2, 3)
 
     def fn_0xb7(self) :
         '''Function call for LAX $xx, Y. Zero Page, Y'''
-        self.A = self.get_zero_page_y_value()
-        self.X = self.A
-        self.set_flags_nz(self.A)
+        self.accumulator = self.get_zero_page_y_value()
+        self.x_register = self.accumulator
+        self.set_flags_nz(self.accumulator)
         return (2, 4)
 
     def fn_0xaf(self) :
         '''Function call for LAX $xxxx. Absolute'''
-        self.A = self.get_absolute_value()
-        self.X = self.A
-        self.set_flags_nz(self.A)
+        self.accumulator = self.get_absolute_value()
+        self.x_register = self.accumulator
+        self.set_flags_nz(self.accumulator)
         return (3, 4)
 
     def fn_0xbf(self) :
         '''Function call for LAX $xxxx, Y. Absolute, Y'''
-        self.A = self.get_absolute_y_value()
-        self.X = self.A
-        self.set_flags_nz(self.A)
+        self.accumulator = self.get_absolute_y_value()
+        self.x_register = self.accumulator
+        self.set_flags_nz(self.accumulator)
         return (3, 4)
 
     def fn_0xa3(self) :
         '''Function call for LAX ($xx, X). Indirect, X'''
-        self.A = self.get_indirect_x_value()
-        self.X = self.A
-        self.set_flags_nz(self.A)
+        self.accumulator = self.get_indirect_x_value()
+        self.x_register = self.accumulator
+        self.set_flags_nz(self.accumulator)
         return (2, 6)
 
     def fn_0xb3(self) :
         '''Function call for LAX ($xx), Y. Indirect, Y'''
-        self.A = self.get_indirect_y_value()
-        self.X = self.A
-        self.set_flags_nz(self.A)
+        self.accumulator = self.get_indirect_y_value()
+        self.x_register = self.accumulator
+        self.set_flags_nz(self.accumulator)
         return (2, 5)
 
     def fn_0x87(self) :
         '''Function call for SAX $xx. Zero Page'''
-        val = self.A & self.X
+        val = self.accumulator & self.x_register
         self.set_zero_page(val)
         return (2, 3)
 
     def fn_0x97(self) :
         '''Function call for SAX $xx, Y. Zero Page, Y'''
-        val = self.A & self.X
+        val = self.accumulator & self.x_register
         self.set_zero_pageY(val)
         return (2, 4)
 
     def fn_0x8f(self) :
         '''Function call for SAX $xxxx. Absolute'''
-        val = self.A & self.X
+        val = self.accumulator & self.x_register
         self.set_absolute(val)
         return (3, 4)
 
     def fn_0x83(self) :
         '''Function call for SAX ($xx, X). Indirect, X'''
-        val = self.A & self.X
+        val = self.accumulator & self.x_register
         self.set_indirect_x(val)
         return (2, 6)
 
@@ -2079,7 +2078,7 @@ class Cpu:
         print("CPU")
         print("Registers:")
         print("A\t| X\t| Y\t| SP\t| PC")
-        print(f"0x{self.A:02x}\t| 0x{self.X:02x}\t| 0x{self.Y:02x}\t| 0x{self.SP:02x}\t| 0x{format_hex_data(self.PC)}")
+        print(f"0x{self.accumulator:02x}\t| 0x{self.x_register:02x}\t| 0x{self.y_register:02x}\t| 0x{self.stack_pointer:02x}\t| 0x{format_hex_data(self.program_counter)}")
         print("")
         print("Flags")
         print("NVxBDIZC")
@@ -2088,7 +2087,7 @@ class Cpu:
 
     def print_status_summary(self) :
         '''Debug print of status'''
-        opcode = instances.memory.read_rom(self.PC)
+        opcode = instances.memory.read_rom(self.program_counter)
         label = OPCODES[opcode][1]
         l = re.search(r'[0-9]+', label)
         if l:
@@ -2098,4 +2097,4 @@ class Cpu:
             else:
                 val = self.get_absolute_address()
                 label = label.replace(l.group(0), f"{format_hex_data(val)}")
-        print(f"Counter : {self.compteur:8}, SP : 0x{self.SP:02x}, PC : {format_hex_data(self.PC)} - fn_0x{opcode:02x} - {label:14}, A = {self.A:2x}, X = {self.X:2x}, Y = {self.Y:2x}, Flags NVxBDIZC : {self.getP():08b}")
+        print(f"Counter : {self.compteur:8}, SP : 0x{self.stack_pointer:02x}, PC : {format_hex_data(self.program_counter)} - fn_0x{opcode:02x} - {label:14}, A = {self.accumulator:2x}, X = {self.x_register:2x}, Y = {self.y_register:2x}, Flags NVxBDIZC : {self.getP():08b}")
