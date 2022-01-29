@@ -21,7 +21,6 @@ class Mapper0:
 
     def read_prg_rom(self, address):
         '''Read PRG ROM from cartridge'''
-        print(f"{address:x} : {instances.cartridge.prg_rom[address]:x}")
         return instances.cartridge.prg_rom[address]
 
     def read_chr_rom(self, address):

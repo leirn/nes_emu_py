@@ -157,12 +157,12 @@ class Ppu:
 
     def read_0x2007(self):
         '''Read PPU internal register at 0x2007 memory address'''
-        return self.read_ppu_memory(self.ppuaddr)
+        value =  self.read_ppu_memory(self.ppuaddr)
         self.read_or_write_0x2007()
+        return value
 
     def write_0x2007(self, value):
         '''Write PPU internal register at 0x2007 memory address'''
-        print(f"PPUADDR : {self.ppuaddr:x}")
         self.write_ppu_memory(self.ppuaddr, value)
         self.read_or_write_0x2007()
 
@@ -266,7 +266,7 @@ class Ppu:
             # TODO : Implement 0,0 cycle skipped on odd frame
 
         #if instances.debug == 1:
-        print(f"(Line, col) = ({self.line}, {self.col}), v = {self.register_v:x}, t = {self.register_t:x}")
+        #print(f"(Line, col) = ({self.line}, {self.col}), v = {self.register_v:x}, t = {self.register_t:x}")
 
         return (self.col, self.line) == (0, 0)
 
@@ -401,39 +401,42 @@ class Ppu:
             '''Compute the pixel to be displayed in current coordinates'''
             fine_x = instances.ppu.col % 8
 
-            palette = []
-            palette.append((0, 0, 0, 0))
-            palette.append(PALETTE[0x23])
-            palette.append(PALETTE[0x27])
-            palette.append(PALETTE[0x30])
-
             bit1 = (self.bg_low_byte_table_register[0] >> (7-fine_x)) & 1
             bit2 = (self.bg_high_byte_table_register[0] >> (7-fine_x)) & 1
-            color_code = bit1 | (bit2 << 1)
+            bg_color_code = bit1 | (bit2 << 1)
 
-            print(f"Low byte : {self.bg_low_byte_table_register[0]:x}, high byte : {self.bg_high_byte_table_register[0]:x}, color code : {color_code:x}")
+            #print(f"Low byte : {self.bg_low_byte_table_register[0]:x}, high byte : {self.bg_high_byte_table_register[0]:x}, color code : {bg_color_code:x}")
 
 
-            print(len(self.bg_high_byte_table_register))
-
+            #print(len(self.bg_high_byte_table_register))
+            sprite_color_code = 0
             #if self.bg_low_byte_table_register[0] != 0 or self.bg_high_byte_table_register[0] != 0: time.sleep(5)
-
-            return palette[color_code]
+            return self.multiplexer_decision(bg_color_code, sprite_color_code, 1)
+            #return palette[color_code]
 
         def multiplexer_decision(self, bg_pixel, sprite_pixel, priority):
             '''Implement PPU Priority Multiplexer decision table'''
-            bg_transparent_color = 0
-            bg_color = 0
-            sprite_color = 0
+            '''Dummy palette'''
+            bg_palette = []
+            bg_palette.append(PALETTE[instances.ppu.read_ppu_memory(0x3f00)])
+            bg_palette.append(PALETTE[0x13])
+            bg_palette.append(PALETTE[0x17])
+            bg_palette.append(PALETTE[0x20])
+            sprite_palette = []
+            sprite_palette.append((0, 0, 0, 0))
+            sprite_palette.append(PALETTE[0x23])
+            sprite_palette.append(PALETTE[0x27])
+            sprite_palette.append(PALETTE[0x30])
+
             if bg_pixel == 0 and sprite_pixel == 0:
-                return bg_transparent_color
+                return bg_palette[0]
             if bg_pixel == 0 and sprite_pixel > 0:
-                return sprite_color
+                return sprite_palette[sprite_pixel]
             if sprite_pixel == 0:
-                return bg_color
+                return bg_palette[bg_pixel]
             if priority == 0:
-                return sprite_color
-            return bg_color
+                return sprite_palette[sprite_pixel]
+            return bg_palette[bg_pixel]
 
         def shift_registers(self):
             '''Shift registers every 8 cycles'''

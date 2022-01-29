@@ -1,5 +1,5 @@
 def init():
-    global ppu, cpu, memory, cartridge, apu, nes
+    global ppu, cpu, memory, cartridge, apu, nes, debug
     ppu = 0
     cpu = 0
     memory = 0
