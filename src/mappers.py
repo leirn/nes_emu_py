@@ -24,9 +24,17 @@ class Mapper0:
         '''Read PRG ROM from cartridge'''
         return instances.cartridge.prg_rom[address]
 
+    def write_prg_rom(self, address, value):
+        '''Write PRG ROM from cartridge. Not implemented in mapper 0'''
+        raise Exception("Mapper 0 doesn't allow to write on PRG ROM")
+
     def read_chr_rom(self, address):
-        '''Read ROM from cartridge. Task will be delegate to mapper'''
+        '''Read ROM from cartridge.'''
         return instances.cartridge.chr_rom[address]
+
+    def write_chr_rom(self, address, value):
+        '''Write CHR ROM from cartridge. Not implemented in mapper 0'''
+        raise Exception("Mapper 0 doesn't allow to write on CHR ROM")
 
     def read_ram(self, address):
         '''Read ROM from cartridge. Task will be delegate to mapper'''

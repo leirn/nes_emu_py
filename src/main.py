@@ -14,6 +14,7 @@ from apu import Apu
 from memory import Memory
 from cartridge import Cartridge
 import instances
+import debug
 
 arguments = sys.argv[1:]
 
@@ -40,7 +41,7 @@ instances.cartridge = Cartridge()
 instances.nes = NesEmulator()
 instances.cartridge.parse_rom(args[0])
 
-instances.ppu.dump_chr()
+debug.dump_chr()
 
 if options.test_file:
     instances.nes.set_test_mode(open(options.test_file, 'r'))

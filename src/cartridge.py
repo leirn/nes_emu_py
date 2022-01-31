@@ -46,9 +46,17 @@ class Cartridge:
         '''Read ROM from cartridge. Task will be delegated to mapper'''
         return self.mapper.read_prg_rom(address)
 
+    def write_prg_rom(self, address, value):
+        '''Write ROM from cartridge. Usefull for some mappers. Task will be delegated to mapper'''
+        return self.mapper.write_prg_rom(address, value)
+
     def read_chr_rom(self, address):
-        '''Read ROM from cartridge. Task will be delegated to mapper'''
+        '''Read CHR ROM from cartridge. Task will be delegated to mapper'''
         return self.mapper.read_chr_rom(address)
+
+    def write_chr_rom(self, address, value):
+        '''Write CHR ROM from cartridge. Usefull for some mappers. Task will be delegated to mapper'''
+        return self.mapper.write_chr_rom(address, value)
 
     def read_ram(self, address):
         '''Read ROM from cartridge. Task will be delegated to mapper'''
