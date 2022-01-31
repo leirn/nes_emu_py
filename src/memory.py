@@ -1,17 +1,13 @@
 '''Memory manager and routing module'''
 import sys
 import instances
+import mappers
+import utils
 
 # Preventing direct execution
 if __name__ == '__main__':
     print("This module cannot be executed. Please use main.py")
     sys.exit()
-
-from cartridge import Cartridge
-from ppu import Ppu
-import mappers
-import utils
-
 
 class Memory:
     '''Handles all memory operations and serves as bus between components'''
@@ -36,7 +32,7 @@ class Memory:
         '''
         if address < 0x2000:
             return self.internal_ram[address % 0x800]
-        elif address < 0x3fff:
+        if address < 0x3fff:
             address = 0x2000 + (address % 8)
             match address:
                 #case 0x2000: Write only
@@ -47,7 +43,7 @@ class Memory:
                 #case 0x2005: Write only
                 #case 0x2006: Write only
                 case 0x2007: return instances.ppu.read_0x2007()
-        elif address < 0x4018:
+        if address < 0x4018:
             if address == 0x4016: # Handling joystick
                 if instances.debug : print(f"Joystick 1 read {self.ctrl1_status:b}")
                 value = self.ctrl1_status & 1
@@ -58,39 +54,39 @@ class Memory:
                 value = self.ctrl2_status & 1
                 self.ctrl2_status = self.ctrl2_status >> 1
                 return value
-        elif address < 0x4020:
-            '''Normally disabled'''
-        elif address < 0x6000:
-            '''Cartrige sapce, but what ?'''
-        elif address < 0x6000:
+        #if address < 0x4020:
+        #    '''Normally disabled'''
+        #if address < 0x6000:
+        #    '''Cartrige sapce, but what ?'''
+        if address < 0x6000:
             return instances.cartridge.read_ram(address - 0x6000)
-        else:
-            return instances.cartridge.read_prg_rom(address - 0x8000)
+        return instances.cartridge.read_prg_rom(address - 0x8000)
 
     # NES is Little Endian
     def read_rom_16_no_crossing_page(self, address):
         '''Read 16 bits values forbidding crossing pages'''
         high_address = (address & 0xFF00) +((address + 1) & 0xFF)
         if instances.debug : print(f"High address : {high_address:04x}, Low address : {address:04x}")
+        high, low = 0, 0
         if address > 0x7FFF:
             low = instances.cartridge.read_prg_rom(address - 0x8000)
             high = instances.cartridge.read_prg_rom(high_address - 0x8000) # So that reading never cross pages
-            return low + (high <<8)
+
         else:
             low = self.internal_ram[address]
             high = self.internal_ram[high_address] # So that reading never cross pages
-            return low + (high <<8)
+        return low + (high <<8)
 
     def read_rom_16(self, address):
         '''Read 16 bits values allowing crossing pages'''
+        high, low = 0, 0
         if address > 0x7FFF:
             low = instances.cartridge.mapper.read_prg_rom(address - 0x8000)
             high = instances.cartridge.mapper.read_prg_rom(address + 1 - 0x8000)
-            return low + (high <<8)
         else:
             low = self.internal_ram[address]
             high = self.internal_ram[address + 1] # So that reading never cross pages
-            return low + (high <<8)
+        return low + (high <<8)
 
 
     def write_rom(self, address, value):

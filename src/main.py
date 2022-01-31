@@ -1,3 +1,5 @@
+''' Main program entry module'''
+
 __description__ = 'YaNESEmu'
 __author__ = 'Laurent Vromman'
 __version__ = '0.0.0'
@@ -12,8 +14,6 @@ from apu import Apu
 from memory import Memory
 from cartridge import Cartridge
 import instances
-
-import cpu_opcodes
 
 arguments = sys.argv[1:]
 

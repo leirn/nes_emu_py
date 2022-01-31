@@ -142,8 +142,8 @@ class Ppu:
             self.register_w = 0
 
     def write_0x2006(self, value):
-        self.ppuaddr = ((self.ppuaddr << 8 ) + value ) & 0xffff
         '''Update PPU internal register when CPU write 0x2006 memory address'''
+        self.ppuaddr = ((self.ppuaddr << 8 ) + value ) & 0xffff
         if self.register_w == 0:
             self.register_t = (self.register_t & 0b000000011111111) | ((value & 0b00111111) << 8)
             self.register_w = 1
@@ -197,15 +197,15 @@ class Ppu:
             self.register_v += 0x1000
         else:
             self.register_v &= 0xfff                # Fine Y = 0
-            y = (self.register_v & 0x3e0 ) >> 5     # y = vert_v
-            if y == 29:
-                y = 0
+            coarse_y = (self.register_v & 0x3e0 ) >> 5     # coarse_y = vert_v
+            if coarse_y == 29:
+                coarse_y = 0
                 self.register_v ^= 0x800            # switch vertical nametable
-            elif y == 31:
-                y = 0
+            elif coarse_y == 31:
+                coarse_y = 0
             else:
-                y += 1
-            self.register_v = (self.register_v & 0b111110000011111) | (y << 5)
+                coarse_y += 1
+            self.register_v = (self.register_v & 0b111110000011111) | (coarse_y << 5)
 
     def copy_hor_t_to_hor_v(self):
         '''Copy hor part of t to v'''

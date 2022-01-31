@@ -6,7 +6,6 @@ import time
 import traceback
 import re
 import pygame
-from pygame.locals import *
 import instances
 import ppu
 import inputs
@@ -68,8 +67,8 @@ class NesEmulator:
                     is_frame |= instances.ppu.next()
                     is_frame |= instances.ppu.next()
                     is_frame |= instances.ppu.next()
-                except Exception as e:
-                    print(e)
+                except Exception as exception:
+                    print(exception)
                     self.print_status()
                     print(traceback.format_exc())
                     sys.exit()
@@ -176,21 +175,19 @@ class NesEmulator:
         ref_status = dict()
         ref_status['PC'] = int(reference[0:4], 16)
 
-        m = re.findall(r'A:(?P<A>[0-9A-Fa-f]{2}) X:(?P<X>[0-9A-Fa-f]{2}) Y:(?P<Y>[0-9A-Fa-f]{2}) P:(?P<P>[0-9A-Fa-f]{2}) SP:(?P<SP>[0-9A-Fa-f]{2})', reference)
-        ref_status['A']  = int(m[0][0], 16)
-        ref_status['X']  = int(m[0][1], 16)
-        ref_status['Y']  = int(m[0][2], 16)
-        ref_status['P']  = int(m[0][3], 16)
-        ref_status['SP'] = int(m[0][4], 16)
-        m = re.findall(r'CYC:(?P<A>[0-9A-Fa-f]+)', reference)
-        ref_status['CYC']  = int(m[0])
-        m = re.findall(r'PPU:[ ]*([0-9]+),[ ]*([0-9]+)', reference)
-        ref_status['PPU_LINE']  = int(m[0][0])
-        ref_status['PPU_COL']  = int(m[0][1])
+        match = re.findall(r'A:(?P<A>[0-9A-Fa-f]{2}) X:(?P<X>[0-9A-Fa-f]{2}) Y:(?P<Y>[0-9A-Fa-f]{2}) P:(?P<P>[0-9A-Fa-f]{2}) SP:(?P<SP>[0-9A-Fa-f]{2})', reference)
+        ref_status['A']  = int(match[0][0], 16)
+        ref_status['X']  = int(match[0][1], 16)
+        ref_status['Y']  = int(match[0][2], 16)
+        ref_status['P']  = int(match[0][3], 16)
+        ref_status['SP'] = int(match[0][4], 16)
+        match = re.findall(r'CYC:(?P<A>[0-9A-Fa-f]+)', reference)
+        ref_status['CYC']  = int(match[0])
+        match = re.findall(r'PPU:[ ]*([0-9]+),[ ]*([0-9]+)', reference)
+        ref_status['PPU_LINE']  = int(match[0][0])
+        ref_status['PPU_COL']  = int(match[0][1])
 
         for i in ["PC", "A", "X", "Y", "P", "SP"]: # On hold : CYC, PPU_LINE, PPU_COL
             if ref_status[i] != cpu_status[i] :
                 raise Exception(f"{i} Error : {cpu_status[i]} instead of {ref_status[i]}")
-
-        self.prev_opcode = opcode
         print("")
