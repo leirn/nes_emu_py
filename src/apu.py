@@ -46,11 +46,25 @@ class Apu:
         }
 
     def next(self):
-        "Execute next APU cycle"
+        '''Execute next APU cycle'''
         pass
 
     def read_register(self, register):
+        '''Read the register given as argument
+
+        Args:
+            Register address
+
+        Returns:
+            The value of the register
+        '''
         return self.registers[register]
 
     def write_register(self, register, value):
+        '''Write value in the given register
+
+        Args:
+            register -- the register address
+            value  -- the value to set in the register
+        '''
         self.registers[register] = value

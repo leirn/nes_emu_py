@@ -50,6 +50,7 @@ class Ppu:
         self.oamaddr = 0
         self.ppuscroll = 0
         self.ppuaddr = 0
+        self.ppudata = 0
         self.vram = bytearray(b'\0' * 0x2000)
         self.palette_vram =  bytearray(b'\0' *  0x20)
         #self.set_ppudata(0)
@@ -154,21 +155,27 @@ class Ppu:
 
     def read_0x2007(self):
         '''Read PPU internal register at 0x2007 memory address'''
-        value =  self.read_ppu_memory(self.ppuaddr)
+        if self.ppuaddr % 0x4000 < 0x3f00: # Delayed buffering requiring dummy read
+            value = self.ppudata
+            self.ppudata = self.read_ppu_memory(self.ppuaddr % 0x4000) # Address above 0x3fff are mirrored down
+        else :
+            self.ppudata = self.read_ppu_memory(self.ppuaddr % 0x4000) # Address above 0x3fff are mirrored down
+            value = self.ppudata
+
         self.read_or_write_0x2007()
+        self.ppuaddr += 1 if (self.ppuctrl >> 2) & 1 == 0 else 0x20
         return value
 
     def write_0x2007(self, value):
         '''Write PPU internal register at 0x2007 memory address'''
-        self.write_ppu_memory(self.ppuaddr, value)
+        self.write_ppu_memory(self.ppuaddr % 0x4000, value) # Address above 0x3fff are mirrored down
         self.read_or_write_0x2007()
+        self.ppuaddr += 1 if (self.ppuctrl >> 2) & 1 == 0 else 0x20
 
     def read_or_write_0x2007(self):
         '''Update PPU internal register when CPU read or write 0x2007 memory address'''
         if not self.is_rendering_enabled:
-            # TODO : checker en quoi c'est redondant. Pas sur
             self.register_v += 1 if (self.ppuctrl >> 2) & 1 == 0 else 0x20
-            self.ppudata += 1 if (self.ppuctrl >> 2) & 1 == 0 else 0x20
         else:
             self.inc_vert_v()
             self.inc_hor_v()
