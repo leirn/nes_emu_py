@@ -1,7 +1,17 @@
 '''Debugging tools'''
+from doctest import debug_script
 import pygame
 import instances
 from ppu import PALETTE
+
+ERROR = 1
+WARN = 2
+DEBUG = 4
+
+def log(class_name, level, message):
+    '''Print a log message depending on given parameters'''
+    if instances.debug :
+        print(message)
 
 def dump_chr():
     """ Display the tiles in CHR Memory. Useful for debugging."""

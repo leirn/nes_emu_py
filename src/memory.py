@@ -2,6 +2,7 @@
 import sys
 import instances
 import utils
+import debug
 
 # Preventing direct execution
 if __name__ == '__main__':
@@ -44,12 +45,12 @@ class Memory:
                 case 0x2007: return instances.ppu.read_0x2007()
         if address < 0x4018:
             if address == 0x4016: # Handling joystick
-                if instances.debug : print(f"Joystick 1 read {self.ctrl1_status:b}")
+                debug.log(self.__class__, debug.DEBUG, f"Joystick 1 read {self.ctrl1_status:b}")
                 value = self.ctrl1_status & 1
                 self.ctrl1_status = self.ctrl1_status >> 1
                 return value
             if address == 0x4017: # Handling joystick
-                if instances.debug : print(f"Joystick 2 read {self.ctrl2_status:b}")
+                debug.log(self.__class__, debug.DEBUG, f"Joystick 2 read {self.ctrl1_status:b}")
                 value = self.ctrl2_status & 1
                 self.ctrl2_status = self.ctrl2_status >> 1
                 return value
@@ -67,7 +68,7 @@ class Memory:
     def read_rom_16_no_crossing_page(self, address):
         '''Read 16 bits values forbidding crossing pages'''
         high_address = (address & 0xFF00) +((address + 1) & 0xFF)
-        if instances.debug : print(f"High address : {high_address:04x}, Low address : {address:04x}")
+        debug.log(self.__class__, debug.DEBUG, f"High address : {high_address:04x}, Low address : {address:04x}")
         high, low = 0, 0
         if address > 0x7FFF:
             low = instances.cartridge.read_prg_rom(address - 0x8000)
@@ -119,10 +120,10 @@ class Memory:
                 value = value << 8
                 instances.ppu.write_oamdma(bytearray(self.internal_ram[value:value + 0x100]))
                 return 514
-            elif address == 0x4016: # Handling joystick
-                if instances.debug : print(f"Joystick write {value:b}")
+            if address == 0x4016: # Handling joystick
+                debug.log(self.__class__, debug.DEBUG, f"Joystick write {value:b}")
                 if value & 1 == 0:
-                    if instances.debug : print(f"Saved {instances.nes.ctrl1.status:b}")
+                    debug.log(self.__class__, debug.DEBUG, f"Saved {instances.nes.ctrl1.status:b}")
                     # store joypad value
                     self.ctrl1_status = instances.nes.ctrl1.status
                     self.ctrl2_status = instances.nes.ctrl2.status

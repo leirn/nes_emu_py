@@ -77,7 +77,8 @@ class NesEmulator:
                     print(traceback.format_exc())
                     sys.exit()
 
-                if self.test_mode == 1 and instances.cpu.remaining_cycles == 0: self.check_test(instances.cpu.get_cpu_status())
+                if self.test_mode == 1 and instances.cpu.remaining_cycles == 0:
+                    self.check_test(instances.cpu.get_cpu_status())
 
                 if is_frame :
                     frame_count += 1
