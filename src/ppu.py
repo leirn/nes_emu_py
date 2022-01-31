@@ -241,22 +241,16 @@ class Ppu:
     def next(self):
         '''Next function that implement the almost exact PPU rendering workflow'''
 
-        self.next_sprite_evaluation()
-
-        #TODO : prepare for sprite fetching
+        #Pixel rendering
         if self.line < 240 or self.line == 261: # Normal line
             if self.col > 0 and self.col < 257:
                 if self.line < 240 and self.is_bg_rendering_enabled():
                     pixel_color = self.pixel_generator.compute_next_pixel()
                     instances.nes.display.fill(pixel_color, (((self.col - 1) * self.scale, self.line * self.scale), (self.scale,self.scale)))
-                self.load_tile_data()
-            if self.col == 257:
-                self.copy_hor_t_to_hor_v()
-            if self.col > 320 and self.col < 337:
-                self.load_tile_data()
 
-        if self.is_rendering_enabled and self.line == 261 and self.col > 279 and self.col < 305 :
-            self.copy_vert_t_to_vert_v()
+            # Nothing happens during Vblank
+            self.next_background_evaluation()
+            self.next_sprite_evaluation()
 
         if (self.col, self.line) == (1, 241):
             pygame.display.flip()
@@ -275,10 +269,20 @@ class Ppu:
             self.line = (self.line + 1) % 262
             # TODO : Implement 0,0 cycle skipped on odd frame
 
-        #if instances.debug == 1:
-        #print(f"(Line, col) = ({self.line}, {self.col}), v = {self.register_v:x}, t = {self.register_t:x}")
-
         return (self.col, self.line) == (0, 0)
+
+    def next_background_evaluation(self):
+        '''Next pixel evaluation and '''
+        if self.line < 240 or self.line == 261: # Normal line
+            if self.col > 0 and self.col < 257:
+                self.load_tile_data()
+            if self.col == 257:
+                self.copy_hor_t_to_hor_v()
+            if self.col > 320 and self.col < 337:
+                self.load_tile_data()
+
+        if self.is_rendering_enabled and self.line == 261 and self.col > 279 and self.col < 305 :
+            self.copy_vert_t_to_vert_v()
 
     def load_tile_data(self):
         '''8 cycle operation to load next tile data'''
@@ -320,15 +324,15 @@ class Ppu:
             self.sprite_count = 0
             self.secondary_oam_pointer = 0
 
-        if self.sprite_count > 7:
+        if self.secondary_oam_pointer > 7:
             return # Maximum 8 sprites found per frame
 
-        if self.col > 64 and self.col < 256 and self.col%2 == 0:
+        if self.col > 64 and self.col < 256 and self.sprite_count < 64:
             '''During those cycles, sprites are actually evaluated'''
             #Fetch next sprite first byte (y coordinate)
             sprite_y_coordinate = self.primary_oam[4 * self.sprite_count]
             self.secondary_oam[self.secondary_oam_pointer * 4] = sprite_y_coordinate
-            if sprite_y_coordinate <= self.line and sprite_y_coordinate + 8 >= self.line:
+            if self.line in range(sprite_y_coordinate, sprite_y_coordinate + 8):
                 # Le sprite traverse la scanline, on le copy dans  le secondary oam
                 self.secondary_oam[self.secondary_oam_pointer * 4 + 1] = self.primary_oam[4 * self.sprite_count + 1]
                 self.secondary_oam[self.secondary_oam_pointer * 4 + 2] = self.primary_oam[4 * self.sprite_count + 2]
@@ -340,20 +344,16 @@ class Ppu:
             self.sprite_fetcher_count = 0
             self.pixel_generator.clear_sprite_registers()
 
-        if self.sprite_fetcher_count < self.sprite_count and self.col > 256 and self.col < 321:
+        if self.sprite_fetcher_count < self.secondary_oam_pointer and self.col > 256 and self.col < 321:
             '''During those cycles sprites are actually fetched for rendering in the next line'''
             match self.col % 8:
-                case 1: # Garbage NT fetch
-                    pass
-                case 3: # Garbage AT fetch
-                    pass
-                case 5: # Fetch sprite low byte
-                    y_coordinate    = self.secondary_oam_pointer[self.sprite_fetcher_count * 4 + 0]
-                    tile_address    = self.secondary_oam_pointer[self.sprite_fetcher_count * 4 + 1]
-                    attribute       = self.secondary_oam_pointer[self.sprite_fetcher_count * 4 + 2]
-                    x_coordinate    = self.secondary_oam_pointer[self.sprite_fetcher_count * 4 + 3]
+                case 7: # Fetch sprite low and high byte at the same time on 7 instead of spreading over 8 cycles
+                    y_coordinate    = self.secondary_oam[self.sprite_fetcher_count * 4 + 0]
+                    tile_address    = self.secondary_oam[self.sprite_fetcher_count * 4 + 1]
+                    attribute       = self.secondary_oam[self.sprite_fetcher_count * 4 + 2]
+                    x_coordinate    = self.secondary_oam[self.sprite_fetcher_count * 4 + 3]
 
-                    fine_y = y_coordinate - self.line
+                    fine_y = self.line - y_coordinate
 
                     # Flipping
                     flip_horizontally = (attribute >> 6) & 1
@@ -368,33 +368,17 @@ class Ppu:
                     chr_bank = ((self.ppuctrl >> 3) & 1) * 0x1000
                     low_sprite_tile_byte = self.read_ppu_memory(chr_bank + 16 * tile_address + fine_y + flipping_offset)
 
-
                     self.pixel_generator.sprite_attribute_table_register.append(attribute)
                     self.pixel_generator.sprite_x_coordinate_table_register.append(x_coordinate)
                     self.pixel_generator.sprite_low_byte_table_register.append(low_sprite_tile_byte)
 
-                case 7: # Fetch sprite high byte
-                    y_coordinate    = self.secondary_oam_pointer[self.sprite_fetcher_count * 4 + 0]
-                    tile_address    = self.secondary_oam_pointer[self.sprite_fetcher_count * 4 + 1]
-                    attribute       = self.secondary_oam_pointer[self.sprite_fetcher_count * 4 + 2]
-                    x_coordinate    = self.secondary_oam_pointer[self.sprite_fetcher_count * 4 + 3]
-
-                    fine_y = y_coordinate - self.line
-
-                    # Flipping
-                    flip_horizontally = (attribute >> 6) & 1
-                    flip_vertically = (attribute >> 7) & 1
-
                     flipping_offset = 8
                     if flip_vertically > 0:
                         flipping_offset = 0
-                    if flip_horizontally > 0:
-                        fine_y = 7 - fine_y
 
-                    chr_bank = ((self.ppuctrl >> 3) & 1) * 0x1000
                     high_sprite_tile_byte = self.read_ppu_memory(chr_bank + 16 * tile_address + fine_y + flipping_offset)
                     self.pixel_generator.sprite_high_byte_table_register.append(high_sprite_tile_byte)
-                case 0: # Incremente sprite counter ?
+
                     self.sprite_fetcher_count += 1
 
 
@@ -436,22 +420,26 @@ class Ppu:
         print(f"{self.ppuctrl:08b} | {self.ppumask:08b} | {self.ppustatus:08b} | {self.ppuaddr:04x}     | {self.oamaddr:02x}")
         print("OAM")
         utils.print_memory_page(self.primary_oam, 0)
+        print("Secondary OAM")
+        utils.print_memory_page(self.secondary_oam, 0)
         print("Palette")
         utils.print_memory_page(self.palette_vram)
         for i in range(6):
             print(f"VRAM Page {i}")
             utils.print_memory_page(self.vram, i, 0x2000)
         print("")
+        self.pixel_generator.print_status()
 
     class PixelGenerator:
         '''This class implement the PPU pixel path, which generate the current pixel'''
         def __init__(self, ppu):
             self.ppu = ppu
-            self.bg_palette_register = [0]
-            self.bg_low_byte_table_register = [0]
-            self.bg_high_byte_table_register = [0]
-            self.bg_attribute_table_register = [0]
-            self.bg_nt_table_register = [0]
+            # Start with two empty tiles
+            self.bg_palette_register = [0, 0]
+            self.bg_low_byte_table_register = [0, 0]
+            self.bg_high_byte_table_register = [0, 0]
+            self.bg_attribute_table_register = [0, 0]
+            self.bg_nt_table_register = [0, 0]
 
             self.sprite_low_byte_table_register = []
             self.sprite_high_byte_table_register = []
@@ -461,26 +449,14 @@ class Ppu:
         def compute_next_pixel(self):
             '''Compute the pixel to be displayed in current coordinates'''
 
-            fine_x = (instances.ppu.col - 1) % 8 + instances.ppu.register_x # Pixel 0 is outputed at col == 1
-
-<<<<<<< Updated upstream
-=======
-<<<<<<< Updated upstream
-=======
->>>>>>> Stashed changes
-
-            bg_color_code, bg_color_palette = self.compute_bg_pixel(fine_x)
-            sprite_color_code, sprite_color_palette, priority = self.compute_sprite_pixel(fine_x)
+            bg_color_code, bg_color_palette = self.compute_bg_pixel()
+            sprite_color_code, sprite_color_palette, priority = self.compute_sprite_pixel()
 
             return self.multiplexer_decision(bg_color_code, bg_color_palette, sprite_color_code, sprite_color_palette, priority)
 
-        def compute_bg_pixel(self, fine_x):
-<<<<<<< Updated upstream
-
-=======
+        def compute_bg_pixel(self):
             '''Compute the elements for the bg pixel'''
->>>>>>> Stashed changes
->>>>>>> Stashed changes
+            fine_x = (instances.ppu.col - 1) % 8 + instances.ppu.register_x # Pixel 0 is outputed at col == 1
             register_level = 0
             if fine_x > 7:
                 register_level += 1
@@ -501,62 +477,38 @@ class Ppu:
             bg_color_palette = (attribute >> shift) & 0b11
             return bg_color_code, bg_color_palette
 
-<<<<<<< Updated upstream
-        def compute_sprite_pixel(self, fine_x):
-=======
-<<<<<<< Updated upstream
-            sprite_color_code = 0
-            priority = 1
-=======
-        def compute_sprite_pixel(self, fine_x):
+        def compute_sprite_pixel(self):
             '''Compute the elements for the sprite pixel if there is one at that position'''
->>>>>>> Stashed changes
             for i in range(len(self.sprite_x_coordinate_table_register)):
                 sprite_x = self.sprite_x_coordinate_table_register[i]
-                if fine_x >= sprite_x and fine_x < sprite_x + 8:
-                    x_offset = fine_x - sprite_x
-                    bit1 = (self.bg_low_byte_table_register[i] >> (7-x_offset)) & 1
-                    bit2 = (self.bg_high_byte_table_register[i] >> (7-x_offset)) & 1
+                # TODO : instances.ppu.col must only wrok where no scrolling, use register_v instead ?
+                if instances.ppu.col >= sprite_x and instances.ppu.col < sprite_x + 8:
+                    x_offset = instances.ppu.col %8
+                    bit1 = (self.sprite_low_byte_table_register[i] >> (7-x_offset)) & 1
+                    bit2 = (self.sprite_high_byte_table_register[i] >> (7-x_offset)) & 1
                     sprite_color_code = bit1 | (bit2 << 1)
-<<<<<<< Updated upstream
-=======
->>>>>>> Stashed changes
->>>>>>> Stashed changes
 
                     attribute = self.sprite_attribute_table_register[i]
                     priority = (attribute >> 5) & 0x1
                     sprite_color_palette = attribute & 0b11
 
                     return sprite_color_code, sprite_color_palette, priority
-            return 0, 0, 1
-
+            return 0, 0, 1 # Means no sprite, transparente color
 
         def multiplexer_decision(self, bg_color_code, bg_color_palette, sprite_color_code, sprite_color_palette, priority):
             '''Implement PPU Priority Multiplexer decision table'''
-            '''Dummy palette'''
             bg_palette_address = bg_color_palette << 2
-            bg_palette = []
-            bg_palette.append(PALETTE[instances.ppu.palette_vram[0]])
-            bg_palette.append(PALETTE[instances.ppu.palette_vram[bg_palette_address + 1]])
-            bg_palette.append(PALETTE[instances.ppu.palette_vram[bg_palette_address + 2]])
-            bg_palette.append(PALETTE[instances.ppu.palette_vram[bg_palette_address + 3]])
-
             sprite_palette_address = sprite_color_palette << 2
-            sprite_palette = []
-            sprite_palette.append((0, 0, 0, 0)) # Unused since multiplexer always use BG when sprite_pixel == 0, but mandatory for correct indices
-            sprite_palette.append(PALETTE[instances.ppu.palette_vram[0x10 + sprite_palette_address + 1]])
-            sprite_palette.append(PALETTE[instances.ppu.palette_vram[0x10 + sprite_palette_address + 2]])
-            sprite_palette.append(PALETTE[instances.ppu.palette_vram[0x10 + sprite_palette_address + 3]])
 
             if bg_color_code == 0 and sprite_color_code == 0:
-                return bg_palette[0]
+                return PALETTE[instances.ppu.palette_vram[0]] # Palette BG Color
             if bg_color_code == 0 and sprite_color_code > 0:
-                return sprite_palette[sprite_color_code]
+                return PALETTE[instances.ppu.palette_vram[0x10 + sprite_palette_address + sprite_color_code]] # Sprite color > 0
             if sprite_color_code == 0:
-                return bg_palette[bg_color_code]
+                return PALETTE[instances.ppu.palette_vram[bg_palette_address + bg_color_code]] # bg color
             if priority == 0:
-                return sprite_palette[sprite_color_code]
-            return bg_palette[bg_color_code]
+                return PALETTE[instances.ppu.palette_vram[0x10 + sprite_palette_address + sprite_color_code]]
+            return PALETTE[instances.ppu.palette_vram[bg_palette_address + bg_color_code]] # bg color
 
         def shift_registers(self):
             '''Shift registers every 8 cycles'''
@@ -592,3 +544,6 @@ class Ppu:
         def set_high_bg_tile_byte(self, high_bg_tile_byte):
             '''Set high_bg_tile_byte into registers'''
             self.bg_high_byte_table_register.append(high_bg_tile_byte)
+
+        def print_status(self):
+            '''Print Pixel Generator current status'''
