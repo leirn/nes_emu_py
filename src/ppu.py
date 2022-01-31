@@ -413,14 +413,20 @@ class Ppu:
 
         def compute_next_pixel(self):
             '''Compute the pixel to be displayed in current coordinates'''
-            fine_x = instances.ppu.col % 8
+            fine_x = (instances.ppu.col - 1) % 8 + instances.ppu.register_x # Pixel 0 is outputed at col == 1
 
-            bit1 = (self.bg_low_byte_table_register[0] >> (7-fine_x)) & 1
-            bit2 = (self.bg_high_byte_table_register[0] >> (7-fine_x)) & 1
+            register_level = 0
+            if fine_x > 7:
+                register_level += 1
+                fine_x -= 8
+
+            bit1 = (self.bg_low_byte_table_register[register_level] >> (7-fine_x)) & 1
+            bit2 = (self.bg_high_byte_table_register[register_level] >> (7-fine_x)) & 1
             bg_color_code = bit1 | (bit2 << 1)
 
             sprite_color_code = 0
             priority = 1
+
             return self.multiplexer_decision(bg_color_code, sprite_color_code, priority)
 
         def multiplexer_decision(self, bg_pixel, sprite_pixel, priority):
