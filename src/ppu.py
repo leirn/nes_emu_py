@@ -30,6 +30,10 @@ class Ppu:
         self.register_w = 0 #  First or second write toggle, 1 bit
 
         self.primary_oam = bytearray(b'\0' * 0x100)
+        self.secondary_oam = bytearray(b'\0' * 0x40)
+        self.sprite_count = 0
+        self.sprite_fetcher_count = 0
+        self.secondary_oam_pointer = 0
 
         self.scale = 2
         self.col = 0
@@ -237,6 +241,8 @@ class Ppu:
     def next(self):
         '''Next function that implement the almost exact PPU rendering workflow'''
 
+        self.next_sprite_evaluation()
+
         #TODO : prepare for sprite fetching
         if self.line < 240 or self.line == 261: # Normal line
             if self.col > 0 and self.col < 257:
@@ -304,6 +310,93 @@ class Ppu:
                     self.inc_vert_v()
                 else:
                     self.inc_hor_v()
+
+    def next_sprite_evaluation(self):
+        '''Handle the sprite evaluation process'''
+        if self.col > 0 and self.col < 65:
+            '''During those cycles, Secondary OAM is clear on byte after another'''
+            self.secondary_oam[self.col - 1] = 0xff
+        if self.col == 64:
+            self.sprite_count = 0
+            self.secondary_oam_pointer = 0
+
+        if self.sprite_count > 7:
+            return # Maximum 8 sprites found per frame
+
+        if self.col > 64 and self.col < 256 and self.col%2 == 0:
+            '''During those cycles, sprites are actually evaluated'''
+            #Fetch next sprite first byte (y coordinate)
+            sprite_y_coordinate = self.primary_oam[4 * self.sprite_count]
+            self.secondary_oam[self.secondary_oam_pointer * 4] = sprite_y_coordinate
+            if sprite_y_coordinate <= self.line and sprite_y_coordinate + 8 >= self.line:
+                # Le sprite traverse la scanline, on le copy dans  le secondary oam
+                self.secondary_oam[self.secondary_oam_pointer * 4 + 1] = self.primary_oam[4 * self.sprite_count + 1]
+                self.secondary_oam[self.secondary_oam_pointer * 4 + 2] = self.primary_oam[4 * self.sprite_count + 2]
+                self.secondary_oam[self.secondary_oam_pointer * 4 + 3] = self.primary_oam[4 * self.sprite_count + 3]
+                self.secondary_oam_pointer += 1
+            self.sprite_count += 1
+
+        if self.col == 256:
+            self.sprite_fetcher_count = 0
+            self.pixel_generator.clear_sprite_registers()
+
+        if self.sprite_fetcher_count < self.sprite_count and self.col > 256 and self.col < 321:
+            '''During those cycles sprites are actually fetched for rendering in the next line'''
+            match self.col % 8:
+                case 1: # Garbage NT fetch
+                    pass
+                case 3: # Garbage AT fetch
+                    pass
+                case 5: # Fetch sprite low byte
+                    y_coordinate    = self.secondary_oam_pointer[self.sprite_fetcher_count * 4 + 0]
+                    tile_address    = self.secondary_oam_pointer[self.sprite_fetcher_count * 4 + 1]
+                    attribute       = self.secondary_oam_pointer[self.sprite_fetcher_count * 4 + 2]
+                    x_coordinate    = self.secondary_oam_pointer[self.sprite_fetcher_count * 4 + 3]
+
+                    fine_y = y_coordinate - self.line
+
+                    # Flipping
+                    flip_horizontally = (attribute >> 6) & 1
+                    flip_vertically = (attribute >> 7) & 1
+
+                    flipping_offset = 0
+                    if flip_vertically > 0:
+                        flipping_offset = 8
+                    if flip_horizontally > 0:
+                        fine_y = 7 - fine_y
+
+                    chr_bank = ((self.ppuctrl >> 3) & 1) * 0x1000
+                    low_sprite_tile_byte = self.read_ppu_memory(chr_bank + 16 * tile_address + fine_y + flipping_offset)
+
+
+                    self.pixel_generator.sprite_attribute_table_register.append(attribute)
+                    self.pixel_generator.sprite_x_coordinate_table_register.append(x_coordinate)
+                    self.pixel_generator.sprite_low_byte_table_register.append(low_sprite_tile_byte)
+
+                case 7: # Fetch sprite high byte
+                    y_coordinate    = self.secondary_oam_pointer[self.sprite_fetcher_count * 4 + 0]
+                    tile_address    = self.secondary_oam_pointer[self.sprite_fetcher_count * 4 + 1]
+                    attribute       = self.secondary_oam_pointer[self.sprite_fetcher_count * 4 + 2]
+                    x_coordinate    = self.secondary_oam_pointer[self.sprite_fetcher_count * 4 + 3]
+
+                    fine_y = y_coordinate - self.line
+
+                    # Flipping
+                    flip_horizontally = (attribute >> 6) & 1
+                    flip_vertically = (attribute >> 7) & 1
+
+                    flipping_offset = 8
+                    if flip_vertically > 0:
+                        flipping_offset = 0
+                    if flip_horizontally > 0:
+                        fine_y = 7 - fine_y
+
+                    chr_bank = ((self.ppuctrl >> 3) & 1) * 0x1000
+                    high_sprite_tile_byte = self.read_ppu_memory(chr_bank + 16 * tile_address + fine_y + flipping_offset)
+                    self.pixel_generator.sprite_high_byte_table_register.append(high_sprite_tile_byte)
+                case 0: # Incremente sprite counter ?
+                    self.sprite_fetcher_count += 1
+
 
     # https://wiki.nesdev.org/w/index.php?title=PPU_registers
     # https://bugzmanov.github.io/nes_ebook/chapter_6_4.html
@@ -409,9 +502,23 @@ class Ppu:
             self.bg_attribute_table_register = [0]
             self.bg_nt_table_register = [0]
 
+            self.sprite_low_byte_table_register = []
+            self.sprite_high_byte_table_register = []
+            self.sprite_attribute_table_register = []
+            self.sprite_x_coordinate_table_register = []
+
         def compute_next_pixel(self):
             '''Compute the pixel to be displayed in current coordinates'''
+
             fine_x = (instances.ppu.col - 1) % 8 + instances.ppu.register_x # Pixel 0 is outputed at col == 1
+
+
+            bg_color_code, bg_color_palette = self.compute_bg_pixel(fine_x)
+            sprite_color_code, sprite_color_palette, priority = self.compute_sprite_pixel(fine_x)
+
+            return self.multiplexer_decision(bg_color_code, bg_color_palette, sprite_color_code, sprite_color_palette, priority)
+
+        def compute_bg_pixel(self, fine_x):
 
             register_level = 0
             if fine_x > 7:
@@ -431,13 +538,26 @@ class Ppu:
             # Compute which zone to select in the attribute byte
             shift = ((1 if shift_x % 32 > 15 else 0) + (2 if shift_y % 32 > 15 else 0)) * 2
             bg_color_palette = (attribute >> shift) & 0b11
+            return bg_color_code, bg_color_palette
 
-            sprite_color_code = 0
-            priority = 1
+        def compute_sprite_pixel(self, fine_x):
+            for i in range(len(self.sprite_x_coordinate_table_register)):
+                sprite_x = self.sprite_x_coordinate_table_register[i]
+                if fine_x >= sprite_x and fine_x < sprite_x + 8:
+                    x_offset = fine_x - sprite_x
+                    bit1 = (self.bg_low_byte_table_register[i] >> (7-x_offset)) & 1
+                    bit2 = (self.bg_high_byte_table_register[i] >> (7-x_offset)) & 1
+                    sprite_color_code = bit1 | (bit2 << 1)
 
-            return self.multiplexer_decision(bg_color_code, bg_color_palette, sprite_color_code, priority)
+                    attribute = self.sprite_attribute_table_register[i]
+                    priority = (attribute >> 5) & 0x1
+                    sprite_color_palette = attribute & 0b11
 
-        def multiplexer_decision(self, bg_color_code, bg_color_palette, sprite_pixel, priority):
+                    return sprite_color_code, sprite_color_palette, priority
+            return 0, 0, 1
+
+
+        def multiplexer_decision(self, bg_color_code, bg_color_palette, sprite_color_code, sprite_color_palette, priority):
             '''Implement PPU Priority Multiplexer decision table'''
             '''Dummy palette'''
             bg_palette_address = bg_color_palette << 2
@@ -447,20 +567,21 @@ class Ppu:
             bg_palette.append(PALETTE[instances.ppu.palette_vram[bg_palette_address + 2]])
             bg_palette.append(PALETTE[instances.ppu.palette_vram[bg_palette_address + 3]])
 
+            sprite_palette_address = sprite_color_palette << 2
             sprite_palette = []
             sprite_palette.append((0, 0, 0, 0)) # Unused since multiplexer always use BG when sprite_pixel == 0, but mandatory for correct indices
-            sprite_palette.append(PALETTE[0x23])
-            sprite_palette.append(PALETTE[0x27])
-            sprite_palette.append(PALETTE[0x30])
+            sprite_palette.append(PALETTE[instances.ppu.palette_vram[0x10 + sprite_palette_address + 1]])
+            sprite_palette.append(PALETTE[instances.ppu.palette_vram[0x10 + sprite_palette_address + 2]])
+            sprite_palette.append(PALETTE[instances.ppu.palette_vram[0x10 + sprite_palette_address + 3]])
 
-            if bg_color_code == 0 and sprite_pixel == 0:
+            if bg_color_code == 0 and sprite_color_code == 0:
                 return bg_palette[0]
-            if bg_color_code == 0 and sprite_pixel > 0:
-                return sprite_palette[sprite_pixel]
-            if sprite_pixel == 0:
+            if bg_color_code == 0 and sprite_color_code > 0:
+                return sprite_palette[sprite_color_code]
+            if sprite_color_code == 0:
                 return bg_palette[bg_color_code]
             if priority == 0:
-                return sprite_palette[sprite_pixel]
+                return sprite_palette[sprite_color_code]
             return bg_palette[bg_color_code]
 
         def shift_registers(self):
@@ -474,6 +595,13 @@ class Ppu:
             self.bg_nt_table_register.pop(0)
             #except:
             #    pass
+
+        def clear_sprite_registers(self):
+            '''Reset the sprite registers'''
+            self.sprite_low_byte_table_register = []
+            self.sprite_high_byte_table_register = []
+            self.sprite_attribute_table_register = []
+            self.sprite_x_coordinate_table_register = []
 
         def set_nt_byte(self, nt_byte):
             '''Set nt_byte into registers'''
