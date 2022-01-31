@@ -26,7 +26,7 @@ class Ppu:
 
         self.register_v = 0 #  Current VRAM address, 15 bits
         self.register_t = 0 #  Temporary VRAM address, 15 bits. Can be thought of as address of top left onscreen tile
-        self.register_x = 0 #  File X Scroll, 3 bits
+        self.register_x = 0 #  Fine X Scroll, 3 bits
         self.register_w = 0 #  First or second write toggle, 1 bit
 
         self.primary_oam = bytearray(b'\0' * 0x100)
@@ -421,11 +421,14 @@ class Ppu:
             '''Dummy palette'''
             bg_palette = []
             bg_palette.append(PALETTE[instances.ppu.read_ppu_memory(0x3f00)])
+
+            # Todo : use attribute to find right BG palette
             bg_palette.append(PALETTE[0x13])
             bg_palette.append(PALETTE[0x17])
             bg_palette.append(PALETTE[0x20])
+
             sprite_palette = []
-            sprite_palette.append((0, 0, 0, 0))
+            sprite_palette.append((0, 0, 0, 0)) # Unused since multiplexer always use BG when sprite_pixel == 0, but mandatory for correct indices
             sprite_palette.append(PALETTE[0x23])
             sprite_palette.append(PALETTE[0x27])
             sprite_palette.append(PALETTE[0x30])

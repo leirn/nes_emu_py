@@ -87,7 +87,7 @@ class Cpu:
         '''
         self.push(self.program_counter >> 8)
         self.push(self.program_counter & 255)
-        self.push(self.getP())
+        self.push(self.get_status_register())
 
         self.interrupt = 0
 
@@ -134,31 +134,31 @@ class Cpu:
         status["A"] = self.accumulator
         status["X"] = self.x_register
         status["Y"] = self.y_register
-        status["P"] = self.getP()
+        status["P"] = self.get_status_register()
         status["CYC"] = self.total_cycles
         status["PPU_LINE"] = instances.ppu.line
         status["PPU_COL"] = instances.ppu.col
         return status
 
-    def getP(self):
+    def get_status_register(self):
         '''Returns the P register which contains the flag status.
 
         Bit 5 is always set to 1
         '''
         return (self.negative << 7) | (self.overflow << 6) | (1 << 5) | (self.break_flag << 4) | (self.decimal << 3) | (self.interrupt << 2) | (self.zero << 1) | self.carry
 
-    def setP(self, p):
+    def set_status_register(self, status_register):
         '''Set the P register which contains the flag status.
 
         When setting the P Register, the break flag is not set.
         '''
-        self.carry = p & 1
-        self.zero = (p >> 1) & 1
-        self.interrupt = (p >> 2) & 1
-        self.decimal = (p >> 3) & 1
-        #self.flagB = (p >> 4) & 1
-        self.overflow = (p >> 6) & 1
-        self.negative = (p >> 7) & 1
+        self.carry = status_register & 1
+        self.zero = (status_register >> 1) & 1
+        self.interrupt = (status_register >> 2) & 1
+        self.decimal = (status_register >> 3) & 1
+        #self.flagB = (status_register >> 4) & 1
+        self.overflow = (status_register >> 6) & 1
+        self.negative = (status_register >> 7) & 1
 
     def push(self, val):
         '''Push value into stack'''
@@ -187,7 +187,7 @@ class Cpu:
         address= self.get_immediate()
         return instances.memory.read_rom(address)
 
-    def set_zero_page_X(self, val):
+    def set_zero_page_x(self, val):
         '''Write val into Zero Page memory. Address is given as opcode 1-byte argument and X register'''
         instances.memory.write_rom(self.get_zero_page_x_address(), val)
 
@@ -200,7 +200,7 @@ class Cpu:
         address = self.get_zero_page_x_address()
         return instances.memory.read_rom(address)
 
-    def set_zero_pageY(self, val):
+    def set_zero_page_y(self, val):
         '''Write val into Zero Page memory. Address is given as opcode 1-byte argument and Y register'''
         instances.memory.write_rom(self.get_zero_page_y_address(), val)
 
@@ -261,17 +261,21 @@ class Cpu:
         return instances.memory.read_rom(address)
 
     def get_indirect_x_address(self):
+        '''Get indirect address given as opcode 2-byte argument and X register'''
         address = self.get_zero_page_x_address()
         return instances.memory.read_rom_16_no_crossing_page(address)
 
     def get_indirect_x_value(self):
+        '''Get val from memory. Indirect address is given as opcode 2-byte argument and X register'''
         address = self.get_indirect_x_address()
         return instances.memory.read_rom(address)
 
     def set_indirect_x(self, val):
+        '''Write val into memory. Indirect address is given as opcode 2-byte argument and X register'''
         instances.memory.write_rom(self.get_indirect_x_address(), val)
 
     def get_indirect_y_address(self):
+        '''Get indirect address given as opcode 2-byte argument and Y register'''
         address = self.get_zero_page_address()
         target_address = 0xFFFF & (instances.memory.read_rom_16_no_crossing_page(address )+ self.y_register)
         if  address & 0xFF00 != target_address & 0xFF00:
@@ -279,10 +283,12 @@ class Cpu:
         return target_address
 
     def get_indirect_y_value(self):
+        '''Get val from memory. Indirect address is given as opcode 2-byte argument and Y register'''
         address = self.get_indirect_y_address()
         return instances.memory.read_rom(address)
 
     def set_indirect_y(self, val):
+        '''Write val into memory. Indirect address is given as opcode 2-byte argument and Y register'''
         instances.memory.write_rom(self.get_indirect_y_address(), val)
 
     def set_flags_nz(self, val):
@@ -422,7 +428,7 @@ class Cpu:
         value = self.get_zero_page_x_value()
         self.carry = value >> 7
         value = (value << 1) & 0b11111111
-        self.set_zero_page_X(value)
+        self.set_zero_page_x(value)
         self.set_flags_nz(value)
         return (2, 6)
 
@@ -533,8 +539,8 @@ class Cpu:
                 self.additional_cycle = 1
         return (2, 2)
 
-        '''Function call for BNE #$xx. Relative'''
     def fn_0xd0(self) :
+        '''Function call for BNE #$xx. Relative'''
         old_pc = self.program_counter + 2
         unsigned = self.get_immediate()
         signed = unsigned - 256 if unsigned > 127 else unsigned
@@ -564,7 +570,7 @@ class Cpu:
         self.program_counter += 1
         self.push(self.program_counter >> 8)
         self.push(self.program_counter & 255)
-        self.push(self.getP())
+        self.push(self.get_status_register())
         self.program_counter = instances.memory.read_rom_16(0xFFFE)
         return (0, 7)
 
@@ -680,7 +686,7 @@ class Cpu:
         '''Function call for DEC $xx, X. Zero Page, X'''
         value = self.get_zero_page_x_value()
         value = 255 if value == 0 else value - 1
-        self.set_zero_page_X(value)
+        self.set_zero_page_x(value)
         self.set_flags_nz(value)
         return (2, 6)
 
@@ -712,7 +718,7 @@ class Cpu:
         '''Function call for DCP $xx, X. Zero Page, X'''
         value = self.get_zero_page_x_value()
         value = 255 if value == 0 else value - 1
-        self.set_zero_page_X(value)
+        self.set_zero_page_x(value)
         self.cmp(self.accumulator, value)
         return (2, 6)
 
@@ -768,7 +774,7 @@ class Cpu:
         '''Function call for ESC $xx, X. Zero Page, X'''
         value = self.get_zero_page_x_value()
         value = 0 if value == 255 else value + 1
-        self.set_zero_page_X(value)
+        self.set_zero_page_x(value)
         self.sbc(value)
         return (2, 6)
 
@@ -928,7 +934,7 @@ class Cpu:
         '''Function call for INC $xx, X. Zero Page, X'''
         value = self.get_zero_page_x_value()
         value = 0 if value == 255 else value + 1
-        self.set_zero_page_X(value)
+        self.set_zero_page_x(value)
         self.set_flags_nz(value)
         return (2, 6)
 
@@ -1104,7 +1110,7 @@ class Cpu:
         value = self.get_zero_page_x_value()
         self.carry = value & 1
         value = value >> 1
-        self.set_zero_page_X(value)
+        self.set_zero_page_x(value)
         self.set_flags_nz(value)
         return (2, 6)
 
@@ -1752,7 +1758,7 @@ class Cpu:
         val = (val << 1) | (self.carry)
         self.carry = val >> 8
         val &= 255
-        self.set_zero_page_X(val)
+        self.set_zero_page_x(val)
         self.set_flags_nz(val)
         return (2, 6)
 
@@ -1800,7 +1806,7 @@ class Cpu:
         carry = val & 1
         val = (val >> 1) | (self.carry << 7)
         self.carry = carry
-        self.set_zero_page_X(val)
+        self.set_zero_page_x(val)
         self.set_flags_nz(val)
         return (2, 6)
 
@@ -1826,7 +1832,7 @@ class Cpu:
 
     def fn_0x40(self) :
         '''Function call for RTI. Implied'''
-        self.setP(self.pop())
+        self.set_status_register(self.pop())
         low = self.pop()
         high = self.pop()
         self.program_counter = (high << 8) + low
@@ -1960,14 +1966,14 @@ class Cpu:
     def fn_0x08(self) :
         '''Function call for PHP. Implied'''
         # create status byte
-        p = self.getP() | (1 << 4)
-        self.push(p)
+        status_register = self.get_status_register() | (1 << 4)
+        self.push(status_register)
         return (1, 3)
 
     def fn_0x28(self) :
         '''Function call for PLP. Implied'''
-        p = self.pop()
-        self.setP(p)
+        status_register = self.pop()
+        self.set_status_register(status_register)
         return (1, 4)
 
     def fn_0x86(self) :
@@ -2057,7 +2063,7 @@ class Cpu:
     def fn_0x97(self) :
         '''Function call for SAX $xx, Y. Zero Page, Y'''
         val = self.accumulator & self.x_register
-        self.set_zero_pageY(val)
+        self.set_zero_page_y(val)
         return (2, 4)
 
     def fn_0x8f(self) :
@@ -2082,7 +2088,7 @@ class Cpu:
         print("")
         print("Flags")
         print("NVxBDIZC")
-        print(f"{self.getP():08b}")
+        print(f"{self.get_status_register():08b}")
         print("")
 
     def print_status_summary(self) :
@@ -2097,4 +2103,4 @@ class Cpu:
             else:
                 val = self.get_absolute_address()
                 label = label.replace(l.group(0), f"{format_hex_data(val)}")
-        print(f"Counter : {self.compteur:8}, SP : 0x{self.stack_pointer:02x}, PC : {format_hex_data(self.program_counter)} - fn_0x{opcode:02x} - {label:14}, A = {self.accumulator:2x}, X = {self.x_register:2x}, Y = {self.y_register:2x}, Flags NVxBDIZC : {self.getP():08b}")
+        print(f"Counter : {self.compteur:8}, SP : 0x{self.stack_pointer:02x}, PC : {format_hex_data(self.program_counter)} - fn_0x{opcode:02x} - {label:14}, A = {self.accumulator:2x}, X = {self.x_register:2x}, Y = {self.y_register:2x}, Flags NVxBDIZC : {self.get_status_register():08b}")

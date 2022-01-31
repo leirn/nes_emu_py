@@ -21,4 +21,4 @@ jobs:
         pip install pygame
     - name: Analysing the code with pylint
       run: |
-        pylint $(git ls-files '*.py') --disable=duplicate-code --disable=line-too-long --extension-pkg-whitelist=pygame
+        pylint $(git ls-files '*.py') --disable=duplicate-code --disable=line-too-long --disable=no-member --extension-pkg-whitelist=pygame
