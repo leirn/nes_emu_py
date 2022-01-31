@@ -285,14 +285,12 @@ class Ppu:
             case 3: #read AT Byte for N+2 tile
                 attribute_address = 0x23c0 | (self.register_v & 0xC00) | ((self.register_v >> 4) & 0x38) | ((self.register_v >> 2) & 0x07)
                 at_byte = self.read_ppu_memory(attribute_address)
-                #if at_byte > 0 : time.sleep(3)
                 self.pixel_generator.set_at_byte(at_byte)
             case 5: #read low BG Tile Byte for N+2 tile
                 chr_bank = ((self.ppuctrl >> 4) & 1) * 0x1000
                 fine_y = self.register_v >> 12
                 tile_address = self.pixel_generator.bg_nt_table_register[-1]
                 low_bg_tile_byte = self.read_ppu_memory(chr_bank + 16 * tile_address + fine_y)
-                #if self.pixel_generator.bg_nt_table_register[-1] > 0 : time.sleep(3)
                 self.pixel_generator.set_low_bg_tile_byte(low_bg_tile_byte)
             case 7: #read high BG Tile Byte for N+2 tile
                 chr_bank = ((self.ppuctrl >> 4) & 1) * 0x1000
@@ -424,21 +422,30 @@ class Ppu:
             bit2 = (self.bg_high_byte_table_register[register_level] >> (7-fine_x)) & 1
             bg_color_code = bit1 | (bit2 << 1)
 
+            attribute = self.bg_attribute_table_register[register_level]
+
+            #la position réelle x et y dépendent du coin en haut à gauche défini par register_t + fine x ou y  + la position réelle sur l'écran
+            shift_x = (instances.ppu.register_t & 0x1f) + (instances.ppu.col - 1) + instances.ppu.register_x
+            shift_y = ((instances.ppu.register_t & 0x3e0) >> 5) + instances.ppu.line + ((instances.ppu.register_t & 0x7000) >> 12)
+
+            # Compute which zone to select in the attribute byte
+            shift = ((1 if shift_x % 32 > 15 else 0) + (2 if shift_y % 32 > 15 else 0)) * 2
+            bg_color_palette = (attribute >> shift) & 0b11
+
             sprite_color_code = 0
             priority = 1
 
-            return self.multiplexer_decision(bg_color_code, sprite_color_code, priority)
+            return self.multiplexer_decision(bg_color_code, bg_color_palette, sprite_color_code, priority)
 
-        def multiplexer_decision(self, bg_pixel, sprite_pixel, priority):
+        def multiplexer_decision(self, bg_color_code, bg_color_palette, sprite_pixel, priority):
             '''Implement PPU Priority Multiplexer decision table'''
             '''Dummy palette'''
+            bg_palette_address = bg_color_palette << 2
             bg_palette = []
-            bg_palette.append(PALETTE[instances.ppu.read_ppu_memory(0x3f00)])
-
-            # Todo : use attribute to find right BG palette
-            bg_palette.append(PALETTE[0x13])
-            bg_palette.append(PALETTE[0x17])
-            bg_palette.append(PALETTE[0x20])
+            bg_palette.append(PALETTE[instances.ppu.palette_vram[0]])
+            bg_palette.append(PALETTE[instances.ppu.palette_vram[bg_palette_address + 1]])
+            bg_palette.append(PALETTE[instances.ppu.palette_vram[bg_palette_address + 2]])
+            bg_palette.append(PALETTE[instances.ppu.palette_vram[bg_palette_address + 3]])
 
             sprite_palette = []
             sprite_palette.append((0, 0, 0, 0)) # Unused since multiplexer always use BG when sprite_pixel == 0, but mandatory for correct indices
@@ -446,15 +453,15 @@ class Ppu:
             sprite_palette.append(PALETTE[0x27])
             sprite_palette.append(PALETTE[0x30])
 
-            if bg_pixel == 0 and sprite_pixel == 0:
+            if bg_color_code == 0 and sprite_pixel == 0:
                 return bg_palette[0]
-            if bg_pixel == 0 and sprite_pixel > 0:
+            if bg_color_code == 0 and sprite_pixel > 0:
                 return sprite_palette[sprite_pixel]
             if sprite_pixel == 0:
-                return bg_palette[bg_pixel]
+                return bg_palette[bg_color_code]
             if priority == 0:
                 return sprite_palette[sprite_pixel]
-            return bg_palette[bg_pixel]
+            return bg_palette[bg_color_code]
 
         def shift_registers(self):
             '''Shift registers every 8 cycles'''
