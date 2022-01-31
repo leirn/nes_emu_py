@@ -426,55 +426,6 @@ class Ppu:
         '''Clear sprite overflow bit in ppustatus register'''
         self.ppustatus &= 0b11011111
 
-    def dump_chr(self):
-        """ Display the tiles in CHR Memory. Useful for debugging."""
-        print(len(instances.cartridge.chr_rom)/16)
-        x_pos = 2
-        y_pos = 2
-        for counter in range(len(instances.cartridge.chr_rom)//16):
-
-            tile = self.create_tile(instances.cartridge.get_tile(0, counter))
-            tile = pygame.transform.scale(tile, (int(8 * self.scale), int(8 * self.scale)))
-            instances.nes.display.blit(tile, (x_pos, y_pos))
-            if (x_pos +  10 * self.scale)  > 256 * self.scale:
-                x_pos = 2
-                y_pos += 10 * self.scale
-            else :
-                x_pos += 10 * self.scale
-
-        pygame.display.update()
-        pygame.display.flip()
-
-    def create_tile(self, array_of_byte, palette_address = -1, is_sprite = 0):
-        """ Create a tile pygame surface from tile array of bytes and palette address
-
-        Arguments:
-        array_of_byte -- The 8 bytes to make a surface from
-        palette_address -- The palette to use, from 0 to 4. -1 is used for default palette
-        is_sprite -- Allows to select between background and sprite palettes
-        """
-
-        surface = pygame.Surface((8, 8), pygame.SRCALPHA)
-        palette = []
-        palette.append((0, 0, 0, 0))
-        if palette_address == -1:
-            palette.append(PALETTE[0x23])
-            palette.append(PALETTE[0x27])
-            palette.append(PALETTE[0x30])
-        else:
-            address = 0x3f00 + (0x10 * is_sprite) + (0x4 * palette_address)
-            palette.append(PALETTE[self.read_ppu_memory(address + 1)])
-            palette.append(PALETTE[self.read_ppu_memory(address + 2)])
-            palette.append(PALETTE[self.read_ppu_memory(address + 3)])
-        for i in range(8):
-            for j in range(8):
-                bit1 = (array_of_byte[i] >> (7-j)) & 1
-                bit2 = (array_of_byte[8 + i] >> (7-j)) & 1
-                color_code = bit1 | (bit2 << 1)
-                surface.set_at((j, i), palette[color_code])
-
-        return surface
-
     def print_status(self):
         """Print the PPU status"""
         print("PPU")
@@ -512,6 +463,11 @@ class Ppu:
 
             fine_x = (instances.ppu.col - 1) % 8 + instances.ppu.register_x # Pixel 0 is outputed at col == 1
 
+<<<<<<< Updated upstream
+=======
+<<<<<<< Updated upstream
+=======
+>>>>>>> Stashed changes
 
             bg_color_code, bg_color_palette = self.compute_bg_pixel(fine_x)
             sprite_color_code, sprite_color_palette, priority = self.compute_sprite_pixel(fine_x)
@@ -519,7 +475,12 @@ class Ppu:
             return self.multiplexer_decision(bg_color_code, bg_color_palette, sprite_color_code, sprite_color_palette, priority)
 
         def compute_bg_pixel(self, fine_x):
+<<<<<<< Updated upstream
 
+=======
+            '''Compute the elements for the bg pixel'''
+>>>>>>> Stashed changes
+>>>>>>> Stashed changes
             register_level = 0
             if fine_x > 7:
                 register_level += 1
@@ -540,7 +501,16 @@ class Ppu:
             bg_color_palette = (attribute >> shift) & 0b11
             return bg_color_code, bg_color_palette
 
+<<<<<<< Updated upstream
         def compute_sprite_pixel(self, fine_x):
+=======
+<<<<<<< Updated upstream
+            sprite_color_code = 0
+            priority = 1
+=======
+        def compute_sprite_pixel(self, fine_x):
+            '''Compute the elements for the sprite pixel if there is one at that position'''
+>>>>>>> Stashed changes
             for i in range(len(self.sprite_x_coordinate_table_register)):
                 sprite_x = self.sprite_x_coordinate_table_register[i]
                 if fine_x >= sprite_x and fine_x < sprite_x + 8:
@@ -548,6 +518,10 @@ class Ppu:
                     bit1 = (self.bg_low_byte_table_register[i] >> (7-x_offset)) & 1
                     bit2 = (self.bg_high_byte_table_register[i] >> (7-x_offset)) & 1
                     sprite_color_code = bit1 | (bit2 << 1)
+<<<<<<< Updated upstream
+=======
+>>>>>>> Stashed changes
+>>>>>>> Stashed changes
 
                     attribute = self.sprite_attribute_table_register[i]
                     priority = (attribute >> 5) & 0x1
