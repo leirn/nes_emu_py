@@ -37,8 +37,6 @@ class Ppu:
         self.cycle = 0
         self.frame_count = 0
 
-        self.current_tile = 0
-
         self.frame_background = ''
         self.frame_sprite = ''
         self.frame_parity = 0
@@ -185,8 +183,8 @@ class Ppu:
         Implementation base on nevdev PPU_scrolling#Wrapping around
         '''
         if (self.register_v & 0x1F) == 31:
-            self.register_v &= 0b111111111100000 # hor_v = 0
-            self.register_v ^= 0x400 #switch horizontal nametable
+            self.register_v &= 0b111111111100000    # hor_v = 0
+            self.register_v ^= 0x400                #switch horizontal nametable
         else:
             self.register_v += 1
 
@@ -198,16 +196,16 @@ class Ppu:
         if (self.register_v & 0x7000) != 0x7000:
             self.register_v += 0x1000
         else:
-            self.register_v &= 0xFFF                # Fine Y = 0
+            self.register_v &= 0xfff                # Fine Y = 0
             y = (self.register_v & 0x3e0 ) >> 5     # y = vert_v
             if y == 29:
                 y = 0
-                self.register_v ^= 0x8000           # switch vertical nametable
+                self.register_v ^= 0x800            # switch vertical nametable
             elif y == 31:
                 y = 0
             else:
                 y += 1
-            self.register_v = (self.register_v & 0x3e0) | (y << 5)
+            self.register_v = (self.register_v & 0b111110000011111) | (y << 5)
 
     def copy_hor_t_to_hor_v(self):
         '''Copy hor part of t to v'''
@@ -219,7 +217,7 @@ class Ppu:
 
     def is_rendering_enabled(self):
         '''Return 1 is rendering is enabled, 0 otherwise'''
-        return (self.ppumask >> 3) & 1 # TODO : This is not the right implementation
+        return self.is_bg_rendering_enabled() and self.is_sprite_rendering_enabled()
 
     def is_bg_rendering_enabled(self):
         '''Return 1 is rendering is enabled, 0 otherwise'''
@@ -233,18 +231,19 @@ class Ppu:
         '''Next function that implement the almost exact PPU rendering workflow'''
 
         #TODO : prepare for sprite fetching
-        if self.line < 240: # Normal line
+        if self.line < 240 or self.line == 261: # Normal line
             if self.col > 0 and self.col < 257:
-                if self.is_bg_rendering_enabled():
+                if self.line < 240 and self.is_bg_rendering_enabled():
                     pixel_color = self.pixel_generator.compute_next_pixel()
                     instances.nes.display.fill(pixel_color, (((self.col - 1) * self.scale, self.line * self.scale), (self.scale,self.scale)))
                 self.load_tile_data()
-
-        if self.line < 240 or self.line == 261: # Normal line or prerender liner
             if self.col == 257:
                 self.copy_hor_t_to_hor_v()
-            if self.col > 320: # Preload data for two first tiles of next scanlines
+            if self.col > 320 and self.col < 337:
                 self.load_tile_data()
+
+        if self.is_rendering_enabled and self.line == 261 and self.col > 279 and self.col < 305 :
+            self.copy_vert_t_to_vert_v()
 
         if (self.col, self.line) == (1, 241):
             pygame.display.flip()
@@ -254,9 +253,8 @@ class Ppu:
 
         if (self.col, self.line) == (1, 261):
             self.clear_vblank()
-
-        if self.line == 261 and self.col > 279 and self.col < 305 :
-            self.copy_vert_t_to_vert_v
+            self.clear_sprite0_hit()
+            self.clear_sprite_overflow()
         #Increment position
         self.col  = (self.col + 1) % 341
         if self.col == 0:
@@ -272,7 +270,6 @@ class Ppu:
     def load_tile_data(self):
         '''8 cycle operation to load next tile data'''
 
-        # TODO : Fetch the actual data
         match self.col % 8:
             case 1: #read NT Byte for N+2 tile
                 tile_address = 0x2000 | (self.register_v & 0xfff) # Is it NT or tile address ?
@@ -285,18 +282,19 @@ class Ppu:
                 self.pixel_generator.set_at_byte(at_byte)
             case 5: #read low BG Tile Byte for N+2 tile
                 bg_pattern_tabl_addr = ((self.ppuctrl >> 4) & 1) * 0x1000
+                fine_y = self.register_v >> 12
                 tile_address = self.pixel_generator.bg_nt_table_register[-1]
-                low_bg_tile_byte = self.read_ppu_memory(bg_pattern_tabl_addr + 16 * tile_address)
+                low_bg_tile_byte = self.read_ppu_memory(bg_pattern_tabl_addr + 16 * tile_address + fine_y)
                 #if self.pixel_generator.bg_nt_table_register[-1] > 0 : time.sleep(3)
                 self.pixel_generator.set_low_bg_tile_byte(low_bg_tile_byte)
             case 7: #read high BG Tile Byte for N+2 tile
                 bg_pattern_tabl_addr = ((self.ppuctrl >> 4) & 1) * 0x1000
+                fine_y = self.register_v >> 12
                 tile_address = self.pixel_generator.bg_nt_table_register[-1]
-                high_bg_tile_byte = self.read_ppu_memory(bg_pattern_tabl_addr + 16 * tile_address + 8)
+                high_bg_tile_byte = self.read_ppu_memory(bg_pattern_tabl_addr + 16 * tile_address + 8 + fine_y)
                 self.pixel_generator.set_high_bg_tile_byte(high_bg_tile_byte)
             case 0: #increment tile number and shift pixel generator registers
                 self.pixel_generator.shift_registers()
-                self.current_tile = (self.current_tile + 1) % 960
                 if self.col == 256:
                     self.inc_vert_v()
                 else:
@@ -321,6 +319,14 @@ class Ppu:
     def clear_sprite0_hit(self):
         '''Clear sprite 0 bit in ppustatus register'''
         self.ppustatus &= 0b10111111
+
+    def set_sprite_overflow(self):
+        '''Set sprite overflow bit in ppustatus register'''
+        self.ppustatus |= 0b00100000
+
+    def clear_sprite_overflow(self):
+        '''Clear sprite overflow bit in ppustatus register'''
+        self.ppustatus &= 0b11011111
 
     def dump_chr(self):
         """ Display the tiles in CHR Memory. Useful for debugging."""
