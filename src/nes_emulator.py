@@ -7,7 +7,6 @@ import traceback
 import re
 import pygame
 import instances
-import ppu
 import inputs
 import utils
 from cpu_opcodes import OPCODES

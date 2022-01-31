@@ -1,7 +1,6 @@
 '''Memory manager and routing module'''
 import sys
 import instances
-import mappers
 import utils
 
 # Preventing direct execution
@@ -49,7 +48,7 @@ class Memory:
                 value = self.ctrl1_status & 1
                 self.ctrl1_status = self.ctrl1_status >> 1
                 return value
-            elif address == 0x4017: # Handling joystick
+            if address == 0x4017: # Handling joystick
                 if instances.debug : print(f"Joystick 2 read {self.ctrl2_status:b}")
                 value = self.ctrl2_status & 1
                 self.ctrl2_status = self.ctrl2_status >> 1

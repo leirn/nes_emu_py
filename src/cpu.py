@@ -65,7 +65,7 @@ class Cpu:
         # Equivalent to JMP ($FFFC)
             self.program_counter = instances.memory.read_rom_16(0xfffc)
         if instances.debug : print(f"Entry point : 0x{format_hex_data(self.program_counter)}")
-        self.total_cycles = 7 # Cout de l'init
+        self.total_cycles = 7 # Cout de match'init
         self.remaining_cycles = 7
 
         return 1
@@ -113,8 +113,8 @@ class Cpu:
             if instances.debug > 0:
                 self.print_status_summary()
 
-            fn = getattr(self, f"fn_0x{opcode:02x}")
-            step, self.remaining_cycles = fn()
+            cpu_instruction = getattr(self, f"fn_0x{opcode:02x}")
+            step, self.remaining_cycles = cpu_instruction()
             self.remaining_cycles += self.additional_cycle
             self.total_cycles += self.remaining_cycles
             self.remaining_cycles -= 1 # Do not count current cycle twice
@@ -122,9 +122,8 @@ class Cpu:
             self.program_counter += step
             self.compteur += 1
             return
-        except KeyError as e:
-            print(f"Unknow opcode 0x{opcode:02x} at {' '.join(a+b for a,b in zip(f'{self.program_counter:x}'[::2], f'{self.program_counter:x}'[1::2]))}")
-            raise e
+        except KeyError as exception:
+            raise Exception(f"Unknow opcode 0x{opcode:02x} at {' '.join(a+b for a,b in zip(f'{self.program_counter:x}'[::2], f'{self.program_counter:x}'[1::2]))}") from exception
 
     def get_cpu_status(self):
         ''' Return a dictionnary containing the current CPU Status. Usefull for debugging'''
@@ -973,9 +972,9 @@ class Cpu:
 
     def fn_0x20(self) :
         '''Function call for JSR $xxxx. Absolute'''
-        pc = self.program_counter + 2
-        high = pc >> 8
-        low =  pc & 255
+        program_counter = self.program_counter + 2
+        high = program_counter >> 8
+        low =  program_counter & 255
         self.push(high) # little endian
         self.push(low)
         self.program_counter = self.get_absolute_address()
@@ -2095,12 +2094,12 @@ class Cpu:
         '''Debug print of status'''
         opcode = instances.memory.read_rom(self.program_counter)
         label = OPCODES[opcode][1]
-        l = re.search(r'[0-9]+', label)
-        if l:
-            if len(l.group(0)) == 2:
+        match = re.search(r'[0-9]+', label)
+        if match:
+            if len(match.group(0)) == 2:
                 val = self.get_immediate()
-                label = label.replace(l.group(0), f"{val:x}")
+                label = label.replace(match.group(0), f"{val:x}")
             else:
                 val = self.get_absolute_address()
-                label = label.replace(l.group(0), f"{format_hex_data(val)}")
+                label = label.replace(match.group(0), f"{format_hex_data(val)}")
         print(f"Counter : {self.compteur:8}, SP : 0x{self.stack_pointer:02x}, PC : {format_hex_data(self.program_counter)} - fn_0x{opcode:02x} - {label:14}, A = {self.accumulator:2x}, X = {self.x_register:2x}, Y = {self.y_register:2x}, Flags NVxBDIZC : {self.get_status_register():08b}")

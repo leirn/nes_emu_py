@@ -7,6 +7,8 @@ if __name__ == '__main__':
     print("This module cannot be executed. Please use main.py")
     sys.exit()
 
+# Disabling no-self-use pylint control
+# pylint: disable=R0201
 class Mapper0:
     '''Class to handle mapper type 0'''
 
