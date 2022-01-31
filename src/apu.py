@@ -19,8 +19,38 @@ class Apu:
         access memory or other components
     '''
     def __init__(self):
-        pass
+        self.registers = {
+            # Default values that silences all channels at start
+            0x4000 : 0x30,
+            0x4001 : 0x08,
+            0x4002 : 0x00,
+            0x4003 : 0x00,
+            0x4004 : 0x30,
+            0x4005 : 0x08,
+            0x4006 : 0x00,
+            0x4007 : 0x00,
+            0x4008 : 0x30,
+            0x4009 : 0x08,
+            0x400a : 0x00,
+            0x400b : 0x00,
+            0x400c : 0x30,
+            0x400d : 0x08,
+            0x400e : 0x00,
+            0x400f : 0x00,
+            0x4010 : 0x30,
+            0x4011 : 0x08,
+            0x4012 : 0x00,
+            0x4013 : 0x00,
+            0x4015 : 0x0f,
+            0x4017 : 0x40,
+        }
 
     def next(self):
         "Execute next APU cycle"
         pass
+
+    def read_register(self, register):
+        return self.registers[register]
+
+    def write_register(self, register, value):
+        self.registers[register] = value

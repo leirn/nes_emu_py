@@ -36,6 +36,8 @@ class NesEmulator:
 
         self.clock = pygame.time.Clock()
 
+        self.apu_toggler = 0
+
         pygame.display.update()
         pygame.display.flip()
 
@@ -61,6 +63,9 @@ class NesEmulator:
                 try:
                     #Execute next CPU instruction
                     instances.cpu.next()
+                    # Execute next APU instruction
+                    if self.apu_toggler : instances.apu.next()
+                    self.apu_toggler = 1 - self.apu_toggler
                     # 3 PPU dots per CPU cycles
                     is_frame = 0
                     is_frame |= instances.ppu.next()

@@ -53,6 +53,8 @@ class Memory:
                 value = self.ctrl2_status & 1
                 self.ctrl2_status = self.ctrl2_status >> 1
                 return value
+            #APU registers
+            return instances.apu.read_register(address)
         #if address < 0x4020:
         #    '''Normally disabled'''
         #if address < 0x6000:
@@ -124,6 +126,8 @@ class Memory:
                     # store joypad value
                     self.ctrl1_status = instances.nes.ctrl1.status
                     self.ctrl2_status = instances.nes.ctrl2.status
+            else: #APU registers
+                instances.apu.write_register(address, value)
         elif address < 0x4020:
             '''Normally disabled'''
         elif address < 0x6000:
