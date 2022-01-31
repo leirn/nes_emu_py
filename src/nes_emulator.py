@@ -15,7 +15,7 @@ class NesEmulator:
     '''Main class handling the whole emulator execution
 
     Arg:
-        cartridge_stream - Cartridge stream to be read in order to load the cartridge
+        entry_point -- optional ROM entry point for debugging
     '''
 
     def __init__(self):
