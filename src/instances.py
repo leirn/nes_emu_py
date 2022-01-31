@@ -1,4 +1,5 @@
 def init():
+    '''Trick to define global variable without circular dependancy issues'''
     global ppu, cpu, memory, cartridge, apu, nes, debug
     ppu = 0
     cpu = 0
