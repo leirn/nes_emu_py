@@ -109,12 +109,12 @@ class Cartridge:
 
     def print_status(self):
         """Print the Cartridge status"""
-        print(self.title)
-        print(self.header)
-        print(self.magic)
+        print(f"Title : {self.title}")
+        print(f"Header : {self.header}")
+        print(f"Magic bytes : {self.magic}")
         print(f"Trainer present : {self.is_trainer}")
         print(f"PRG_ROM Size : {self.prg_rom_size//1024} kB")
         print(f"CHR_ROM Size : {self.chr_rom_size//1024} kB")
         print(f"PRG_RAM Size : {self.prg_ram_size//1024} kB")
-        print(f"Mapper : {self.mapper}")
-        print(f"Entry point : {self.prg_rom[0x7ffc:0x7ffc+2]}")
+        print(f"Mapper : {self.mapper_id}")
+        print(f"Entry point : 0x{self.prg_rom[0x7ffc] + (self.prg_rom[0x7ffd] << 8):04x}")

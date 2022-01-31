@@ -281,17 +281,17 @@ class Ppu:
                 #if at_byte > 0 : time.sleep(3)
                 self.pixel_generator.set_at_byte(at_byte)
             case 5: #read low BG Tile Byte for N+2 tile
-                bg_pattern_tabl_addr = ((self.ppuctrl >> 4) & 1) * 0x1000
+                chr_bank = ((self.ppuctrl >> 4) & 1) * 0x1000
                 fine_y = self.register_v >> 12
                 tile_address = self.pixel_generator.bg_nt_table_register[-1]
-                low_bg_tile_byte = self.read_ppu_memory(bg_pattern_tabl_addr + 16 * tile_address + fine_y)
+                low_bg_tile_byte = self.read_ppu_memory(chr_bank + 16 * tile_address + fine_y)
                 #if self.pixel_generator.bg_nt_table_register[-1] > 0 : time.sleep(3)
                 self.pixel_generator.set_low_bg_tile_byte(low_bg_tile_byte)
             case 7: #read high BG Tile Byte for N+2 tile
-                bg_pattern_tabl_addr = ((self.ppuctrl >> 4) & 1) * 0x1000
+                chr_bank = ((self.ppuctrl >> 4) & 1) * 0x1000
                 fine_y = self.register_v >> 12
                 tile_address = self.pixel_generator.bg_nt_table_register[-1]
-                high_bg_tile_byte = self.read_ppu_memory(bg_pattern_tabl_addr + 16 * tile_address + 8 + fine_y)
+                high_bg_tile_byte = self.read_ppu_memory(chr_bank + 16 * tile_address + 8 + fine_y)
                 self.pixel_generator.set_high_bg_tile_byte(high_bg_tile_byte)
             case 0: #increment tile number and shift pixel generator registers
                 self.pixel_generator.shift_registers()
@@ -381,6 +381,8 @@ class Ppu:
         """Print the PPU status"""
         print("PPU")
         print(f"Line, col : {self.line}, {self.col}")
+        print(" Register T         | Register V")
+        print(f" {self.register_t:015b}    | {self.register_v:015b}")
         print("PPUCTRL  | PPUMASK  | PPUSTAT  | PPUADDR  | OAMADDR")
         print(f"{self.ppuctrl:08b} | {self.ppumask:08b} | {self.ppustatus:08b} | {self.ppuaddr:04x}     | {self.oamaddr:02x}")
         print("OAM")
@@ -410,14 +412,9 @@ class Ppu:
             bit2 = (self.bg_high_byte_table_register[0] >> (7-fine_x)) & 1
             bg_color_code = bit1 | (bit2 << 1)
 
-            #print(f"Low byte : {self.bg_low_byte_table_register[0]:x}, high byte : {self.bg_high_byte_table_register[0]:x}, color code : {bg_color_code:x}")
-
-
-            #print(len(self.bg_high_byte_table_register))
             sprite_color_code = 0
-            #if self.bg_low_byte_table_register[0] != 0 or self.bg_high_byte_table_register[0] != 0: time.sleep(5)
-            return self.multiplexer_decision(bg_color_code, sprite_color_code, 1)
-            #return palette[color_code]
+            priority = 1
+            return self.multiplexer_decision(bg_color_code, sprite_color_code, priority)
 
         def multiplexer_decision(self, bg_pixel, sprite_pixel, priority):
             '''Implement PPU Priority Multiplexer decision table'''

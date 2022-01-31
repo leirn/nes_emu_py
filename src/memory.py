@@ -38,24 +38,15 @@ class Memory:
             return self.internal_ram[address % 0x800]
         elif address < 0x3fff:
             address = 0x2000 + (address % 8)
-            #Plug into new PPU architecture
-            if address == 0x2000:
-                '''Write only'''
-            elif address == 0x2001:
-                '''Write only'''
-            elif address == 0x2002:
-                return instances.ppu.read_0x2002()
-            elif address == 0x2003:
-                '''Write only'''
-            elif address == 0x2004:
-                instances.ppu.read_0x2004()
-            elif address == 0x2005:
-                '''Write only'''
-            elif address == 0x2006:
-                '''Write only'''
-            elif address == 0x2007:
-                return instances.ppu.read_0x2007()
-            # Endof plug
+            match address:
+                #case 0x2000: Write only
+                #case 0x2001: Write only
+                case 0x2002: return instances.ppu.read_0x2002()
+                #case 0x2003: Write only
+                case 0x2004: return instances.ppu.read_0x2004()
+                #case 0x2005: Write only
+                #case 0x2006: Write only
+                case 0x2007: return instances.ppu.read_0x2007()
         elif address < 0x4018:
             if address == 0x4016: # Handling joystick
                 if instances.debug : print(f"Joystick 1 read {self.ctrl1_status:b}")
@@ -116,23 +107,15 @@ class Memory:
             self.internal_ram[address % 0x800] = value
         elif address < 0x3fff:
             address = 0x2000 + (address % 8)
-            if address == 0x2000:
-                instances.ppu.write_0x2000(value)
-            elif address == 0x2001:
-                instances.ppu.write_0x2001(value)
-            elif address == 0x2002:
-                '''Read only'''
-            elif address == 0x2003:
-                instances.ppu.write_0x2003(value)
-            elif address == 0x2004:
-                instances.ppu.write_0x2004(value)
-            elif address == 0x2005:
-                instances.ppu.write_0x2005(value)
-            elif address == 0x2006:
-                instances.ppu.write_0x2006(value)
-            elif address == 0x2007:
-                instances.ppu.write_0x2007(value)
-            # Endof plug
+            match address:
+                case 0x2000: instances.ppu.write_0x2000(value)
+                case 0x2001: instances.ppu.write_0x2001(value)
+                #case' 0x2002: Read only
+                case 0x2003: instances.ppu.write_0x2003(value)
+                case 0x2004: instances.ppu.write_0x2004(value)
+                case 0x2005: instances.ppu.write_0x2005(value)
+                case 0x2006: instances.ppu.write_0x2006(value)
+                case 0x2007: instances.ppu.write_0x2007(value)
 
         elif address < 0x4018:
             if address == 0x4014 : # OAMDMA
@@ -155,63 +138,7 @@ class Memory:
         else:
             instances.cartridge.write_prg_rom(address - 0x8000, value)
         return 0
-    '''
-    def read_ppu_memory_at_ppuaddr(self):
-        if self.PPUADDR < 0x2000:
-            return self.PRG[self.PPUADDR] # CHR_ROM ADDRESS
-        elif self.PPUADDR < 0x3000: # VRAM
-            val =  self.VRAM[self.PPUADDR - 0x2000]
-            self.PPUADDR += 1 if (self.PPUCTRL >> 2) & 1 == 0 else 0x20
-            return val
-        elif self.PPUADDR < 0x3F00: # VRAM mirror
-            val =  self.VRAM[self.PPUADDR - 0X3000]
-            self.PPUADDR += 1 if (self.PPUCTRL >> 2) & 1 == 0 else 0x20
-            return val
-        elif self.PPUADDR < 0x4000 : # palette
-            if self.PPUADDR % 4 == 0:
-                address = 0
-            else:
-                address = self.PPUADDR % 0x20
-            return self.palette_VRAM[address]
-        else:
-            raise Exception("Out of PPU memory range")
-    ''
-    def read_ppu_memory(self, address):
-        if address < 0x2000:
-            return self.PRG[address] # CHR_ROM ADDRESS
-        elif address < 0x3000: # VRAM
-            return self.VRAM[address - 0x2000]
-        elif address < 0x3F00: # VRAM mirror
-            return self.VRAM[address - 0X3000]
-        elif address < 0x4000 : # palette
-            if address % 4 == 0:
-                palette_address = 0
-            else:
-                palette_address = address % 0x20
-            return self.palette_VRAM[palette_address]
-        else:
-            raise Exception("Out of PPU memory range")
-    '' OBSOLETE
-    def write_ppu_memory_at_ppuaddr(self, value):
-        if self.PPUADDR < 0x2000:
-            pass # CHR_ROM ADDRESS
-        elif self.PPUADDR < 0x3000: # VRAM
-            self.VRAM[self.PPUADDR - 0x2000] = value
-            VRAM_increment = (self.read_rom(0x2000) >> 2) & 1
-            self.PPUADDR += 1 if VRAM_increment == 0 else 0x20
-        elif self.PPUADDR < 0x3F00: # VRAM mirror
-            self.VRAM[self.PPUADDR - 0x3000] = value
-            VRAM_increment = (self.read_rom(0x2000) >> 2) & 1
-            self.PPUADDR += 1 if VRAM_increment == 0 else 0x20
-        elif self.PPUADDR < 0x4000: # palette
-            if self.PPUADDR % 4 == 0:
-                address = 0
-            else:
-                address = self.PPUADDR % 0x20
-            self.palette_VRAM[address] = value
-            VRAM_increment = (self.read_rom(0x2000) >> 2) & 1
-            self.PPUADDR += 1 if VRAM_increment == 0 else 0x20
-    '''
+
     def print_status(self):
         '''Print the status of Memory component'''
         print("Memory status")
