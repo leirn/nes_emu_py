@@ -234,6 +234,9 @@ class Cpu:
         address = instances.memory.read_rom_16(self.program_counter+1)
         target_address = (address + self.x_register) & 0xFFFF
         if  address & 0xFF00 != target_address & 0xFF00:
+            print("Absolute X")
+            print(address)
+            print(target_address)
             self.additional_cycle += 1
         return target_address
 
@@ -251,6 +254,9 @@ class Cpu:
         address = instances.memory.read_rom_16(self.program_counter+1)
         target_address = (address + self.y_register) & 0xFFFF
         if  address & 0xFF00 != target_address & 0xFF00:
+            print("Absolute Y")
+            print(address)
+            print(target_address)
             self.additional_cycle += 1
         return target_address
 
@@ -276,7 +282,8 @@ class Cpu:
     def get_indirect_y_address(self):
         '''Get indirect address given as opcode 2-byte argument and Y register'''
         address = self.get_zero_page_address()
-        target_address = 0xFFFF & (instances.memory.read_rom_16_no_crossing_page(address )+ self.y_register)
+        address = instances.memory.read_rom_16_no_crossing_page(address )
+        target_address = 0xFFFF & (address + self.y_register)
         if  address & 0xFF00 != target_address & 0xFF00:
             self.additional_cycle += 1
         return target_address
