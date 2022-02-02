@@ -161,6 +161,13 @@ class NesEmulator:
 
     def check_test(self, cpu_status):
         ''' Performs test execution against reference execution log to find descrepancies'''
+        reference = self.test_file.readline()
+
+        if reference == "":
+            print("Test file completed")
+            return
+            #sys.exit()
+
         opcode = instances.memory.read_rom(cpu_status["PC"])
 
         opcode_arg_1 = '  '
@@ -170,13 +177,7 @@ class NesEmulator:
         if OPCODES[opcode][2] > 2:
             opcode_arg_2 = f"{instances.memory.read_rom(cpu_status['PC']+2):02x}"
 
-        print(f"{cpu_status['PC']:x}  {opcode:02x} {opcode_arg_1} {opcode_arg_2}  {OPCODES[opcode][1]:30}  A:{cpu_status['A']:02x} X:{cpu_status['X']:02x} Y:{cpu_status['Y']:02x} P:{cpu_status['P']:02x} SP:{cpu_status['SP']:02x} PPU:{instances.ppu.line}, {instances.ppu.col} CYC:{cpu_status['CYC']}".upper())
-
-        reference = self.test_file.readline()
-
-        if reference == "":
-            print("Test file completed")
-            sys.exit()
+        print(f"{cpu_status['PC']:x}  {opcode:02x} {opcode_arg_1} {opcode_arg_2}  {OPCODES[opcode][1]:30}  A:{cpu_status['A']:02x} X:{cpu_status['X']:02x} Y:{cpu_status['Y']:02x} P:{cpu_status['P']:02x} SP:{cpu_status['SP']:02x} PPU:{instances.ppu.line},{instances.ppu.col: 3} CYC:{cpu_status['CYC']}".upper())
 
         print(reference)
         utils.print_memory_page(instances.memory.internal_ram, 0x0)
@@ -197,7 +198,7 @@ class NesEmulator:
         ref_status['PPU_LINE']  = int(match[0][0])
         ref_status['PPU_COL']  = int(match[0][1])
 
-        for i in ["PC", "A", "X", "Y", "P", "SP"]: # On hold : CYC, PPU_LINE, PPU_COL
+        for i in ["PC", "A", "X", "Y", "P", "SP", "CYC", "PPU_LINE", "PPU_COL"]: # On hold : CYC, PPU_LINE, PPU_COL
             if ref_status[i] != cpu_status[i] :
                 raise Exception(f"{i} Error : {cpu_status[i]} instead of {ref_status[i]}")
         print("")
