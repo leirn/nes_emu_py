@@ -66,7 +66,7 @@ class Cpu:
             self.program_counter = instances.memory.read_rom_16(0xfffc)
         if instances.debug : print(f"Entry point : 0x{format_hex_data(self.program_counter)}")
         self.total_cycles = 7 # Cout de match'init
-        self.remaining_cycles = 7
+        self.remaining_cycles = 7 - 1 # On évite de compter deux fois le cycle en cours
 
         return 1
 
