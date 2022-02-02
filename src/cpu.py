@@ -225,44 +225,38 @@ class Cpu:
         address = self.get_absolute_address()
         return instances.memory.read_rom(address)
 
-    def set_absolute_x(self, val):
+    def set_absolute_x(self, val, is_additionnal = True):
         '''Write val into memory. Address is given as opcode 2-byte argument and X register'''
-        instances.memory.write_rom(self.get_absolute_x_address(), val)
+        instances.memory.write_rom(self.get_absolute_x_address(is_additionnal), val)
 
-    def get_absolute_x_address(self):
+    def get_absolute_x_address(self, is_additionnal = True):
         '''Get address given as opcode 2-byte argument and X register'''
         address = instances.memory.read_rom_16(self.program_counter+1)
         target_address = (address + self.x_register) & 0xFFFF
-        if  address & 0xFF00 != target_address & 0xFF00:
-            print("Absolute X")
-            print(address)
-            print(target_address)
+        if  is_additionnal and address & 0xFF00 != target_address & 0xFF00:
             self.additional_cycle += 1
         return target_address
 
-    def get_absolute_x_value(self):
+    def get_absolute_x_value(self, is_additionnal = True):
         '''Get val from memory. Address is given as opcode 2-byte argument and X register'''
-        address = self.get_absolute_x_address()
+        address = self.get_absolute_x_address(is_additionnal)
         return instances.memory.read_rom(address)
 
-    def set_absolute_y(self, val):
+    def set_absolute_y(self, val, is_additionnal = True):
         '''Write val into memory. Address is given as opcode 2-byte argument and Y register'''
-        instances.memory.write_rom(self.get_absolute_y_address(), val)
+        instances.memory.write_rom(self.get_absolute_y_address(is_additionnal), val)
 
-    def get_absolute_y_address(self):
+    def get_absolute_y_address(self, is_additionnal = True):
         '''Get address given as opcode 2-byte argument and Y register'''
         address = instances.memory.read_rom_16(self.program_counter+1)
         target_address = (address + self.y_register) & 0xFFFF
-        if  address & 0xFF00 != target_address & 0xFF00:
-            print("Absolute Y")
-            print(address)
-            print(target_address)
+        if is_additionnal and address & 0xFF00 != target_address & 0xFF00:
             self.additional_cycle += 1
         return target_address
 
-    def get_absolute_y_value(self):
+    def get_absolute_y_value(self, is_additionnal = True):
         '''Get val from memory. Address is given as opcode 2-byte argument and Y register'''
-        address = self.get_absolute_y_address()
+        address = self.get_absolute_y_address(is_additionnal)
         return instances.memory.read_rom(address)
 
     def get_indirect_x_address(self):
@@ -279,23 +273,23 @@ class Cpu:
         '''Write val into memory. Indirect address is given as opcode 2-byte argument and X register'''
         instances.memory.write_rom(self.get_indirect_x_address(), val)
 
-    def get_indirect_y_address(self):
+    def get_indirect_y_address(self, is_additionnal = True):
         '''Get indirect address given as opcode 2-byte argument and Y register'''
         address = self.get_zero_page_address()
         address = instances.memory.read_rom_16_no_crossing_page(address )
         target_address = 0xFFFF & (address + self.y_register)
-        if  address & 0xFF00 != target_address & 0xFF00:
+        if is_additionnal and address & 0xFF00 != target_address & 0xFF00:
             self.additional_cycle += 1
         return target_address
 
-    def get_indirect_y_value(self):
+    def get_indirect_y_value(self, is_additionnal = True):
         '''Get val from memory. Indirect address is given as opcode 2-byte argument and Y register'''
-        address = self.get_indirect_y_address()
+        address = self.get_indirect_y_address(is_additionnal)
         return instances.memory.read_rom(address)
 
-    def set_indirect_y(self, val):
+    def set_indirect_y(self, val, is_additionnal = True):
         '''Write val into memory. Indirect address is given as opcode 2-byte argument and Y register'''
-        instances.memory.write_rom(self.get_indirect_y_address(), val)
+        instances.memory.write_rom(self.get_indirect_y_address(is_additionnal), val)
 
     def set_flags_nz(self, val):
         '''Sets flags N and Z according to value'''
@@ -345,14 +339,14 @@ class Cpu:
         self.adc(self.get_absolute_value())
         return (3, 4)
 
-    def fn_0x7d(self) :
+    def fn_0x7d(self, is_additionnal = True) :
         '''Function call for ADC $xxxx, X. Absolute, X'''
-        self.adc(self.get_absolute_x_value())
+        self.adc(self.get_absolute_x_value(is_additionnal))
         return (3, 4)
 
-    def fn_0x79(self) :
+    def fn_0x79(self, is_additionnal  = True) :
         '''Function call for ADC $xxxx, Y. Absolute, Y'''
-        self.adc(self.get_absolute_y_value())
+        self.adc(self.get_absolute_y_value(is_additionnal))
         return (3, 4)
 
     def fn_0x61(self) :
@@ -360,9 +354,9 @@ class Cpu:
         self.adc(self.get_indirect_x_value())
         return (2, 6)
 
-    def fn_0x71(self) :
+    def fn_0x71(self, is_additionnal = True) :
         '''Function call for ADC ($xx), Y. Indirect, Y'''
-        self.adc(self.get_indirect_y_value())
+        self.adc(self.get_indirect_y_value(is_additionnal))
         return (2, 5)
 
     def fn_0x29(self) :
@@ -389,15 +383,15 @@ class Cpu:
         self.set_flags_nz(self.accumulator)
         return (3, 4)
 
-    def fn_0x3d(self) :
+    def fn_0x3d(self, is_additionnal = True) :
         '''Function call for AND $xxxx, X. Absolute, X'''
-        self.accumulator &= self.get_absolute_x_value()
+        self.accumulator &= self.get_absolute_x_value(is_additionnal)
         self.set_flags_nz(self.accumulator)
         return (3, 4)
 
-    def fn_0x39(self) :
+    def fn_0x39(self, is_additionnal = True) :
         '''Function call for AND $xxxx, Y. Absolute, Y'''
-        self.accumulator &= self.get_absolute_y_value()
+        self.accumulator &= self.get_absolute_y_value(is_additionnal)
         self.set_flags_nz(self.accumulator)
         return (3, 4)
 
@@ -407,9 +401,9 @@ class Cpu:
         self.set_flags_nz(self.accumulator)
         return (2, 6)
 
-    def fn_0x31(self) :
+    def fn_0x31(self, is_additionnal = True) :
         '''Function call for AND ($xx), Y. Indirect, Y'''
-        self.accumulator &= self.get_indirect_y_value()
+        self.accumulator &= self.get_indirect_y_value(is_additionnal)
         self.set_flags_nz(self.accumulator)
         return (2, 5)
 
@@ -447,12 +441,12 @@ class Cpu:
         self.set_flags_nz(value)
         return (3, 6)
 
-    def fn_0x1e(self) :
+    def fn_0x1e(self, is_additionnal = True) :
         '''Function call for ASL $xxxx, X. Absolute, X'''
-        value = self.get_absolute_x_value()
+        value = self.get_absolute_x_value(is_additionnal)
         self.carry = value >> 7
         value = (value << 1) & 0b11111111
-        self.set_absolute_x(value)
+        self.set_absolute_x(value, is_additionnal)
         self.set_flags_nz(value)
         return (3, 7)
 
@@ -565,8 +559,8 @@ class Cpu:
         if self.zero == 1:
             self.program_counter += signed
             self.additional_cycle += 1
-            if self.program_counter & 0xFF00 != old_pc & 0xFF00:
-                self.additional_cycle = 1
+            if (self.program_counter + 2) & 0xFF00 != old_pc & 0xFF00: # PC+2 to take into account current instruction size
+                self.additional_cycle += 1
         return (2, 2)
 
     def fn_0x00(self) :
@@ -738,17 +732,17 @@ class Cpu:
 
     def fn_0xdf(self):
         '''Function call for DCP $xxxx, X. Absolute, X'''
-        value = self.get_absolute_x_value()
+        value = self.get_absolute_x_value(False)
         value = 255 if value == 0 else value - 1
-        self.set_absolute_x(value)
+        self.set_absolute_x(value, False)
         self.cmp(self.accumulator, value)
         return (3, 7)
 
     def fn_0xdb(self):
         '''Function call for CPY $xxxx, Y. Absolute, Y'''
-        value = self.get_absolute_y_value()
+        value = self.get_absolute_y_value(False)
         value = 255 if value == 0 else value - 1
-        self.set_absolute_y(value)
+        self.set_absolute_y(value, False)
         self.cmp(self.accumulator, value)
         return (3, 7)
 
@@ -762,9 +756,9 @@ class Cpu:
 
     def fn_0xd3(self):
         '''Function call for DCP ($xx), Y. Indirect, Y'''
-        value = self.get_indirect_y_value()
+        value = self.get_indirect_y_value(False)
         value = 255 if value == 0 else value - 1
-        self.set_indirect_y(value)
+        self.set_indirect_y(value, False)
         self.cmp(self.accumulator, value)
         return (2, 8)
 
@@ -794,17 +788,17 @@ class Cpu:
 
     def fn_0xff(self):
         '''Function call for ISC $xxxx, X. Absolute, X'''
-        value = self.get_absolute_x_value()
+        value = self.get_absolute_x_value(False)
         value = 0 if value == 255 else value + 1
-        self.set_absolute_x(value)
+        self.set_absolute_x(value, False)
         self.sbc(value)
         return (3, 7)
 
     def fn_0xfb(self):
         '''Function call for ISC $xxxx, Y. Absolute, Y'''
-        value = self.get_absolute_y_value()
+        value = self.get_absolute_y_value(False)
         value = 0 if value == 255 else value + 1
-        self.set_absolute_y(value)
+        self.set_absolute_y(value, False)
         self.sbc(value)
         return (3, 7)
 
@@ -822,7 +816,7 @@ class Cpu:
         value = 0 if value == 255 else value + 1
         self.set_indirect_y(value)
         self.sbc(value)
-        return (2, 4)
+        return (2, 6)
 
     def fn_0x49(self) :
         '''Function call for EOR #$xx. Immediate'''
@@ -848,15 +842,15 @@ class Cpu:
         self.set_flags_nz(self.accumulator)
         return (3, 4)
 
-    def fn_0x5d(self) :
+    def fn_0x5d(self, is_additionnal = True) :
         '''Function call for EOR $xxxx, X. Absolute, X'''
-        self.accumulator ^= self.get_absolute_x_value()
+        self.accumulator ^= self.get_absolute_x_value(is_additionnal)
         self.set_flags_nz(self.accumulator)
         return (3, 4)
 
-    def fn_0x59(self) :
+    def fn_0x59(self, is_additionnal = True) :
         '''Function call for EOR $xxxx, Y. Absolute, Y'''
-        self.accumulator ^= self.get_absolute_y_value()
+        self.accumulator ^= self.get_absolute_y_value(is_additionnal)
         self.set_flags_nz(self.accumulator)
         return (3, 4)
 
@@ -866,9 +860,9 @@ class Cpu:
         self.set_flags_nz(self.accumulator)
         return (2, 6)
 
-    def fn_0x51(self) :
+    def fn_0x51(self, is_additionnal = True) :
         '''Function call for EOR ($xx), Y. Indirect, Y'''
-        self.accumulator ^= self.get_indirect_y_value()
+        self.accumulator ^= self.get_indirect_y_value(is_additionnal)
         self.set_flags_nz(self.accumulator)
         return (2, 5)
 
@@ -1129,12 +1123,12 @@ class Cpu:
         self.set_flags_nz(value)
         return (3, 6)
 
-    def fn_0x5e(self) :
+    def fn_0x5e(self, is_additionnal  = True) :
         '''Function call for LSR $xxxx, X. Absolute, X'''
-        value = self.get_absolute_x_value()
+        value = self.get_absolute_x_value(is_additionnal)
         self.carry = value & 1
         value = value >> 1
-        self.set_absolute_x(value)
+        self.set_absolute_x(value, is_additionnal)
         self.set_flags_nz(value)
         return (3, 7)
 
@@ -1252,42 +1246,50 @@ class Cpu:
 
         Equivalent to NOP NOP NOP (3-byte NOP)
         '''
+
         return (3, 4)
     def fn_0x1c(self) :
         '''Function call for TOP. Implied
 
         Equivalent to NOP NOP NOP (3-byte NOP)
         '''
+        self.get_absolute_x_value() # Need extra cycle
+
         return (3, 4)
     def fn_0x3c(self) :
         '''Function call for TOP. Implied
 
         Equivalent to NOP NOP NOP (3-byte NOP)
         '''
+        self.get_absolute_x_value() # Need extra cycle
         return (3, 4)
     def fn_0x5c(self) :
         '''Function call for TOP. Implied
 
         Equivalent to NOP NOP NOP (3-byte NOP)
         '''
+        self.get_absolute_x_value() # Need extra cycle
         return (3, 4)
     def fn_0x7c(self) :
         '''Function call for TOP. Implied
 
         Equivalent to NOP NOP NOP (3-byte NOP)
         '''
+        self.get_absolute_x_value() # Need extra cycle
         return (3, 4)
     def fn_0xdc(self) :
         '''Function call for TOP. Implied
 
         Equivalent to NOP NOP NOP (3-byte NOP)
         '''
+        self.get_absolute_x_value() # Need extra cycle
         return (3, 4)
     def fn_0xfc(self) :
         '''Function call for TOP. Implied
 
         Equivalent to NOP NOP NOP (3-byte NOP)
         '''
+        self.get_absolute_x_value() # Need extra cycle
         return (3, 4)
     # Restoring no-self-use pylint control
     # pylint: enable=R0201
@@ -1316,15 +1318,15 @@ class Cpu:
         self.set_flags_nz(self.accumulator)
         return (3, 4)
 
-    def fn_0x1d(self) :
+    def fn_0x1d(self, is_additionnal = True) :
         '''Function call for ORA $xxxx, X. Absolute, X'''
-        self.accumulator |= self.get_absolute_x_value()
+        self.accumulator |= self.get_absolute_x_value(is_additionnal)
         self.set_flags_nz(self.accumulator)
         return (3, 4)
 
-    def fn_0x19(self) :
+    def fn_0x19(self, is_additionnal = True) :
         '''Function call for ORA $xxxx, Y. Absolute, Y'''
-        self.accumulator |= self.get_absolute_y_value()
+        self.accumulator |= self.get_absolute_y_value(is_additionnal)
         self.set_flags_nz(self.accumulator)
         return (3, 4)
 
@@ -1334,9 +1336,9 @@ class Cpu:
         self.set_flags_nz(self.accumulator)
         return (2, 6)
 
-    def fn_0x11(self) :
+    def fn_0x11(self, is_additionnal = True) :
         '''Function call for ORA ($xx), Y. Indirect, Y'''
-        self.accumulator |= self.get_indirect_y_value()
+        self.accumulator |= self.get_indirect_y_value(is_additionnal)
         self.set_flags_nz(self.accumulator)
         return (2, 5)
 
@@ -1380,8 +1382,8 @@ class Cpu:
             ASL
             ORA
         '''
-        self.fn_0x1e() # ASL
-        self.fn_0x1d() # ORA
+        self.fn_0x1e(False) # ASL
+        self.fn_0x1d(False) # ORA
         return (3, 7)
 
     def fn_0x1b(self):
@@ -1391,11 +1393,11 @@ class Cpu:
             ASL
             ORA
         '''
-        value = self.get_absolute_y_value()
+        value = self.get_absolute_y_value(False)
         self.carry = value >> 7
         value = (value << 1) & 0b11111111
-        self.set_absolute_y(value)
-        self.fn_0x19() # ORA
+        self.set_absolute_y(value, False)
+        self.fn_0x19(False) # ORA
         return (3, 7)
 
     def fn_0x03(self):
@@ -1419,11 +1421,11 @@ class Cpu:
             ASL
             ORA
         '''
-        value = self.get_indirect_y_value()
+        value = self.get_indirect_y_value(False)
         self.carry = value >> 7
         value = (value << 1) & 0b11111111
-        self.set_indirect_y(value)
-        self.fn_0x11() # ORA
+        self.set_indirect_y(value, False)
+        self.fn_0x11(False) # ORA
         return (2, 8)
 
     def fn_0x27(self):
@@ -1466,8 +1468,8 @@ class Cpu:
             ROL
             AND
         '''
-        self.fn_0x3e() # ROL
-        self.fn_0x3d() # AND
+        self.fn_0x3e(False) # ROL
+        self.fn_0x3d(False) # AND
         return (3, 7)
 
     def fn_0x3b(self):
@@ -1477,12 +1479,12 @@ class Cpu:
             ROL
             AND
         '''
-        val = self.get_absolute_y_value()
+        val = self.get_absolute_y_value(False)
         val = (val << 1) | (self.carry)
         self.carry = val >> 8
         val &= 255
-        self.set_absolute_y(val)
-        self.fn_0x39() # AND
+        self.set_absolute_y(val, False)
+        self.fn_0x39(False) # AND
         return (3, 7)
 
     def fn_0x23(self):
@@ -1507,12 +1509,12 @@ class Cpu:
             ROL
             AND
         '''
-        val = self.get_indirect_y_value()
+        val = self.get_indirect_y_value(False)
         val = (val << 1) | (self.carry)
         self.carry = val >> 8
         val &= 255
-        self.set_indirect_y(val)
-        self.fn_0x31() # AND
+        self.set_indirect_y(val, False)
+        self.fn_0x31(False) # AND
         return (2, 8)
 
     def fn_0x67(self):
@@ -1555,8 +1557,8 @@ class Cpu:
             ROR
             ADC
         '''
-        self.fn_0x7e() # ROR
-        self.fn_0x7d() # ADC
+        self.fn_0x7e(False) # ROR
+        self.fn_0x7d(False) # ADC
         return (3, 7)
 
     def fn_0x7b(self):
@@ -1566,12 +1568,12 @@ class Cpu:
             ROR
             ADC
         '''
-        val = self.get_absolute_y_value()
+        val = self.get_absolute_y_value(False)
         carry = val & 1
         val = (val >> 1) | (self.carry << 7)
         self.carry = carry
-        self.set_absolute_y(val)
-        self.fn_0x79() # ADC
+        self.set_absolute_y(val, False)
+        self.fn_0x79(False) # ADC
         return (3, 7)
 
     def fn_0x63(self):
@@ -1598,12 +1600,12 @@ class Cpu:
             ROR
             ADC
         '''
-        val = self.get_indirect_y_value()
+        val = self.get_indirect_y_value(False)
         carry = val & 1
         val = (val >> 1) | (self.carry << 7)
         self.carry = carry
-        self.set_indirect_y(val)
-        self.fn_0x71() # ADC
+        self.set_indirect_y(val, False)
+        self.fn_0x71(False) # ADC
         return (2, 8)
 
     def fn_0x47(self):
@@ -1646,8 +1648,8 @@ class Cpu:
             LSR
             EOR
         '''
-        self.fn_0x5e() # LSR
-        self.fn_0x5d() # EOR
+        self.fn_0x5e(False) # LSR
+        self.fn_0x5d(False) # EOR
         return (3, 7)
 
     def fn_0x5b(self):
@@ -1657,11 +1659,11 @@ class Cpu:
             LSR
             EOR
         '''
-        val = self.get_absolute_y_value()
+        val = self.get_absolute_y_value(False)
         self.carry = val & 1
         val = val >> 1
-        self.set_absolute_y(val)
-        self.fn_0x59() # EOR
+        self.set_absolute_y(val, False)
+        self.fn_0x59(False) # EOR
         return (3, 7)
 
     def fn_0x43(self):
@@ -1685,11 +1687,11 @@ class Cpu:
             LSR
             EOR
         '''
-        val = self.get_indirect_y_value()
+        val = self.get_indirect_y_value(False)
         self.carry = val & 1
         val = val >> 1
-        self.set_indirect_y(val)
-        self.fn_0x51() # EOR
+        self.set_indirect_y(val, False)
+        self.fn_0x51(False) # EOR
         return (2, 8)
 
     def fn_0xaa(self) :
@@ -1778,13 +1780,13 @@ class Cpu:
         self.set_flags_nz(val)
         return (3, 6)
 
-    def fn_0x3e(self) :
+    def fn_0x3e(self, is_additionnal = True) :
         '''Function call for ROL $xxxx, X. Absolute, X'''
-        val = self.get_absolute_x_value()
+        val = self.get_absolute_x_value(is_additionnal)
         val = (val << 1) | (self.carry)
         self.carry = val >> 8
         val &= 255
-        self.set_absolute_x(val)
+        self.set_absolute_x(val, is_additionnal)
         self.set_flags_nz(val)
         return (3, 7)
 
@@ -1826,13 +1828,13 @@ class Cpu:
         self.set_flags_nz(val)
         return (3, 6)
 
-    def fn_0x7e(self) :
+    def fn_0x7e(self, is_additionnal = True) :
         '''Function call for ROR$xxxx, X. Absolute, X'''
-        val = self.get_absolute_x_value()
+        val = self.get_absolute_x_value(is_additionnal)
         carry = val & 1
         val = (val >> 1) | (self.carry << 7)
         self.carry = carry
-        self.set_absolute_x(val)
+        self.set_absolute_x(val, is_additionnal)
         self.set_flags_nz(val)
         return (3, 7)
 
@@ -1925,13 +1927,13 @@ class Cpu:
 
     def fn_0x9d(self) :
         '''Function call for STA $xxxx, X. Absolute, X'''
-        address = self.get_absolute_x_address()
+        address = self.get_absolute_x_address(False) # No additionnal cycles on STA
         extra_cycles = instances.memory.write_rom(address, self.accumulator)
         return (3, 5 + extra_cycles)
 
     def fn_0x99(self) :
         '''Function call for STA $xxxx, Y. Absolute, Y'''
-        address = self.get_absolute_y_address()
+        address = self.get_absolute_y_address(False) # No additionnal cycles on STA
         extra_cycles = instances.memory.write_rom(address, self.accumulator)
         return (3, 5 + extra_cycles)
 
@@ -1943,7 +1945,7 @@ class Cpu:
 
     def fn_0x91(self) :
         '''Function call for STA ($xx), Y. Indirect, Y'''
-        address = self.get_indirect_y_address()
+        address = self.get_indirect_y_address(False) # No additionnal cycles on STA
         extra_cycles = instances.memory.write_rom(address, self.accumulator)
         return (2, 6 + extra_cycles)
 

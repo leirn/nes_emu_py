@@ -68,6 +68,7 @@ class Memory:
     def read_rom_16_no_crossing_page(self, address):
         '''Read 16 bits values forbidding crossing pages'''
         high_address = (address & 0xFF00) +((address + 1) & 0xFF)
+
         debug.log(self.__class__, debug.DEBUG, f"High address : {high_address:04x}, Low address : {address:04x}")
         high, low = 0, 0
         if address > 0x7FFF:
