@@ -113,7 +113,7 @@ class Cartridge:
         self.f9= h[9]
         self.f10= h[10]
 
-        self.mapper_id = (self.f7 & 0x11110000) + ((self.f6 & 0x11110000) >> 4)
+        self.mapper_id = (self.f7 & 0b11110000) + ((self.f6 & 0b11110000) >> 4)
 
     def print_status(self):
         """Print the Cartridge status"""

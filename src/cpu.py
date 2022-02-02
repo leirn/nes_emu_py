@@ -144,7 +144,14 @@ class Cpu:
 
         Bit 5 is always set to 1
         '''
-        return (self.negative << 7) | (self.overflow << 6) | (1 << 5) | (self.break_flag << 4) | (self.decimal << 3) | (self.interrupt << 2) | (self.zero << 1) | self.carry
+        return    (self.negative << 7) \
+                | (self.overflow << 6) \
+                | (1 << 5) \
+                | (self.break_flag << 4) \
+                | (self.decimal << 3) \
+                | (self.interrupt << 2) \
+                | (self.zero << 1) \
+                | self.carry
 
     def set_status_register(self, status_register):
         '''Set the P register which contains the flag status.

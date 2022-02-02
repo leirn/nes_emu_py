@@ -11,6 +11,11 @@ import inputs
 import utils
 from cpu_opcodes import OPCODES
 
+# Preventing direct execution
+if __name__ == '__main__':
+    print("This module cannot be executed. Please use main.py")
+    sys.exit()
+
 class NesEmulator:
     '''Main class handling the whole emulator execution
 
@@ -174,8 +179,8 @@ class NesEmulator:
             sys.exit()
 
         print(reference)
-        utils.print_memory_page(instances.memory.ROM, 0x0)
-        utils.print_memory_page(instances.memory.ROM, 0x6)
+        utils.print_memory_page(instances.memory.internal_ram, 0x0)
+        utils.print_memory_page(instances.memory.internal_ram, 0x6)
 
         ref_status = dict()
         ref_status['PC'] = int(reference[0:4], 16)
