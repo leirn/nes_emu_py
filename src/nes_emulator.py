@@ -63,6 +63,7 @@ class NesEmulator:
                     self.is_nmi = False
                     instances.cpu.nmi()
                 if not instances.cpu.interrupt and self.is_irq: # Interrupt flag is ON
+                    self.is_irq = False
                     instances.cpu.irq()
                 #Check for IRQ
                 try:
