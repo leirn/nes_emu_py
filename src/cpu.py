@@ -496,7 +496,7 @@ class Cpu:
             self.program_counter += signed
             self.additional_cycle += 1
             if self.program_counter & 0xFF00 != old_pc & 0xFF00:
-                self.additional_cycle = 1
+                self.additional_cycle += 1
         return (2, 2)
 
     # BVC
@@ -519,7 +519,7 @@ class Cpu:
             self.program_counter += signed
             self.additional_cycle += 1
             if self.program_counter & 0xFF00 != old_pc & 0xFF00:
-                self.additional_cycle = 1
+                self.additional_cycle += 1
         return (2, 2)
 
     def fn_0x90(self) :
@@ -531,7 +531,7 @@ class Cpu:
             self.program_counter += signed
             self.additional_cycle += 1
             if self.program_counter & 0xFF00 != old_pc & 0xFF00:
-                self.additional_cycle = 1
+                self.additional_cycle += 1
         return (2, 2)
 
     def fn_0xb0(self) :
@@ -543,7 +543,7 @@ class Cpu:
             self.program_counter += signed
             self.additional_cycle += 1
             if self.program_counter & 0xFF00 != old_pc & 0xFF00:
-                self.additional_cycle = 1
+                self.additional_cycle += 1
         return (2, 2)
 
     def fn_0xd0(self) :
@@ -555,7 +555,7 @@ class Cpu:
             self.program_counter += signed
             self.additional_cycle += 1
             if self.program_counter & 0xFF00 != old_pc & 0xFF00:
-                self.additional_cycle = 1
+                self.additional_cycle += 1
         return (2, 2)
 
     def fn_0xf0(self) :
