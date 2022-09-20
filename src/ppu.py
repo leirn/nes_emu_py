@@ -281,7 +281,7 @@ class Ppu:
             if self.col > 320 and self.col < 337:
                 self.load_tile_data()
 
-        if self.is_rendering_enabled and self.line == 261 and self.col > 279 and self.col < 305 :
+        if self.is_rendering_enabled() and self.line == 261 and self.col > 279 and self.col < 305 :
             self.copy_vert_t_to_vert_v()
 
     def load_tile_data(self):
