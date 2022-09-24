@@ -267,7 +267,10 @@ class Ppu:
         if self.col == 0:
             # End of scan line
             self.line = (self.line + 1) % 262
-            # TODO : Implement 0,0 cycle skipped on odd frame
+            if self.line == 0:
+                if self.frame_parity > 0 :
+                    self.col = 1
+                self.frame_parity = 1 - self.frame_parity
 
         return (self.col, self.line) == (0, 0)
 
@@ -392,7 +395,7 @@ class Ppu:
 
     def clear_vblank(self):
         '''Clear vblank bit in ppustatus register'''
-        self.ppustatus &= 0b11111111
+        self.ppustatus &= 0b01111111
 
     def set_sprite0_hit(self):
         '''Set sprite 0 bit in ppustatus register'''
