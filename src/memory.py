@@ -32,7 +32,7 @@ class Memory:
         '''
         if address < 0x2000:
             return self.internal_ram[address % 0x800]
-        if address < 0x3fff:
+        if address < 0x4000:
             address = 0x2000 + (address % 8)
             match address:
                 #case 0x2000: Write only
@@ -60,14 +60,14 @@ class Memory:
         #    '''Normally disabled'''
         #if address < 0x6000:
         #    '''Cartrige sapce, but what ?'''
-        if address < 0x6000:
+        if address > 0x6000 and address < 0x8000:
             return instances.cartridge.read_ram(address - 0x6000)
         return instances.cartridge.read_prg_rom(address - 0x8000)
 
     # NES is Little Endian
     def read_rom_16_no_crossing_page(self, address):
         '''Read 16 bits values forbidding crossing pages'''
-        high_address = (address & 0xFF00) +((address + 1) & 0xFF)
+        high_address = (address & 0xFF00) + ((address + 1) & 0xFF)
 
         debug.log(self.__class__, debug.DEBUG, f"High address : {high_address:04x}, Low address : {address:04x}")
         high, low = 0, 0
@@ -104,7 +104,7 @@ class Memory:
         '''
         if address < 0x2000:
             self.internal_ram[address % 0x800] = value
-        elif address < 0x3fff:
+        elif address < 0x4000:
             address = 0x2000 + (address % 8)
             match address:
                 case 0x2000: instances.ppu.write_0x2000(value)
