@@ -16,4 +16,4 @@ def init():
     cartridge = 0
     apu = 0
     nes = 0
-    debug = 0
+    debug = 1

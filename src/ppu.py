@@ -43,7 +43,8 @@ class Ppu:
 
         self.frame_background = ''
         self.frame_sprite = ''
-        self.frame_parity = 0
+        self.frame_parity = 1
+        self.is_first_sprite_0 = 0
 
         self.x_scroll = 0
         self.y_scroll = 0
@@ -261,6 +262,7 @@ class Ppu:
         if (self.col, self.line) == (1, 261):
             self.clear_vblank()
             self.clear_sprite0_hit()
+            self.is_first_sprite_0 = 0
             self.clear_sprite_overflow()
         #Increment position
         self.col  = (self.col + 1) % 341
@@ -328,6 +330,7 @@ class Ppu:
             self.secondary_oam_pointer = 0
 
         if self.secondary_oam_pointer > 7:
+            self.set_sprite_overflow()
             return # Maximum 8 sprites found per frame
 
         if self.col > 64 and self.col < 256 and self.sprite_count < 64:
@@ -550,3 +553,22 @@ class Ppu:
 
         def print_status(self):
             '''Print Pixel Generator current status'''
+
+
+    def xor_primary_oam(self):
+        xor = 0
+        for i in self.primary_oam:
+            xor ^= i
+        return xor
+
+    def xor_secondary_oam(self):
+        xor = 0
+        for i in self.secondary_oam:
+            xor ^= i
+        return xor
+
+    def print_oam(self):
+        print("Primary OAM")
+        utils.print_memory_page(self.primary_oam, 0)
+        print("Secondary OAM")
+        utils.print_memory_page(self.secondary_oam, 0)

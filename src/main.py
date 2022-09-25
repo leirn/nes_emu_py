@@ -45,6 +45,7 @@ debug.dump_chr()
 
 if options.test_file:
     instances.nes.set_test_mode(open(options.test_file, 'r'))
-    instances.nes.start(0xC000)
+    #instances.nes.start(0xC000)
+    instances.nes.start()
 else:
     instances.nes.start()

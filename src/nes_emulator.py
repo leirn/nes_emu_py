@@ -178,11 +178,17 @@ class NesEmulator:
         if OPCODES[opcode][2] > 2:
             opcode_arg_2 = f"{instances.memory.read_rom(cpu_status['PC']+2):02x}"
 
-        print(f"{cpu_status['PC']:x}  {opcode:02x} {opcode_arg_1} {opcode_arg_2}  {OPCODES[opcode][1]:30}  A:{cpu_status['A']:02x} X:{cpu_status['X']:02x} Y:{cpu_status['Y']:02x} P:{cpu_status['P']:02x} SP:{cpu_status['SP']:02x} PPU:{instances.ppu.line},{instances.ppu.col: 3} CYC:{cpu_status['CYC']}".upper())
+
+        cpu_status['ZERO_PAGE'] = instances.memory.xor_zero_page()
+        cpu_status['P_OAM'] = instances.ppu.xor_primary_oam()
+        cpu_status['S_OAM'] = instances.ppu.xor_secondary_oam()
+
+        print(f"{cpu_status['PC']:x}  {opcode:02x} {opcode_arg_1} {opcode_arg_2}  {OPCODES[opcode][1]:30}  A:{cpu_status['A']:02x} X:{cpu_status['X']:02x} Y:{cpu_status['Y']:02x} P:{cpu_status['P']:02x} SP:{cpu_status['SP']:02x} PPU:{instances.ppu.line},{instances.ppu.col: 3} CYC:{cpu_status['CYC']}, ZeroPage:{cpu_status['ZERO_PAGE']:02x},P_OAM:{cpu_status['P_OAM']:02x},S_OAM:{cpu_status['S_OAM']:02x}".upper())
 
         print(reference)
-        utils.print_memory_page(instances.memory.internal_ram, 0x0)
-        utils.print_memory_page(instances.memory.internal_ram, 0x6)
+        #utils.print_memory_page(instances.memory.internal_ram, 0x0)
+        #utils.print_memory_page(instances.memory.internal_ram, 0x6)
+        #instances.ppu.print_oam()
 
         ref_status = dict()
         ref_status['PC'] = int(reference[0:4], 16)
@@ -198,8 +204,15 @@ class NesEmulator:
         match = re.findall(r'PPU:[ ]*([0-9]+),[ ]*([0-9]+)', reference)
         ref_status['PPU_LINE']  = int(match[0][0])
         ref_status['PPU_COL']  = int(match[0][1])
+        match = re.findall(r'ZeroPage:(?P<ZP>[0-9A-Fa-f]{2})', reference)
+        ref_status['ZERO_PAGE'] = int(match[0], 16)
+        match = re.findall(r'P_OAM:(?P<POAM>[0-9A-Fa-f]{2}),S_OAM:(?P<SOAM>[0-9A-Fa-f]{2})', reference)
+        ref_status['P_OAM'] = int(match[0][0], 16)
+        ref_status['S_OAM'] = int(match[0][1], 16)
 
-        for i in ["PC", "A", "X", "Y", "P", "SP", "CYC", "PPU_LINE", "PPU_COL"]: # On hold : CYC, PPU_LINE, PPU_COL
+
+
+        for i in ["PC", "A", "X", "Y", "P", "SP", "CYC", "PPU_LINE", "PPU_COL", "ZERO_PAGE", "P_OAM", "S_OAM"]: # On hold : CYC, PPU_LINE, PPU_COL
             if ref_status[i] != cpu_status[i] :
                 raise Exception(f"{i} Error : {cpu_status[i]} instead of {ref_status[i]}")
         print("")

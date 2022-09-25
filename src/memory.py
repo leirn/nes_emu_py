@@ -151,3 +151,9 @@ class Memory:
         utils.print_memory_page(self.internal_ram, 0x2)
         print("Page 3")
         utils.print_memory_page(self.internal_ram, 0x3)
+
+    def xor_zero_page(self):
+        xor = 0
+        for i in range(0, 256):
+            xor ^= self.internal_ram[i]
+        return xor
