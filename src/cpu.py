@@ -87,7 +87,7 @@ class Cpu:
         '''
         self.push(self.program_counter >> 8)
         self.push(self.program_counter & 255)
-        self.push(self.get_status_register())
+        self.push(self.get_status_register() & 0b11101111) # NIM and IRQ set break flag to 0
 
         self.interrupt = 0
 
@@ -572,12 +572,11 @@ class Cpu:
 
     def fn_0x00(self) :
         '''Function call for BRK. Implied
-        TODO ! Should set Break flag to 1
         '''
         self.program_counter += 1
         self.push(self.program_counter >> 8)
         self.push(self.program_counter & 255)
-        self.push(self.get_status_register())
+        self.push(self.get_status_register() | (1 << 4)) # BRK sets Break flag to 1
         self.program_counter = instances.memory.read_rom_16(0xFFFE)
         return (0, 7)
 
@@ -1981,7 +1980,7 @@ class Cpu:
     def fn_0x08(self) :
         '''Function call for PHP. Implied'''
         # create status byte
-        status_register = self.get_status_register() | (1 << 4)
+        status_register = self.get_status_register() | (1 << 4) # PHP sets Break flag to 1
         self.push(status_register)
         return (1, 3)
 
